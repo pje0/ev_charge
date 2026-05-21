@@ -22,12 +22,14 @@
 
 		<nav class="ev-header-nav">
 			<a href="/map"
-				class="ev-header-nav-link ${pageContext.request.requestURI.contains('/map') ? 'active' : ''}">충전소
-				지도</a> <a href="/reservation"
+				class="ev-header-nav-link ${pageContext.request.requestURI.contains('/map') ? 'active' : ''}">충전소 지도</a>
+			<a href="/reservation"
 				class="ev-header-nav-link ${pageContext.request.requestURI.contains('/reservation') ? 'active' : ''}">예약하기</a>
+			<a href="/calculator"
+				class="ev-header-nav-link ${pageContext.request.requestURI.contains('/calculator') ? 'active' : ''}">충전 요금 계산기</a>
 			<a href="/status"
-				class="ev-header-nav-link ${pageContext.request.requestURI.contains('/status') ? 'active' : ''}">충전
-				현황</a> <a href="/notices"
+				class="ev-header-nav-link ${pageContext.request.requestURI.contains('/inquiry') ? 'active' : ''}">1:1 문의</a>
+			<a href="/notices"
 				class="ev-header-nav-link ${pageContext.request.requestURI.contains('/notices') ? 'active' : ''}">공지사항</a>
 			<c:if test="${sessionScope.loginUser.role == 'ADMIN'}">
 				<a href="/admin" class="ev-header-nav-link ev-header-nav-link-admin">관리자</a>
