@@ -16,4 +16,6 @@ public interface UserMapper {
     
     // 이메일 중복 체크
     int countByEmail(String email);
+    
+    
 }
