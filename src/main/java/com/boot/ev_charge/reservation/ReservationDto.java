@@ -9,15 +9,13 @@ import lombok.Data;
 public class ReservationDto {
 
     private Long id;
-
     private Long userId;
     private Long chargerId;
+    private Long stationId;
 
     private String reservationType;
     private String status;
-
     private String carType;
-
     private Timestamp reservedAt;
 
     private Timestamp actualStartTime;

@@ -18,14 +18,15 @@ public class ReservationService {
     @Transactional
     public void createReservation(ReservationDto dto) {
 
-        // 시간 예약 중복 검사
+        reservationMapper.insertReservation(dto);
+
         if ("TIME".equals(dto.getReservationType())) {
 
-            int count = reservationMapper.countDuplicateReservation(dto);
+            reservationMapper.insertReservationTime(dto);
 
-            if (count > 0) {
-                throw new RuntimeException("이미 예약된 시간입니다.");
-            }
+        } else if ("TARGET".equals(dto.getReservationType())) {
+
+            reservationMapper.insertReservationTarget(dto);
         }
 
         // 공통 예약 생성
