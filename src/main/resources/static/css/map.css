@@ -29,22 +29,44 @@
   overflow: hidden;
 }
 
-.ev-map-sidebar-header {
-  padding: 16px;
+/* ── 탭 ── */
+.ev-map-tabs {
+  display: flex;
   border-bottom: 1px solid var(--ev-border);
 }
-
-.ev-map-sidebar-title {
-  font-size: 16px;
-  font-weight: 700;
-  margin-bottom: 12px;
+.ev-map-tab {
+  flex: 1;
+  padding: 14px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: var(--ev-muted-foreground);
+  font-family: inherit;
+  transition: all 0.15s;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
 }
+.ev-map-tab.active {
+  color: var(--ev-primary);
+  border-bottom-color: var(--ev-primary);
+}
+.ev-map-tab:hover:not(.active) { color: var(--ev-foreground); }
 
-.ev-map-location-btns {
+.ev-map-tab-content { display: none; flex-direction: column; flex: 1; overflow: hidden; }
+.ev-map-tab-content.active { display: flex; }
+
+/* ── 사이드바 헤더 ── */
+.ev-map-sidebar-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--ev-border);
   display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
+  flex-direction: column;
+  gap: 10px;
 }
+
+.ev-map-location-btns { display: flex; gap: 8px; }
 
 .ev-map-btn-primary {
   flex: 1;
@@ -75,28 +97,13 @@
   transition: background 0.15s;
 }
 .ev-map-btn-outline:hover:not(:disabled) { background: var(--ev-muted); }
-.ev-map-btn-outline:disabled { opacity: 0.5; cursor: not-allowed; }
+.ev-map-btn-outline:disabled { opacity: 0.4; cursor: not-allowed; }
 
-.ev-map-search-wrap { margin-bottom: 12px; }
-.ev-map-search-input {
-  width: 100%;
-  padding: 10px 14px;
-  border: 1px solid var(--ev-border);
-  border-radius: 8px;
-  font-size: 14px;
-  font-family: inherit;
-  outline: none;
-  transition: border-color 0.15s;
-}
-.ev-map-search-input:focus { border-color: var(--ev-primary); }
-
-.ev-map-filter-btns {
-  display: flex;
-  gap: 6px;
-}
+/* ── 필터 ── */
+.ev-map-filter-row { display: flex; gap: 6px; }
 .ev-map-filter-btn {
   flex: 1;
-  padding: 6px;
+  padding: 6px 4px;
   border: 1px solid var(--ev-border);
   border-radius: 6px;
   font-size: 12px;
@@ -108,9 +115,29 @@
   transition: all 0.15s;
 }
 .ev-map-filter-btn.active { background: var(--ev-primary); color: white; border-color: var(--ev-primary); }
-.ev-map-filter-btn.available.active { background: #16a34a; border-color: #16a34a; }
-.ev-map-filter-btn.inuse.active { background: #d97706; border-color: #d97706; }
-.ev-map-filter-btn.error.active { background: #dc2626; border-color: #dc2626; }
+.ev-map-filter-btn:hover:not(.active) { background: var(--ev-muted); }
+
+/* ── 지역 선택 ── */
+.ev-map-select-group { display: flex; flex-direction: column; gap: 8px; }
+.ev-map-select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--ev-border);
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  cursor: pointer;
+  background: white;
+  transition: border-color 0.15s;
+}
+.ev-map-select:focus { border-color: var(--ev-primary); }
+
+.ev-map-region-count {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ev-primary);
+}
 
 /* ── 충전소 목록 ── */
 .ev-map-station-list {
@@ -135,10 +162,26 @@
   align-items: center;
   margin-bottom: 4px;
 }
-.ev-map-station-item-name { font-size: 14px; font-weight: 600; }
-.ev-map-station-item-avail { font-size: 12px; color: #16a34a; font-weight: 600; }
-.ev-map-station-item-addr { font-size: 12px; color: var(--ev-muted-foreground); }
-.ev-map-station-item-dist { font-size: 12px; color: var(--ev-primary); font-weight: 600; margin-top: 4px; }
+.ev-map-station-item-name { font-size: 14px; font-weight: 700; }
+.ev-map-station-item-dist { font-size: 12px; color: var(--ev-primary); font-weight: 600; }
+.ev-map-station-item-addr { font-size: 12px; color: var(--ev-muted-foreground); margin-bottom: 6px; }
+.ev-map-station-item-bottom { display: flex; gap: 8px; }
+.ev-map-station-item-rapid {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: oklch(0.38 0.18 258 / 0.1);
+  color: var(--ev-primary);
+  font-weight: 600;
+}
+.ev-map-station-item-slow {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: oklch(0.52 0.13 180 / 0.1);
+  color: var(--ev-accent);
+  font-weight: 600;
+}
 
 .ev-map-loading, .ev-map-empty {
   text-align: center;
@@ -148,15 +191,8 @@
 }
 
 /* ── 지도 ── */
-.ev-map-container {
-  flex: 1;
-  position: relative;
-}
-
-.ev-map-kakao {
-  width: 100%;
-  height: 100%;
-}
+.ev-map-container { flex: 1; position: relative; }
+.ev-map-kakao { width: 100%; height: 100%; }
 
 /* ── 범례 ── */
 .ev-map-legend {
@@ -170,31 +206,15 @@
   box-shadow: 0 4px 12px rgba(0,0,0,0.08);
   z-index: 10;
 }
-.ev-map-legend-title {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--ev-muted-foreground);
-  margin-bottom: 8px;
-}
-.ev-map-legend-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
-  font-size: 12px;
-}
+.ev-map-legend-title { font-size: 11px; font-weight: 600; color: var(--ev-muted-foreground); margin-bottom: 8px; }
+.ev-map-legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 12px; }
 .ev-map-legend-item:last-child { margin-bottom: 0; }
-.ev-map-legend-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-}
+.ev-map-legend-dot { width: 10px; height: 10px; border-radius: 50%; }
 
 /* ── 상세 패널 ── */
 .ev-map-detail {
   position: absolute;
-  bottom: 0;
-  right: 0;
+  bottom: 0; right: 0;
   width: 320px;
   background: white;
   border-left: 1px solid var(--ev-border);
@@ -205,7 +225,6 @@
   flex-direction: column;
   max-height: 60vh;
 }
-
 .ev-map-detail-header {
   display: flex;
   justify-content: space-between;
@@ -216,21 +235,11 @@
 .ev-map-detail-name { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
 .ev-map-detail-addr { font-size: 12px; color: var(--ev-muted-foreground); }
 .ev-map-detail-close {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 16px;
-  color: var(--ev-muted-foreground);
-  padding: 4px;
+  background: none; border: none; cursor: pointer;
+  font-size: 16px; color: var(--ev-muted-foreground); padding: 4px;
 }
-
 .ev-map-detail-body { padding: 16px; overflow-y: auto; }
-
-.ev-map-detail-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
+.ev-map-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .ev-map-detail-card {
   background: var(--ev-muted);
   border-radius: 8px;
@@ -242,11 +251,7 @@
 .ev-map-detail-card-label { font-size: 11px; color: var(--ev-muted-foreground); }
 .ev-map-detail-card-value { font-size: 14px; font-weight: 700; }
 .ev-map-detail-car { font-size: 11px; font-weight: 500; }
-
-.ev-map-detail-footer {
-  padding: 12px 16px;
-  border-top: 1px solid var(--ev-border);
-}
+.ev-map-detail-footer { padding: 12px 16px; border-top: 1px solid var(--ev-border); }
 .ev-map-reserve-btn {
   display: block;
   width: 100%;
@@ -259,7 +264,6 @@
   font-weight: 700;
   text-align: center;
   text-decoration: none;
-  cursor: pointer;
   transition: background 0.15s;
 }
 .ev-map-reserve-btn:hover { background: var(--ev-primary-light); }

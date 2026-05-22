@@ -33,6 +33,7 @@ public class SecurityConfig {
             	        "/", "/login", "/signup", "/login-process",
             	        "/css/**", "/js/**", "/images/**",
             	        "/map", "/calculator",
+            	        "/api/**",
             	        "/WEB-INF/**"  
             	    ).permitAll()
             	    .requestMatchers("/admin/**").hasRole("ADMIN")
