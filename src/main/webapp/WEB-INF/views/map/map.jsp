@@ -1,140 +1,179 @@
-<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+	pageEncoding="UTF-8"%>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core"%>
-<%@ taglib prefix="sec" uri="http://www.springframework.org/security/tags"%>
+<%@ taglib prefix="sec"
+	uri="http://www.springframework.org/security/tags"%>
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>충전소 지도 - EV 충전소</title>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/common.css">
-  <link rel="stylesheet" href="/css/map.css">
-  <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=d5fdc4f5945a067850cad3bbd4d6308a&libraries=services"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>충전소 지도 - EV 충전소</title>
+<link
+	href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap"
+	rel="stylesheet">
+<link rel="stylesheet" href="/css/common.css">
+<link rel="stylesheet" href="/css/map.css">
+<script type="text/javascript"
+	src="//dapi.kakao.com/v2/maps/sdk.js?appkey=d5fdc4f5945a067850cad3bbd4d6308a&libraries=services"></script>
 </head>
 <body class="ev-map-page">
 
-  <jsp:include page="/WEB-INF/views/layout/header.jsp" />
+	<jsp:include page="/WEB-INF/views/layout/header.jsp" />
 
-  <div class="ev-map-wrap">
+	<div class="ev-map-wrap">
 
-    <!-- 사이드바 -->
-    <div class="ev-map-sidebar" id="sidebar">
+		<!-- 사이드바 -->
+		<div class="ev-map-sidebar" id="sidebar">
 
-      <!-- 탭 -->
-      <div class="ev-map-tabs">
-        <button type="button" class="ev-map-tab active" onclick="switchTab('nearby', this)">주변 충전소</button>
-        <button type="button" class="ev-map-tab" onclick="switchTab('region', this)">지역 충전소</button>
-      </div>
+			<!-- 탭 -->
+			<div class="ev-map-tabs">
+				<button type="button" class="ev-map-tab active"
+					onclick="switchTab('nearby', this)">주변 충전소</button>
+				<button type="button" class="ev-map-tab"
+					onclick="switchTab('region', this)">지역 충전소</button>
+			</div>
 
-      <!-- 주변 충전소 탭 -->
-      <div class="ev-map-tab-content active" id="tab-nearby">
-        <div class="ev-map-sidebar-header">
-          <div class="ev-map-location-btns">
-            <button type="button" class="ev-map-btn-primary" onclick="getMyLocation()">📍 내 위치</button>
-            <button type="button" class="ev-map-btn-outline" onclick="findNearest()" id="nearestBtn" disabled>🔍 가장 가까운</button>
-          </div>
-          <div class="ev-map-filter-row">
-            <button type="button" class="ev-map-filter-btn active" onclick="setFilter('all', this)">전체</button>
-            <button type="button" class="ev-map-filter-btn" onclick="setFilter('AVAILABLE', this)">사용가능</button>
-            <button type="button" class="ev-map-filter-btn" onclick="setFilter('rapid', this)">급속</button>
-            <button type="button" class="ev-map-filter-btn" onclick="setFilter('slow', this)">완속</button>
-          </div>
-        </div>
-        <div class="ev-map-station-list" id="nearbyList">
-          <div class="ev-map-empty">📍 내 위치 버튼을 눌러주세요</div>
-        </div>
-      </div>
+			<!-- 주변 충전소 탭 -->
+			<div class="ev-map-tab-content active" id="tab-nearby">
+				<div class="ev-map-sidebar-header">
+					<div class="ev-map-location-btns">
+						<button type="button" class="ev-map-btn-primary"
+							onclick="getMyLocation()">📍 내 위치</button>
+						<button type="button" class="ev-map-btn-outline"
+							onclick="findNearest()" id="nearestBtn" disabled>🔍 가장
+							가까운</button>
+					</div>
+					<div class="ev-map-filter-row">
+						<button type="button" class="ev-map-filter-btn active"
+							onclick="setFilter('all', this)">전체</button>
+						<button type="button" class="ev-map-filter-btn"
+							onclick="setFilter('AVAILABLE', this)">사용가능</button>
+						<button type="button" class="ev-map-filter-btn"
+							onclick="setFilter('rapid', this)">급속</button>
+						<button type="button" class="ev-map-filter-btn"
+							onclick="setFilter('slow', this)">완속</button>
+					</div>
+				</div>
+				<div class="ev-map-station-list" id="nearbyList">
+					<div class="ev-map-empty">📍 내 위치 버튼을 눌러주세요</div>
+				</div>
+			</div>
 
-      <!-- 지역 충전소 탭 -->
-      <div class="ev-map-tab-content" id="tab-region">
-        <div class="ev-map-sidebar-header">
-          <div class="ev-map-select-group">
-            <select class="ev-map-select" id="metroCd" onchange="onMetroChange()">
-              <option value="">시/도 선택</option>
-              <option value="11">서울특별시</option>
-              <option value="21">부산광역시</option>
-              <option value="22">대구광역시</option>
-              <option value="23">인천광역시</option>
-              <option value="24">광주광역시</option>
-              <option value="25">대전광역시</option>
-              <option value="26">울산광역시</option>
-              <option value="29">세종특별자치시</option>
-              <option value="31">경기도</option>
-              <option value="32">강원도</option>
-              <option value="33">충청북도</option>
-              <option value="34">충청남도</option>
-              <option value="35">전라북도</option>
-              <option value="36">전라남도</option>
-              <option value="37">경상북도</option>
-              <option value="38">경상남도</option>
-              <option value="39">제주특별자치도</option>
-            </select>
-            <select class="ev-map-select" id="chargeSpeed" onchange="loadRegionStations()">
-              <option value="all">급속 + 완속</option>
-              <option value="rapid">급속만</option>
-              <option value="slow">완속만</option>
-            </select>
-          </div>
-          <div class="ev-map-region-count" id="regionCount"></div>
-        </div>
-        <div class="ev-map-station-list" id="regionList">
-          <div class="ev-map-empty">시/도를 선택해주세요</div>
-        </div>
-      </div>
+			<!-- 지역 충전소 탭 -->
+			<div class="ev-map-tab-content" id="tab-region">
+				<div class="ev-map-sidebar-header">
+					<div class="ev-map-select-group">
+						<div class="ev-map-select-row">
+							<span class="ev-map-select-label">시/도</span> <select
+								class="ev-map-select" id="metroCd" onchange="onMetroChange()">
+								<option value="">선택</option>
+								<option value="11">서울특별시</option>
+								<option value="21">부산광역시</option>
+								<option value="22">대구광역시</option>
+								<option value="23">인천광역시</option>
+								<option value="24">광주광역시</option>
+								<option value="25">대전광역시</option>
+								<option value="26">울산광역시</option>
+								<option value="29">세종특별자치시</option>
+								<option value="31">경기도</option>
+								<option value="32">강원도</option>
+								<option value="33">충청북도</option>
+								<option value="34">충청남도</option>
+								<option value="35">전라북도</option>
+								<option value="36">전라남도</option>
+								<option value="37">경상북도</option>
+								<option value="38">경상남도</option>
+								<option value="39">제주특별자치도</option>
+							</select>
+						</div>
+						<div class="ev-map-select-row">
+							<span class="ev-map-select-label">시/군/구</span> <select
+								class="ev-map-select" id="cityCd"
+								onchange="loadRegionStations()" disabled>
+								<option value="">전체</option>
+							</select>
+						</div>
+						<div class="ev-map-select-row">
+							<span class="ev-map-select-label">충전속도</span> <select
+								class="ev-map-select" id="chargeSpeed"
+								onchange="loadRegionStations()">
+								<option value="all">급속 + 완속</option>
+								<option value="rapid">급속만</option>
+								<option value="slow">완속만</option>
+							</select>
+						</div>
+					</div>
+					<div class="ev-map-region-count" id="regionCount"></div>
+				</div>
+				<div class="ev-map-station-list" id="regionList">
+					<div class="ev-map-empty">시/도를 선택해주세요</div>
+				</div>
+			</div>
 
-    </div>
+		</div>
 
-    <!-- 지도 -->
-    <div class="ev-map-container">
-      <div id="kakaoMap" class="ev-map-kakao"></div>
+		<!-- 지도 -->
+		<div class="ev-map-container">
+			<div id="kakaoMap" class="ev-map-kakao"></div>
 
-      <!-- 범례 -->
-      <div class="ev-map-legend">
-        <p class="ev-map-legend-title">범례</p>
-        <div class="ev-map-legend-item"><div class="ev-map-legend-dot" style="background:#16a34a"></div><span>사용 가능</span></div>
-        <div class="ev-map-legend-item"><div class="ev-map-legend-dot" style="background:#d97706"></div><span>사용 중</span></div>
-        <div class="ev-map-legend-item"><div class="ev-map-legend-dot" style="background:#dc2626"></div><span>점검 중</span></div>
-      </div>
+			<!-- 범례 -->
+			<div class="ev-map-legend">
+				<p class="ev-map-legend-title">범례</p>
+				<div class="ev-map-legend-item">
+					<div class="ev-map-legend-dot" style="background: #16a34a"></div>
+					<span>사용 가능</span>
+				</div>
+				<div class="ev-map-legend-item">
+					<div class="ev-map-legend-dot" style="background: #d97706"></div>
+					<span>사용 중</span>
+				</div>
+				<div class="ev-map-legend-item">
+					<div class="ev-map-legend-dot" style="background: #dc2626"></div>
+					<span>점검 중</span>
+				</div>
+			</div>
 
-      <!-- 충전소 상세 패널 -->
-      <div class="ev-map-detail" id="detailPanel" style="display:none">
-        <div class="ev-map-detail-header">
-          <div>
-            <h3 class="ev-map-detail-name" id="detailName"></h3>
-            <p class="ev-map-detail-addr" id="detailAddr"></p>
-          </div>
-          <button type="button" class="ev-map-detail-close" onclick="closeDetail()">✕</button>
-        </div>
-        <div class="ev-map-detail-body">
-          <div class="ev-map-detail-grid">
-            <div class="ev-map-detail-card">
-              <span class="ev-map-detail-card-label">⚡ 급속</span>
-              <span class="ev-map-detail-card-value" id="detailRapid"></span>
-            </div>
-            <div class="ev-map-detail-card">
-              <span class="ev-map-detail-card-label">🔋 완속</span>
-              <span class="ev-map-detail-card-value" id="detailSlow"></span>
-            </div>
-            <div class="ev-map-detail-card" style="grid-column: span 2">
-              <span class="ev-map-detail-card-label">🚗 지원차종</span>
-              <span class="ev-map-detail-card-value ev-map-detail-car" id="detailCar"></span>
-            </div>
-          </div>
-        </div>
-        <div class="ev-map-detail-footer">
-          <sec:authorize access="isAuthenticated()">
-            <a href="/reservation" class="ev-map-reserve-btn">예약하기 →</a>
-          </sec:authorize>
-          <sec:authorize access="isAnonymous()">
-            <a href="/login" class="ev-map-reserve-btn">로그인 후 예약하기 →</a>
-          </sec:authorize>
-        </div>
-      </div>
-    </div>
-  </div>
+			<!-- 충전소 상세 패널 -->
+			<div class="ev-map-detail" id="detailPanel" style="display: none">
+				<div class="ev-map-detail-header">
+					<div>
+						<h3 class="ev-map-detail-name" id="detailName"></h3>
+						<p class="ev-map-detail-addr" id="detailAddr"></p>
+					</div>
+					<button type="button" class="ev-map-detail-close"
+						onclick="closeDetail()">✕</button>
+				</div>
+				<div class="ev-map-detail-body">
+					<div class="ev-map-detail-grid">
+						<div class="ev-map-detail-card">
+							<span class="ev-map-detail-card-label">⚡ 급속</span> <span
+								class="ev-map-detail-card-value" id="detailRapid"></span>
+						</div>
+						<div class="ev-map-detail-card">
+							<span class="ev-map-detail-card-label">🔋 완속</span> <span
+								class="ev-map-detail-card-value" id="detailSlow"></span>
+						</div>
+						<div class="ev-map-detail-card" style="grid-column: span 2">
+							<span class="ev-map-detail-card-label">🚗 지원차종</span> <span
+								class="ev-map-detail-card-value ev-map-detail-car"
+								id="detailCar"></span>
+						</div>
+					</div>
+				</div>
+				<div class="ev-map-detail-footer">
+					<sec:authorize access="isAuthenticated()">
+						<a href="/reservation" class="ev-map-reserve-btn">예약하기 →</a>
+					</sec:authorize>
+					<sec:authorize access="isAnonymous()">
+						<a href="/login" class="ev-map-reserve-btn">로그인 후 예약하기 →</a>
+					</sec:authorize>
+				</div>
+			</div>
+		</div>
+	</div>
 
-  <script>
+	<script>
     var map;
     var markers = [];
     var stations = [];
@@ -216,38 +255,99 @@
     }
 
     // ── 지역 충전소 탭 ──
-    function onMetroChange() {
-      loadRegionStations();
-    }
+    // 시/도별 시/군/구 코드
+var cityMap = {
+  '11': [
+    {code:'11110',name:'종로구'},{code:'11140',name:'중구'},{code:'11170',name:'용산구'},
+    {code:'11200',name:'성동구'},{code:'11215',name:'광진구'},{code:'11230',name:'동대문구'},
+    {code:'11260',name:'중랑구'},{code:'11290',name:'성북구'},{code:'11305',name:'강북구'},
+    {code:'11320',name:'도봉구'},{code:'11350',name:'노원구'},{code:'11380',name:'은평구'},
+    {code:'11410',name:'서대문구'},{code:'11440',name:'마포구'},{code:'11470',name:'양천구'},
+    {code:'11500',name:'강서구'},{code:'11530',name:'구로구'},{code:'11545',name:'금천구'},
+    {code:'11560',name:'영등포구'},{code:'11590',name:'동작구'},{code:'11620',name:'관악구'},
+    {code:'11650',name:'서초구'},{code:'11680',name:'강남구'},{code:'11710',name:'송파구'},
+    {code:'11740',name:'강동구'}
+  ],
+  '21': [
+    {code:'21110',name:'중구'},{code:'21120',name:'서구'},{code:'21130',name:'동구'},
+    {code:'21140',name:'영도구'},{code:'21150',name:'부산진구'},{code:'21160',name:'동래구'},
+    {code:'21170',name:'남구'},{code:'21180',name:'북구'},{code:'21190',name:'해운대구'},
+    {code:'21200',name:'사하구'},{code:'21210',name:'금정구'},{code:'21220',name:'강서구'},
+    {code:'21230',name:'연제구'},{code:'21240',name:'수영구'},{code:'21250',name:'사상구'},
+    {code:'21310',name:'기장군'}
+  ],
+  '31': [
+    {code:'31110',name:'수원시'},{code:'31150',name:'성남시'},{code:'31170',name:'의정부시'},
+    {code:'31180',name:'안양시'},{code:'31190',name:'부천시'},{code:'31200',name:'광명시'},
+    {code:'31210',name:'평택시'},{code:'31230',name:'동두천시'},{code:'31250',name:'안산시'},
+    {code:'31260',name:'고양시'},{code:'31270',name:'과천시'},{code:'31280',name:'구리시'},
+    {code:'31290',name:'남양주시'},{code:'31300',name:'오산시'},{code:'31310',name:'시흥시'},
+    {code:'31320',name:'군포시'},{code:'31330',name:'의왕시'},{code:'31340',name:'하남시'},
+    {code:'31350',name:'용인시'},{code:'31360',name:'파주시'},{code:'31370',name:'이천시'},
+    {code:'31380',name:'안성시'},{code:'31390',name:'김포시'},{code:'31400',name:'화성시'},
+    {code:'31410',name:'광주시'},{code:'31420',name:'양주시'},{code:'31430',name:'포천시'},
+    {code:'31440',name:'여주시'},{code:'31710',name:'연천군'},{code:'31720',name:'가평군'},
+    {code:'31730',name:'양평군'}
+  ]
+};
 
-    function loadRegionStations() {
-      var metroCd = document.getElementById('metroCd').value;
-      var speed = document.getElementById('chargeSpeed').value;
-      if (!metroCd) return;
+function onMetroChange() {
+	  var metroCd = document.getElementById('metroCd').value;
+	  var cityCdSelect = document.getElementById('cityCd');
+	  
+	  cityCdSelect.innerHTML = '<option value="">전체</option>';
+	  cityCdSelect.disabled = true;
+	  
+	  if (!metroCd) return;
 
-      document.getElementById('regionList').innerHTML = '<div class="ev-map-loading">불러오는 중...</div>';
-      clearMarkers();
+	  // 먼저 전체 데이터 불러와서 city 목록 추출
+	  fetch('/api/stations?metroCd=' + metroCd)
+	    .then(function(res) { return res.json(); })
+	    .then(function(data) {
+	      if (!data || !data.data) return;
+	      
+	      // city 필드에서 unique 목록 추출
+	      var cities = [];
+	      data.data.forEach(function(s) {
+	        if (s.city && !cities.includes(s.city)) {
+	          cities.push(s.city);
+	        }
+	      });
+	      cities.sort();
+	      
+	      cities.forEach(function(city) {
+	        var opt = document.createElement('option');
+	        opt.value = city;
+	        opt.textContent = city;
+	        cityCdSelect.appendChild(opt);
+	      });
+	      
+	      cityCdSelect.disabled = false;
+	      
+	      // 전체 데이터도 바로 렌더링
+	      window._allData = data.data;
+	      filterAndRender();
+	    });
+	}
 
-      fetch('/api/stations?metroCd=' + metroCd)
-        .then(function(res) { return res.json(); })
-        .then(function(data) {
-          if (!data || !data.data) {
-            document.getElementById('regionList').innerHTML = '<div class="ev-map-empty">데이터 없음</div>';
-            return;
-          }
-          var list = data.data;
+function loadRegionStations() {
+	  if (!window._allData) return;
+	  filterAndRender();
+	}
 
-          // 급속/완속 필터
-          if (speed === 'rapid') list = list.filter(function(s) { return s.rapidCnt > 0; });
-          if (speed === 'slow') list = list.filter(function(s) { return s.slowCnt > 0; });
-
-          document.getElementById('regionCount').textContent = list.length + '개 충전소';
-          renderRegionList(list);
-        })
-        .catch(function(e) {
-          document.getElementById('regionList').innerHTML = '<div class="ev-map-empty">오류 발생</div>';
-        });
-    }
+	function filterAndRender() {
+	  var city = document.getElementById('cityCd').value;
+	  var speed = document.getElementById('chargeSpeed').value;
+	  
+	  var list = window._allData;
+	  
+	  if (city) list = list.filter(function(s) { return s.city === city; });
+	  if (speed === 'rapid') list = list.filter(function(s) { return s.rapidCnt > 0; });
+	  if (speed === 'slow') list = list.filter(function(s) { return s.slowCnt > 0; });
+	  
+	  document.getElementById('regionCount').textContent = list.length + '개 충전소';
+	  renderRegionList(list);
+	}
 
     function renderRegionList(list) {
       clearMarkers();
@@ -363,6 +463,7 @@
 
     // 내 위치
     function getMyLocation() {
+    	console.log('내위치 버튼 클릭됨');
       if (!navigator.geolocation) { alert('위치 정보를 지원하지 않는 브라우저입니다.'); return; }
       navigator.geolocation.getCurrentPosition(function(pos) {
         userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
@@ -382,6 +483,8 @@
         // 현재 위치 기준 시도코드 추론 후 API 호출
         var geocoder = new kakao.maps.services.Geocoder();
         geocoder.coord2RegionCode(userLocation.lng, userLocation.lat, function(result, status) {
+        	  console.log('위치 결과:', result);
+        	  console.log('상태:', status);
           if (status === kakao.maps.services.Status.OK) {
             var region = result[0];
             var metroCd = getMetroCd(region.region_1depth_name);
@@ -407,31 +510,14 @@
     }
 
     function loadNearbyStations(metroCd) {
-      fetch('/api/stations?metroCd=' + metroCd)
-        .then(function(res) { return res.json(); })
-        .then(function(data) {
-          if (!data || !data.data) return;
-          var geocoder = new kakao.maps.services.Geocoder();
-          var list = data.data;
-          var processed = 0;
-
-          list.forEach(function(s) {
-            geocoder.addressSearch(s.stnAddr, function(result, status) {
-              if (status === kakao.maps.services.Status.OK) {
-                s.lat = parseFloat(result[0].y);
-                s.lng = parseFloat(result[0].x);
-                s.dist = calcDistance(userLocation.lat, userLocation.lng, s.lat, s.lng);
-              }
-              processed++;
-              if (processed === list.length) {
-                stations = list.filter(function(s) { return s.lat; });
-                stations.sort(function(a, b) { return a.dist - b.dist; });
-                renderNearbyList();
-              }
-            });
-          });
-        });
-    }
+    	  fetch('/api/stations?metroCd=' + metroCd)
+    	    .then(function(res) { return res.json(); })
+    	    .then(function(data) {
+    	      if (!data || !data.data) return;
+    	      stations = data.data;
+    	      renderNearbyList();
+    	    });
+    	}
 
     // 가장 가까운 충전소
     function findNearest() {
