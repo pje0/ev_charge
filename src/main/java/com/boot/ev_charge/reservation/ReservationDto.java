@@ -1,6 +1,7 @@
 package com.boot.ev_charge.reservation;
 
 import java.sql.Timestamp;
+import java.time.LocalDateTime;
 
 import lombok.Data;
 
@@ -29,4 +30,7 @@ public class ReservationDto {
     // TARGET 예약
     private Integer targetKwh;
     private Integer maxMinutes;
+    
+    // 예약 생성 시간 관리
+    private Timestamp createdAt;
 }

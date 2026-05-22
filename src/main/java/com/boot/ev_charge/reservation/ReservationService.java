@@ -11,7 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class ReservationService {
 
     @Autowired
-    private ReservationMapper ReservationMapper;
+    private ReservationMapper reservationMapper;
 
 
     // 예약 생성
@@ -21,7 +21,7 @@ public class ReservationService {
         // 시간 예약 중복 검사
         if ("TIME".equals(dto.getReservationType())) {
 
-            int count = ReservationMapper.countDuplicateReservation(dto);
+            int count = reservationMapper.countDuplicateReservation(dto);
 
             if (count > 0) {
                 throw new RuntimeException("이미 예약된 시간입니다.");
@@ -29,20 +29,20 @@ public class ReservationService {
         }
 
         // 공통 예약 생성
-        ReservationMapper.insertReservation(dto);
+        reservationMapper.insertReservation(dto);
 
 
         // 시간 예약 생성
         if ("TIME".equals(dto.getReservationType())) {
 
-        	ReservationMapper.insertReservationTime(dto);
+        	reservationMapper.insertReservationTime(dto);
         }
 
 
         // 목표 충전량 예약 생성
         if ("TARGET".equals(dto.getReservationType())) {
 
-        	ReservationMapper.insertReservationTarget(dto);
+        	reservationMapper.insertReservationTarget(dto);
         }
     }
 
@@ -50,35 +50,35 @@ public class ReservationService {
     // 예약 상세 조회
     public ReservationDto getReservationDetail(Long reservationId) {
 
-        return ReservationMapper.getReservationDetail(reservationId);
+        return reservationMapper.getReservationDetail(reservationId);
     }
 
 
     // 회원 예약 목록 조회
     public List<ReservationDto> getReservationListByUser(Long userId) {
 
-        return ReservationMapper.getReservationListByUser(userId);
+        return reservationMapper.getReservationListByUser(userId);
     }
 
 
     // 충전 시작
     public void startCharging(Long reservationId) {
 
-    	ReservationMapper.startCharging(reservationId);
+    	reservationMapper.startCharging(reservationId);
     }
 
 
     // 충전 완료
     public void completeCharging(Long reservationId) {
 
-    	ReservationMapper.completeCharging(reservationId);
+    	reservationMapper.completeCharging(reservationId);
     }
 
 
     // 예약 취소
     public void cancelReservation(Long reservationId) {
 
-    	ReservationMapper.cancelReservation(reservationId);
+    	reservationMapper.cancelReservation(reservationId);
     }
 
 
@@ -86,6 +86,6 @@ public class ReservationService {
     @Scheduled(fixedRate = 60000)
     public void expireReservation() {
 
-    	ReservationMapper.expireReservation();
+    	reservationMapper.expireReservation();
     }
 }
