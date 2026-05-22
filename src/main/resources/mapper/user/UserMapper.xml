@@ -4,53 +4,57 @@
 
 <mapper namespace="com.boot.ev_charge.user.UserMapper">
 
-  <!-- 아이디로 회원 조회 -->
-  <select id="findByLoginId"
-          parameterType="String"
-          resultType="com.boot.ev_charge.user.UserDto">
+	<!-- 아이디로 회원 조회 -->
+	<select id="findByLoginId" parameterType="String"
+		resultType="com.boot.ev_charge.user.UserDto">
 
-    SELECT id, login_id, password, name, email,
-           phone, role, created_at, updated_at
-    FROM user
-    WHERE login_id = #{loginId}
+		SELECT id, login_id, password, name, email,
+		phone, role, created_at, updated_at
+		FROM user
+		WHERE login_id = #{loginId}
 
-  </select>
+	</select>
 
-  <!-- 회원가입 -->
-  <insert id="insert"
-          parameterType="com.boot.ev_charge.user.UserDto"
-          useGeneratedKeys="true"
-          keyProperty="id">
+	<!-- 회원가입 -->
+	<insert id="insert"
+		parameterType="com.boot.ev_charge.user.UserDto"
+		useGeneratedKeys="true" keyProperty="id">
 
-    INSERT INTO user
-    (login_id, password, name, email, phone, role)
+		INSERT INTO user
+		(login_id, password, name, email, phone, role)
 
-    VALUES
-    (#{loginId}, #{password}, #{name},
-     #{email}, #{phone}, 'USER')
+		VALUES
+		(#{loginId}, #{password}, #{name},
+		#{email}, #{phone}, 'USER')
 
-  </insert>
+	</insert>
 
-  <!-- 아이디 중복 -->
-  <select id="countByLoginId"
-          parameterType="String"
-          resultType="int">
+	<!-- 아이디 중복 -->
+	<select id="countByLoginId" parameterType="String"
+		resultType="int">
 
-    SELECT COUNT(*)
-    FROM user
-    WHERE login_id = #{loginId}
+		SELECT COUNT(*)
+		FROM user
+		WHERE login_id = #{loginId}
 
-  </select>
+	</select>
 
-  <!-- 이메일 중복 -->
-  <select id="countByEmail"
-          parameterType="String"
-          resultType="int">
+	<!-- 이메일 중복 -->
+	<select id="countByEmail" parameterType="String"
+		resultType="int">
 
-    SELECT COUNT(*)
-    FROM user
-    WHERE email = #{email}
+		SELECT COUNT(*)
+		FROM user
+		WHERE email = #{email}
 
-  </select>
+	</select>
+
+	<select id="findByEmail" parameterType="String"
+		resultType="com.boot.ev_charge.user.UserDto">
+		SELECT id, login_id, password, name, email, phone, role, created_at,
+		updated_at
+		FROM user
+		WHERE email = #{email}
+	</select>
 
 </mapper>

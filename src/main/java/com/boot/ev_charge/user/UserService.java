@@ -16,6 +16,19 @@ public class UserService {
     public UserDto findByLoginId(String loginId) {
         return userMapper.findByLoginId(loginId);
     }
+    
+    public UserDto findByEmail(String email) {
+        return userMapper.findByEmail(email);
+    }
+    
+//  소셜 로그인용
+    public void signupOAuth2(UserDto user) {
+        userMapper.insert(user);
+    }
+    
+    public int countByEmail(String email) {
+        return userMapper.countByEmail(email);
+    }
 
     // 회원가입
     public boolean signup(UserDto user) {

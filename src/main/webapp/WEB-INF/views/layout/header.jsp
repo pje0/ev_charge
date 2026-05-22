@@ -69,7 +69,7 @@
 
 						</div>
 
-						<span> <sec:authentication property="principal.attributes['name']" />
+						<span> <sec:authentication property="name" />
 
 						</span>
 

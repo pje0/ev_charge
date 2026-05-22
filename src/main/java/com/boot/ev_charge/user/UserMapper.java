@@ -17,5 +17,8 @@ public interface UserMapper {
     // 이메일 중복 체크
     int countByEmail(String email);
     
+    // 가입한 이메일인지 체크
+    UserDto findByEmail(String email);
+    
     
 }
