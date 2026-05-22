@@ -20,7 +20,7 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
             	    .requestMatchers(
-//            	    		비로그인도 접근 가능한 경로
+//            	    	비로그인도 접근 가능한 경로
             	        "/", "/login", "/signup", "/login-process",
             	        "/css/**", "/js/**", "/images/**",
             	        "/map", "/calculator",
@@ -38,6 +38,10 @@ public class SecurityConfig {
                 .failureUrl("/login?error=true")
                 .permitAll()
             )
+            .oauth2Login(oauth2 -> oauth2
+            	    .loginPage("/login")
+            	    .defaultSuccessUrl("/", true)
+            	)
             .logout(logout -> logout
             	    .logoutUrl("/logout")
             	    .logoutSuccessUrl("/")
