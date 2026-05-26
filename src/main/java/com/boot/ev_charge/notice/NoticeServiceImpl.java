@@ -12,16 +12,22 @@ public class NoticeServiceImpl implements NoticeService {
     private final NoticeDAO noticeDAO;
 
     @Override
-    public List<NoticeDTO> getNoticeList(String category) {
-        // "전체" 카테고리일 경우 MyBatis에서 처리하기 쉽게 null이나 특정 값을 넘길 수 있습니다.
-        return noticeDAO.selectNoticeList(category);
+    public List<NoticeDTO> getNoticeList(NoticeCriteria cri) {
+        // 검색, 카테고리, 페이징 정보가 담긴 cri를 그대로 DAO에 전달
+        return noticeDAO.selectNoticeList(cri);
     }
 
     @Override
-    @Transactional // 상세 조회와 조회수 증가를 하나의 작업으로 묶음
+    public int getTotalCount(NoticeCriteria cri) {
+        // 현재 검색 조건에 맞는 게시글의 총 개수 반환
+        return noticeDAO.selectNoticeCount(cri);
+    }
+
+    @Override
+    @Transactional // 조회수 증가와 조회를 원자적으로 처리
     public NoticeDTO getNoticeDetail(Long id) {
         noticeDAO.updateViews(id); // 조회수 1 증가
-        return noticeDAO.selectNoticeDetail(id); // 상세 데이터 반환
+        return noticeDAO.selectNoticeDetail(id);
     }
 
     @Override
@@ -38,5 +44,4 @@ public class NoticeServiceImpl implements NoticeService {
     public boolean removeNotice(Long id) {
         return noticeDAO.deleteNotice(id) > 0;
     }
-    
 }

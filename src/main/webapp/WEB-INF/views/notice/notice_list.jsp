@@ -86,7 +86,32 @@
                     </c:choose>
                 </c:forEach>
             </div>
+                        <!-- ── 페이징 영역 ── -->
+            <div class="ev-pagination">
+                <%-- [이전] 버튼 --%>
+                <c:if test="${cri.page > 1}">
+                    <a href="?page=${cri.page - 1}&category=${cri.category}&searchKeyword=${cri.searchKeyword}" class="ev-page-btn">
+                        &lt;
+                    </a>
+                </c:if>
+
+                <%-- 페이지 번호 --%>
+                <c:forEach var="i" begin="1" end="${totalPages}">
+                    <a href="?page=${i}&category=${cri.category}&searchKeyword=${cri.searchKeyword}" 
+                       class="ev-page-btn ${cri.page == i ? 'active' : ''}">
+                        ${i}
+                    </a>
+                </c:forEach>
+
+                <%-- [다음] 버튼 --%>
+                <c:if test="${cri.page < totalPages}">
+                    <a href="?page=${cri.page + 1}&category=${cri.category}&searchKeyword=${cri.searchKeyword}" class="ev-page-btn">
+                        &gt;
+                    </a>
+                </c:if>
+            </div>
         </div>
+        
     </main>
 
     <!-- 상세보기 모달 -->

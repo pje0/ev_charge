@@ -13,35 +13,32 @@ public class NoticeController {
 
     private final NoticeService noticeService;
 
-    // ============================================================
-    // [사용자] 공지사항 게시판 페이지 (누구나 접근)
-    // 주소: http://localhost:8383/notice/list
-    // ============================================================
+    // [사용자] 공지사항 통합 목록 (검색 + 카테고리 + 페이징)
     @GetMapping("/notice/list")
-    public String noticeList(@RequestParam(value = "category", required = false, defaultValue = "전체") String category, Model model){
-        List<NoticeDTO> list = noticeService.getNoticeList(category);
+    public String noticeList(NoticeCriteria cri, Model model) {
+        
+        // 1. 목록 데이터 가져오기 (검색/페이징 반영)
+        List<NoticeDTO> list = noticeService.getNoticeList(cri);
+        
+        // 2. 전체 게시글 수 가져오기 (검색 조건 반영)
+        int total = noticeService.getTotalCount(cri);
+        
+        // 3. 페이징 계산 (최적화 타협: 컨트롤러에서 직접 계산)
+        int totalPages = (int) Math.ceil((double) total / cri.getLimit());
+        
+        // 4. JSP로 전송
         model.addAttribute("noticeList", list);
+        model.addAttribute("total", total);
+        model.addAttribute("totalPages", totalPages);
+        model.addAttribute("cri", cri); // 현재 검색/페이지 상태 유지용
+        
         return "notice/notice_list"; 
     }
 
-    // ============================================================
-    // [공통] 공지사항 상세 데이터 (모달용 AJAX 전용)
-    // 주소: http://localhost:8383/notice/detail/{id}
-    // ============================================================
+    // [공통] 상세 데이터 (모달용)
     @GetMapping("/notice/detail/{id}")
     @ResponseBody 
-    public NoticeDTO noticeDetail(@PathVariable(value = "id") Long id) { // <- 여기 value 추가
+    public NoticeDTO noticeDetail(@PathVariable(value = "id") Long id) {
         return noticeService.getNoticeDetail(id);
-    }
-
-    // ============================================================
-    // [관리자] 대시보드 공지 관리 메인 (나중에 대시보드 탭 연동용)
-    // 주소: http://localhost:8383/admin/notice/main
-    // ============================================================
-    @GetMapping("/admin/notice/main")
-    public String adminNoticeMain(Model model) {
-        List<NoticeDTO> list = noticeService.getNoticeList("전체");
-        model.addAttribute("noticeList", list);
-        return "notice/notice_list";
     }
 }

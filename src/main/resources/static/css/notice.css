@@ -157,3 +157,41 @@
     white-space: pre-wrap;
     min-height: 150px;
 }
+/* ── 페이징 스타일 ── */
+.ev-pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    margin-top: 40px;
+    padding-top: 20px;
+}
+
+.ev-page-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    border: 1px solid var(--ev-border);
+    background: white;
+    color: var(--ev-foreground);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.15s;
+}
+
+.ev-page-btn:hover {
+    border-color: var(--ev-primary);
+    color: var(--ev-primary);
+    background: oklch(0.38 0.18 258 / 0.05);
+}
+
+.ev-page-btn.active {
+    background: var(--ev-primary);
+    color: white;
+    border-color: var(--ev-primary);
+    font-weight: 700;
+}
