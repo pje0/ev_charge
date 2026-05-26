@@ -85,9 +85,9 @@ public class ReservationService {
 
     // 7. 예약 자동 만료 처리 스케줄러 (필요 시 주석 해제하여 사용 가능)
     // @Scheduled(fixedRate = 60000)
-    public void expireReservation() {
-        reservationMapper.expireReservation();
-    }
+    //public void expireReservation() {
+    //    reservationMapper.expireReservation();
+    //}
     
     // 8. 충전기 목록 조회
     public List<ChargerDto> getChargerList() {
