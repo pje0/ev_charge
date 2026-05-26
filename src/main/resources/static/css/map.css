@@ -282,6 +282,19 @@
 
 .ev-map-reserve-btn:hover { background: var(--ev-primary-light); }
 
+.ev-map-admin-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 10;
+  display: flex;
+  gap: 8px;
+  background: white;
+  padding: 8px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+
 @media (max-width: 768px) {
   .ev-map-sidebar { width: 100%; min-width: unset; position: absolute; z-index: 30; height: 50%; bottom: 0; }
   .ev-map-detail { width: 100%; border-radius: 12px 12px 0 0; }

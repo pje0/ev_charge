@@ -117,6 +117,32 @@
 		<div class="ev-map-container">
 			<div id="kakaoMap" class="ev-map-kakao"></div>
 
+			<!-- 관리자 전용 초기화 버튼 -->
+			<sec:authorize access="hasRole('ADMIN')">
+				<div class="ev-map-admin-btn">
+					<select id="initMetroCd" class="ev-map-select" style="width: 140px">
+						<option value="11">서울</option>
+						<option value="21">부산</option>
+						<option value="22">대구</option>
+						<option value="23">인천</option>
+						<option value="24">광주</option>
+						<option value="25">대전</option>
+						<option value="26">울산</option>
+						<option value="31">경기</option>
+						<option value="32">강원</option>
+						<option value="33">충북</option>
+						<option value="34">충남</option>
+						<option value="35">전북</option>
+						<option value="36">전남</option>
+						<option value="37">경북</option>
+						<option value="38">경남</option>
+						<option value="39">제주</option>
+					</select>
+					<button type="button" class="ev-map-btn-primary"
+						onclick="initStationData()" style="width: 100px">DB 초기화</button>
+				</div>
+			</sec:authorize>
+
 			<!-- 범례 -->
 			<div class="ev-map-legend">
 				<p class="ev-map-legend-title">범례</p>
@@ -462,39 +488,36 @@ function loadRegionStations() {
     }
 
     // 내 위치
-    function getMyLocation() {
-    	console.log('내위치 버튼 클릭됨');
-      if (!navigator.geolocation) { alert('위치 정보를 지원하지 않는 브라우저입니다.'); return; }
-      navigator.geolocation.getCurrentPosition(function(pos) {
-        userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        map.setCenter(new kakao.maps.LatLng(userLocation.lat, userLocation.lng));
-        map.setLevel(8);
-
-        if (userMarker) userMarker.setMap(null);
-        userMarker = new kakao.maps.Marker({
-          position: new kakao.maps.LatLng(userLocation.lat, userLocation.lng),
-          map: map,
-          title: '내 위치'
-        });
-
-        document.getElementById('nearestBtn').disabled = false;
-        document.getElementById('nearbyList').innerHTML = '<div class="ev-map-loading">주변 충전소 불러오는 중...</div>';
-
-        // 현재 위치 기준 시도코드 추론 후 API 호출
-        var geocoder = new kakao.maps.services.Geocoder();
-        geocoder.coord2RegionCode(userLocation.lng, userLocation.lat, function(result, status) {
-        	  console.log('위치 결과:', result);
-        	  console.log('상태:', status);
-          if (status === kakao.maps.services.Status.OK) {
-            var region = result[0];
-            var metroCd = getMetroCd(region.region_1depth_name);
-            loadNearbyStations(metroCd);
-          }
-        });
-      }, function() {
-        alert('위치 정보를 가져올 수 없습니다.');
-      });
-    }
+   function getMyLocation() {
+	  if (!navigator.geolocation) { alert('위치 정보를 지원하지 않는 브라우저입니다.'); return; }
+	  navigator.geolocation.getCurrentPosition(function(pos) {
+	    userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+	    map.setCenter(new kakao.maps.LatLng(userLocation.lat, userLocation.lng));
+	    map.setLevel(8);
+	
+	    if (userMarker) userMarker.setMap(null);
+	    userMarker = new kakao.maps.Marker({
+	      position: new kakao.maps.LatLng(userLocation.lat, userLocation.lng),
+	      map: map,
+	      title: '내 위치'
+	    });
+	
+	    document.getElementById('nearestBtn').disabled = false;
+	    document.getElementById('nearbyList').innerHTML = '<div class="ev-map-loading">주변 충전소 불러오는 중...</div>';
+	
+	    var geocoder = new kakao.maps.services.Geocoder();
+	    geocoder.coord2RegionCode(userLocation.lng, userLocation.lat, function(result, status) {
+	      if (status === kakao.maps.services.Status.OK) {
+	        var region = result[0];
+	        var metroCd = getMetroCd(region.region_1depth_name);
+	        var userCity = region.region_2depth_name;
+	        loadNearbyStations(metroCd, userCity);
+	      }
+	    });
+	  }, function() {
+	    alert('위치 정보를 가져올 수 없습니다.');
+	  });
+	}
 
     function getMetroCd(regionName) {
       var map = {
@@ -509,13 +532,40 @@ function loadRegionStations() {
       return '11';
     }
 
-    function loadNearbyStations(metroCd) {
+    function loadNearbyStations(metroCd, userCity) {
     	  fetch('/api/stations?metroCd=' + metroCd)
     	    .then(function(res) { return res.json(); })
     	    .then(function(data) {
     	      if (!data || !data.data) return;
-    	      stations = data.data;
-    	      renderNearbyList();
+
+    	      var cityKeyword = userCity ? userCity.split(' ')[0] : '';
+    	      var list = data.data.filter(function(s) {
+    	        return !cityKeyword || (s.city && s.city.includes(cityKeyword));
+    	      });
+
+    	      var geocoder = new kakao.maps.services.Geocoder();
+    	      var idx = 0;
+
+    	      function geocodeNext() {
+    	        if (idx >= list.length) {
+    	          stations = list.filter(function(s) { return s.lat; });
+    	          stations.sort(function(a, b) { return (a.dist || 0) - (b.dist || 0); });
+    	          renderNearbyList();
+    	          return;
+    	        }
+    	        var s = list[idx];
+    	        geocoder.addressSearch(s.stnAddr, function(result, status) {
+    	          if (status === kakao.maps.services.Status.OK) {
+    	            s.lat = parseFloat(result[0].y);
+    	            s.lng = parseFloat(result[0].x);
+    	            s.dist = calcDistance(userLocation.lat, userLocation.lng, s.lat, s.lng);
+    	            addMarker(s.lat, s.lng, '#16a34a', s);
+    	          }
+    	          idx++;
+    	          setTimeout(geocodeNext, 150);
+    	        });
+    	      }
+    	      geocodeNext();
     	    });
     	}
 
@@ -540,6 +590,21 @@ function loadRegionStations() {
         Math.sin(dLng/2) * Math.sin(dLng/2);
       return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     }
+    
+    function initStationData() {
+    	  var metroCd = document.getElementById('initMetroCd').value;
+    	  if (!confirm('해당 지역 충전소 데이터를 DB에 저장할까요?')) return;
+    	  
+    	  fetch('/api/stations/init?metroCd=' + metroCd)
+    	    .then(function(res) { return res.json(); })
+    	    .then(function(data) {
+    	      if (data.success !== undefined) {
+    	        alert(data.total + '개 중 ' + data.success + '개 저장 완료!');
+    	      } else {
+    	        alert('오류: ' + data.error);
+    	      }
+    	    });
+    	}
   </script>
 
 </body>
