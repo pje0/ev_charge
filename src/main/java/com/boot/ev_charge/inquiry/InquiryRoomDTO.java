@@ -1,4 +1,4 @@
-package com.boot.inquiry;
+package com.boot.ev_charge.inquiry;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

@@ -1,4 +1,4 @@
-package com.boot.inquiry;
+package com.boot.ev_charge.inquiry;
 
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;

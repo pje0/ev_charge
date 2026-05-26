@@ -1,4 +1,4 @@
-package com.boot.inquiry;
+package com.boot.ev_charge.inquiry;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

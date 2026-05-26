@@ -1,4 +1,4 @@
-package com.boot.adminpage;
+package com.boot.ev_charge.adminpage;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

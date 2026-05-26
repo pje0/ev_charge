@@ -1,4 +1,4 @@
-package com.boot.inquiry;
+package com.boot.ev_charge.inquiry;
 
 import java.util.List;
 
