@@ -12,21 +12,33 @@ public class InquiryServiceImpl implements InquiryService {
     private InquiryDAO inquiryDAO;
 
     /**
-     * [사용자] 메시지 전송 로직
-     * 논리: OPEN된 방 검색 -> 없으면 생성 -> 생성된(혹은 기존) ID로 메시지 저장
+     * [추가] 방 확보 로직 (컨트롤러와 전송 로직에서 공통 사용)
+     * 논리: OPEN된 방 검색 -> 없으면 생성하여 반환
      */
     @Override
     @Transactional
-    public void sendMessageFromUser(Long userId, String content) {
+    public InquiryRoomDTO getOrCreateRoom(Long userId) {
         InquiryRoomDTO room = inquiryDAO.findOpenRoomByUserId(userId);
-        
         if (room == null) {
             room = InquiryRoomDTO.builder()
                     .userId(userId)
                     .status("OPEN")
                     .build();
-            inquiryDAO.createRoom(room); 
+            inquiryDAO.createRoom(room); // XML의 useGeneratedKeys로 id 채워짐
+            // 생성된 ID를 확실히 포함하기 위해 재조회
+            room = inquiryDAO.findOpenRoomByUserId(userId);
         }
+        return room;
+    }
+
+    /**
+     * [사용자] 메시지 전송 로직 (기존 로직 유지)
+     */
+    @Override
+    @Transactional
+    public void sendMessageFromUser(Long userId, String content) {
+        // 기존의 직접 조회/생성 로직 대신 공통 메서드 호출로 보완
+        InquiryRoomDTO room = getOrCreateRoom(userId);
 
         InquiryMessageDTO message = InquiryMessageDTO.builder()
                 .roomId(room.getId())
@@ -41,18 +53,15 @@ public class InquiryServiceImpl implements InquiryService {
     }
 
     /**
-     * [공통] 채팅 내역 조회
-     * 논리: 실시간 폴링 시 중복 읽음 처리를 방지하기 위해 단순 조회만 수행
+     * [공통] 채팅 내역 조회 (기존 유지)
      */
     @Override
     public List<InquiryMessageDTO> getChatHistory(Long roomId) {
-        // 이제 관리자가 조회해도 여기서 자동으로 읽음 처리를 하지 않습니다.
         return inquiryDAO.selectMessageList(roomId);
     }
 
     /**
-     * [관리자] 읽음 처리 전용
-     * 논리: 관리자가 방을 클릭하는 시점에 명시적으로 호출하여 읽음(is_read = 'Y') 처리 수행
+     * [관리자] 읽음 처리 전용 (기존 유지)
      */
     @Override
     @Transactional
@@ -61,8 +70,7 @@ public class InquiryServiceImpl implements InquiryService {
     }
 
     /**
-     * [관리자] 답변 전송 로직
-     * 논리: 담당 관리자 지정(최초 1회) -> 답변 메시지 저장
+     * [관리자] 답변 전송 로직 (기존 유지)
      */
     @Override
     @Transactional
@@ -82,7 +90,7 @@ public class InquiryServiceImpl implements InquiryService {
     }
 
     /**
-     * [관리자] 문의 종료 로직
+     * [관리자] 문의 종료 로직 (기존 유지)
      */
     @Override
     @Transactional

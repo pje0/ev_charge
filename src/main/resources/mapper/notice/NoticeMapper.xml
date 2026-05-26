@@ -1,0 +1,60 @@
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.boot.ev_charge.notice.NoticeDAO">
+
+    <!-- 목록 조회: is_pinned AS pinned 로 변경 -->
+    <select id="selectNoticeList" resultType="com.boot.ev_charge.notice.NoticeDTO">
+        SELECT 
+            n.id, 
+            n.category, 
+            n.title, 
+            n.content, 
+            n.is_pinned AS pinned, <!-- isPinned -> pinned 로 변경 -->
+            n.views, 
+            n.created_at AS createdAt,
+            u.name AS writerName
+        FROM notice n
+        JOIN user u ON n.writer_id = u.id
+        <where>
+            <if test="category != null and category != '전체'">
+                n.category = #{category}
+            </if>
+        </where>
+        ORDER BY n.is_pinned DESC, n.created_at DESC
+    </select>
+
+    <!-- 상세 조회: 이미 pinned로 잘 되어 있음 -->
+    <select id="selectNoticeDetail" resultType="com.boot.ev_charge.notice.NoticeDTO">
+        SELECT 
+            n.id, n.category, n.title, n.content, n.writer_id AS writerId,
+            n.is_pinned AS pinned, n.views, n.created_at AS createdAt,
+            u.name AS writerName
+        FROM notice n
+        JOIN user u ON n.writer_id = u.id
+        WHERE n.id = #{id}
+    </select>
+
+    <!-- [관리자] 작성/수정 시에도 필드명 맞춰줌 -->
+    <insert id="insertNotice" parameterType="com.boot.ev_charge.notice.NoticeDTO">
+        INSERT INTO notice (category, title, content, writer_id, is_pinned)
+        VALUES (#{category}, #{title}, #{content}, #{writerId}, #{pinned}) <!-- isPinned -> pinned -->
+    </insert>
+
+    <update id="updateNotice" parameterType="com.boot.ev_charge.notice.NoticeDTO">
+        UPDATE notice 
+        SET category = #{category}, title = #{title}, content = #{content}, is_pinned = #{pinned} <!-- isPinned -> pinned -->
+        WHERE id = #{id}
+    </update>
+
+    <!-- 조회수 증가 및 삭제는 동일 -->
+    <update id="updateViews">
+        UPDATE notice SET views = views + 1 WHERE id = #{id}
+    </update>
+
+    <delete id="deleteNotice">
+        DELETE FROM notice WHERE id = #{id}
+    </delete>
+
+</mapper>

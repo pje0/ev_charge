@@ -43,7 +43,7 @@
 
     <script>
     let currentRoomId = "${roomId}"; // 방 번호 저장
-    let lastMessageCount = ${messages.size()}; // 초기 메시지 개수 저장 (JSTL로 주입)
+    let lastMessageCount = ${not empty messages ? messages.size() : 0}; 
     // 1. 스크롤을 맨 아래로 내리는 공통 함수
     function scrollToBottom() {
         const area = document.getElementById('chatArea');

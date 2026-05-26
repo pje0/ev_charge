@@ -15,8 +15,7 @@ public class InquiryUserController {
     @Autowired
     private InquiryService inquiryService;
     
-    @Autowired
-    private InquiryDAO inquiryDAO;
+    // getOrCreateRoom 호출을 위해 서비스만 사용하도록 변경 (DAO 직접 호출 제거)
 
     // 1:1 문의 채팅창 접속
     @GetMapping("/chat")
@@ -30,15 +29,15 @@ public class InquiryUserController {
         Long userId = (Long) session.getAttribute("userId");
         if (userId == null) return "redirect:/login"; // 로그인 체크
 
-        // 현재 유저의 열려있는 방 조회
-        InquiryRoomDTO room = inquiryDAO.findOpenRoomByUserId(userId);
+        // [수정] 현재 유저의 열려있는 방 조회 (없으면 서비스에서 자동 생성)
+        // 기존의 if(room != null) 체크 로직을 서비스 내부로 옮겨 방 생성을 보장합니다.
+        InquiryRoomDTO room = inquiryService.getOrCreateRoom(userId);
         
-        if (room != null) {
-            // 대화 내역 로드 (USER 권한으로 조회)
-            List<InquiryMessageDTO> messages = inquiryService.getChatHistory(room.getId());
-            model.addAttribute("messages", messages);
-            model.addAttribute("roomId", room.getId());
-        }
+        // 대화 내역 로드 (USER 권한으로 조회)
+        List<InquiryMessageDTO> messages = inquiryService.getChatHistory(room.getId());
+        
+        model.addAttribute("messages", messages);
+        model.addAttribute("roomId", room.getId());
         
         // 이미지 확인 경로: /WEB-INF/views/inquiry/user_inquiry.jsp
         return "inquiry/user_inquiry";
@@ -60,7 +59,8 @@ public class InquiryUserController {
         inquiryService.sendMessageFromUser(userId, content);
         return "ok";
     }
- // 채팅 내역만 가져오는 API (폴링용)
+
+    // 채팅 내역만 가져오는 API (폴링용)
     @GetMapping("/messages")
     @ResponseBody
     public List<InquiryMessageDTO> getMessages(@RequestParam("roomId") Long roomId, HttpSession session) {

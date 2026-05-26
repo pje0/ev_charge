@@ -3,6 +3,8 @@ package com.boot.ev_charge.inquiry;
 import java.util.List;
 
 public interface InquiryService {
+	 // [추가] 사용자의 활성 방을 가져오거나, 없으면 새로 생성해서 반환
+    InquiryRoomDTO getOrCreateRoom(Long userId);
 
      //[사용자] 메시지 전송
      //방이 없으면 생성하고, 있으면 기존 방에 메시지를 저장합니다.
