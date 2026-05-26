@@ -216,5 +216,35 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         ]]>
 
     </update>
+    
+    <!-- ===================================================== -->
+    <!-- 충전기 목록 조회 -->
+    <!-- ===================================================== -->
+    <select id="getChargerList"
+            resultType="com.boot.ev_charge.station.ChargerDto">
+
+        select
+            id,
+            station_id as stationId,
+            connector_type as connectorType,
+            power_kw as powerKw,
+            status
+        from charger
+        order by id asc
+
+    </select>
+    
+	<select id="getReservedTimes" resultType="map">
+	    SELECT 
+	        DATE_FORMAT(rt.start_time, '%Y-%m-%d %H:%i:%s') AS startTime,
+	        DATE_FORMAT(rt.end_time, '%Y-%m-%d %H:%i:%s') AS endTime
+	    FROM reservation r
+	    JOIN reservation_time rt
+	        ON r.id = rt.reservation_id
+	    WHERE r.charger_id = #{chargerId}
+	      AND DATE(rt.start_time) = #{date}
+	      AND r.reservation_type = 'TIME'
+	      AND r.status = 'RESERVED'
+	</select>
 
 </mapper>
