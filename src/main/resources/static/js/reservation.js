@@ -1,4 +1,3 @@
-
 let selectedChargerId = null;
 let selectedChargerName = null;
 
