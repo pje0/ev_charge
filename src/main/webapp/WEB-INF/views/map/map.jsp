@@ -185,6 +185,10 @@
 								class="ev-map-detail-card-value ev-map-detail-car"
 								id="detailCar"></span>
 						</div>
+						<div class="ev-map-detail-card" style="grid-column: span 2">
+						    <span class="ev-map-detail-card-label">충전기 상태</span>
+						    <span class="ev-map-detail-card-value" id="detailStatus"></span>
+						</div>
 					</div>
 				</div>
 				<div class="ev-map-detail-footer">
@@ -281,13 +285,22 @@
 
     // 상세 패널
     function showDetail(station) {
-      document.getElementById('detailName').textContent = station.stnPlace || station.name || '-';
-      document.getElementById('detailAddr').textContent = station.stnAddr || station.address || '-';
-      document.getElementById('detailRapid').textContent = (station.rapidCnt || 0) + '대';
-      document.getElementById('detailSlow').textContent = (station.slowCnt || 0) + '대';
-      document.getElementById('detailCar').textContent = station.carType || '-';
-      document.getElementById('detailPanel').style.display = 'flex';
-    }
+	  document.getElementById('detailName').textContent = station.stnPlace || station.name || '-';
+	  document.getElementById('detailAddr').textContent = station.stnAddr || station.address || '-';
+	  document.getElementById('detailRapid').textContent = (station.rapidCnt || 0) + '대';
+	  document.getElementById('detailSlow').textContent = (station.slowCnt || 0) + '대';
+	  document.getElementById('detailCar').textContent = station.carType || '-';
+	
+	  // 상태 정보 추가 (detailPanel HTML에 id 추가 필요)
+	  var statusEl = document.getElementById('detailStatus');
+	  if (statusEl) {
+	      statusEl.innerHTML =
+	          '<span style="color:#16a34a">사용가능 ' + (station.availableCnt||0) + '대</span> / ' +
+	          '<span style="color:#d97706">사용중 ' + (station.inUseCnt||0) + '대</span> / ' +
+	          '<span style="color:#dc2626">점검중 ' + (station.outOfServiceCnt||0) + '대</span>';
+	  }
+	  document.getElementById('detailPanel').style.display = 'flex';
+	}
 
     function closeDetail() {
       document.getElementById('detailPanel').style.display = 'none';
@@ -475,16 +488,17 @@ function loadRegionStations() {
       list.forEach(function(s, idx) {
         var dist = s.dist ? s.dist.toFixed(1) + 'km' : '';
         html += '<div class="ev-map-station-item" onclick="moveToNearbyStation(' + idx + ')">' +
-          '<div class="ev-map-station-item-top">' +
-            '<span class="ev-map-station-item-name">' + (s.stnPlace || '-') + '</span>' +
-            (dist ? '<span class="ev-map-station-item-dist">' + dist + '</span>' : '') +
-          '</div>' +
-          '<p class="ev-map-station-item-addr">📍 ' + (s.stnAddr || '-') + '</p>' +
-          '<div class="ev-map-station-item-bottom">' +
-            '<span class="ev-map-station-item-rapid">급속 ' + (s.rapidCnt || 0) + '대</span>' +
-            '<span class="ev-map-station-item-slow">완속 ' + (s.slowCnt || 0) + '대</span>' +
-          '</div>' +
-        '</div>';
+        '<div class="ev-map-station-item-top">' +
+          '<span class="ev-map-station-item-name">' + (s.stnPlace || '-') + '</span>' +
+          (dist ? '<span class="ev-map-station-item-dist">' + dist + '</span>' : '') +
+        '</div>' +
+        '<p class="ev-map-station-item-addr">📍 ' + (s.stnAddr || '-') + '</p>' +
+        '<div class="ev-map-station-item-bottom">' +
+          '<span class="ev-map-station-item-rapid">급속 ' + (s.rapidCnt || 0) + '대</span>' +
+          '<span class="ev-map-station-item-slow">완속 ' + (s.slowCnt || 0) + '대</span>' +
+          '<span style="margin-left:auto; color:#16a34a; font-size:12px;">사용가능 ' + s.availableCnt + '/' + ((s.rapidCnt||0)+(s.slowCnt||0)) + '</span>' +
+        '</div>' +
+      '</div>';
         addMarker(s.lat, s.lng, '#16a34a', s);
       });
       document.getElementById('nearbyList').innerHTML = html;
@@ -545,29 +559,31 @@ function loadRegionStations() {
 	            
 	            // DB 필드명 맞게 변환
 	            stations = data.map(function(s) {
-
 				    s.stnPlace = s.name;
 				    s.stnAddr = s.address;
-				
 				    s.lat = parseFloat(s.latitude);
 				    s.lng = parseFloat(s.longitude);
+				    s.availableCnt = s.availableCnt || 0;
+				    s.inUseCnt = s.inUseCnt || 0;
+				    s.outOfServiceCnt = s.outOfServiceCnt || 0;
 				
-				    console.log('DB 좌표:', s.stnPlace, s.lat, s.lng);
+				    // 마커 색상 결정
+				    if (s.availableCnt > 0) s.markerColor = '#16a34a';
+				    else if (s.inUseCnt > 0) s.markerColor = '#d97706';
+				    else s.markerColor = '#dc2626';
 				
-				    s.dist =
-				        !isNaN(s.lat) && !isNaN(s.lng)
+				    s.dist = !isNaN(s.lat) && !isNaN(s.lng)
 				        ? calcDistance(userLocation.lat, userLocation.lng, s.lat, s.lng)
 				        : null;
-				
 				    return s;
 				});
 	            stations.sort(function(a, b) { return (a.dist || 0) - (b.dist || 0); });
 
 	            clearMarkers();
 	            stations.forEach(function(s) {
-	            	if (!isNaN(s.lat) && !isNaN(s.lng)) {
-	            	    addMarker(s.lat, s.lng, '#16a34a', s);
-	            	}
+	                if (!isNaN(s.lat) && !isNaN(s.lng)) {
+	                    addMarker(s.lat, s.lng, s.markerColor, s);
+	                }
 	            });
 	            renderNearbyList();
 	        });

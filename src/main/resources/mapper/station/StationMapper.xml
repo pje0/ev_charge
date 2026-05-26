@@ -36,19 +36,23 @@
 		SELECT COUNT(*) FROM station WHERE address = #{address}
 	</select>
 
-	<select id="findByMetroAndCity"
-		resultType="com.boot.ev_charge.station.StationDto">
-		SELECT id, name, address, metro, city, rapid_cnt, slow_cnt, car_type,
-		latitude, longitude
-		FROM station
-		<where>
-			<if test="metro != null and metro != ''">
-				AND metro = #{metro}
-			</if>
-			<if test="city != null and city != ''">
-				AND city LIKE CONCAT('%', #{city}, '%')
-			</if>
-		</where>
+	<select id="findByMetroAndCity" resultType="com.boot.ev_charge.station.StationDto">
+	    SELECT s.id, s.name, s.address, s.metro, s.city, s.rapid_cnt, s.slow_cnt, s.car_type,
+	           s.latitude, s.longitude,
+	           SUM(CASE WHEN c.status = 'AVAILABLE' THEN 1 ELSE 0 END) AS available_cnt,
+	           SUM(CASE WHEN c.status = 'IN_USE' THEN 1 ELSE 0 END) AS in_use_cnt,
+	           SUM(CASE WHEN c.status = 'OUT_OF_SERVICE' THEN 1 ELSE 0 END) AS out_of_service_cnt
+	    FROM station s
+	    LEFT JOIN charger c ON s.id = c.station_id
+	    <where>
+	        <if test="metro != null and metro != ''">
+	            AND s.metro = #{metro}
+	        </if>
+	        <if test="city != null and city != ''">
+	            AND s.city LIKE CONCAT('%', #{city}, '%')
+	        </if>
+	    </where>
+	    GROUP BY s.id, s.name, s.address, s.metro, s.city, s.rapid_cnt, s.slow_cnt, s.car_type, s.latitude, s.longitude
 	</select>
 
 </mapper>

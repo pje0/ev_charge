@@ -14,4 +14,8 @@ public class StationDto {
     private String carType;
     private Double latitude;
     private Double longitude;
+    
+    private Integer availableCnt;  // 사용 가능
+    private Integer inUseCnt;      // 사용 중
+    private Integer outOfServiceCnt; // 점검 중
 }
