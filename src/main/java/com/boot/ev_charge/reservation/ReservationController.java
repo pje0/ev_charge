@@ -4,17 +4,18 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+<<<<<<< feature/조성민
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
+=======
+import org.springframework.web.bind.annotation.RestController;
+>>>>>>> 5a22b00 도중 저장
 
+<<<<<<< feature/조성민
 import com.boot.ev_charge.station.ChargerDto;
 import com.boot.ev_charge.user.UserDto;
 import com.boot.ev_charge.user.UserService;
@@ -23,15 +24,16 @@ import lombok.extern.slf4j.Slf4j;
 
 @Controller
 @Slf4j
+=======
+@RestController
+>>>>>>> 5a22b00 도중 저장
 @RequestMapping("/reservation")
 public class ReservationController {
 
     @Autowired
-    private UserService userService;
-
-    @Autowired
     private ReservationService reservationService;
 
+<<<<<<< feature/조성민
     // 예약 페이지
     @GetMapping("")
     public String reservationPage(Model model) {
@@ -52,11 +54,18 @@ public class ReservationController {
 
         return "reservation/reservation";
     }
+=======
+>>>>>>> 5a22b00 도중 저장
 
     // 예약 생성
     @PostMapping("/create")
+<<<<<<< feature/조성민
     public String createReservation(ReservationDto reservationDto, @AuthenticationPrincipal UserDetails userDetails, Model model) {
+=======
+    public String createReservation(@RequestBody ReservationDto dto) {
+>>>>>>> 5a22b00 도중 저장
 
+<<<<<<< feature/조성민
     	// 로그인 여부 확인
     	if (userDetails == null) {
 			return "redirect:/login";
@@ -81,7 +90,13 @@ public class ReservationController {
         model.addAttribute("reservation", reservation);
 
         return "reservation/reservationSuccess";
+=======
+        reservationService.createReservation(dto);
+
+        return "예약 완료";
+>>>>>>> 5a22b00 도중 저장
     }
+<<<<<<< feature/조성민
     
     // 예약 목록
     @GetMapping("/my")
@@ -107,9 +122,13 @@ public class ReservationController {
     	
     	return "reservation/myReservation";
     }
+=======
+
+>>>>>>> 5a22b00 도중 저장
 
     // 예약 상세 조회
     @GetMapping("/{reservationId}")
+<<<<<<< feature/조성민
     public String getReservationDetail(@PathVariable Long reservationId, Model model, @AuthenticationPrincipal UserDetails userDetails) {
     	
     	// 로그인 여부 확인
@@ -118,7 +137,12 @@ public class ReservationController {
     	}
     	
     	log.info("@# [GET] /reservation/{} -> getReservationDetail() 호출", reservationId);
+=======
+    public ReservationDto getReservationDetail(
+            @PathVariable Long reservationId) {
+>>>>>>> 5a22b00 도중 저장
 
+<<<<<<< feature/조성민
     	ReservationDto reservation = reservationService.getReservationDetail(reservationId);
     	log.info("@# 조회된 상세 데이터: {}", reservation);
     	
@@ -126,7 +150,20 @@ public class ReservationController {
     	log.info("@# 리턴할 뷰 경로: reservation/reservationDetail");
     	
         return "reservation/reservationDetail";
+=======
+        return reservationService.getReservationDetail(reservationId);
+>>>>>>> 5a22b00 도중 저장
     }
+
+
+    // 회원 예약 목록 조회
+    @GetMapping("/user/{userId}")
+    public List<ReservationDto> getReservationListByUser(
+            @PathVariable Long userId) {
+
+        return reservationService.getReservationListByUser(userId);
+    }
+
 
     // 충전 시작
     @PostMapping("/start/{reservationId}")
@@ -136,8 +173,9 @@ public class ReservationController {
         reservationService.startCharging(reservationId);
         log.info("@# 충전 시작 상태 변경 완료 -> 목록으로 리다이렉트");
 
-        return "redirect:/reservation/my";
+        return "충전 시작";
     }
+
 
     // 충전 완료
     @PostMapping("/complete/{reservationId}")
@@ -147,8 +185,9 @@ public class ReservationController {
         reservationService.completeCharging(reservationId);
         log.info("@# 충전 완료 상태 변경 완료 -> 목록으로 리다이렉트");
 
-        return "redirect:/reservation/my";
+        return "충전 완료";
     }
+
 
     // 예약 취소
     @PostMapping("/cancel/{reservationId}")
@@ -158,7 +197,7 @@ public class ReservationController {
         reservationService.cancelReservation(reservationId);
         log.info("@# 예약 취소 완료 -> 목록으로 리다이렉트");
 
-        return "redirect:/reservation/my";
+        return "예약 취소 완료";
     }
     
     @GetMapping("/reserved-times")
