@@ -241,24 +241,37 @@
 
     // 마커 추가
     function addMarker(lat, lng, color, station) {
-      if (!lat || !lng) return;
-      var markerImage = new kakao.maps.MarkerImage(
+
+    lat = parseFloat(lat);
+    lng = parseFloat(lng);
+
+    console.log('마커 생성:', station.stnPlace, lat, lng);
+
+    if (isNaN(lat) || isNaN(lng)) {
+        console.log('좌표 오류');
+        return;
+    }
+
+    var markerImage = new kakao.maps.MarkerImage(
         getMarkerSVG(color),
         new kakao.maps.Size(36, 44),
         { offset: new kakao.maps.Point(18, 44) }
-      );
-      var marker = new kakao.maps.Marker({
+    );
+
+    var marker = new kakao.maps.Marker({
         position: new kakao.maps.LatLng(lat, lng),
         map: map,
         image: markerImage,
         title: station.stnPlace || station.name
-      });
-      kakao.maps.event.addListener(marker, 'click', function() {
+    });
+
+    kakao.maps.event.addListener(marker, 'click', function() {
         showDetail(station);
         map.setCenter(new kakao.maps.LatLng(lat, lng));
-      });
-      markers.push(marker);
-    }
+    });
+
+    markers.push(marker);
+}
 
     // 마커 전체 제거
     function clearMarkers() {
@@ -507,16 +520,57 @@ function loadRegionStations() {
 	
 	    var geocoder = new kakao.maps.services.Geocoder();
 	    geocoder.coord2RegionCode(userLocation.lng, userLocation.lat, function(result, status) {
-	      if (status === kakao.maps.services.Status.OK) {
-	        var region = result[0];
-	        var metroCd = getMetroCd(region.region_1depth_name);
-	        var userCity = region.region_2depth_name;
-	        loadNearbyStations(metroCd, userCity);
-	      }
+	        if (status === kakao.maps.services.Status.OK) {
+	            var region = result[0];
+	            var metro = region.region_1depth_name; // ex) 경기도
+	            var city = region.region_2depth_name;  // ex) 수원시 장안구
+	            console.log('metro:', metro, 'city:', city);
+	            loadNearbyStationsFromDb(metro, city);
+	        }
 	    });
 	  }, function() {
 	    alert('위치 정보를 가져올 수 없습니다.');
 	  });
+	}
+    
+   function loadNearbyStationsFromDb(metro, city) {
+	    var cityKeyword = city ? city.split(' ')[0] : '';
+	    fetch('/api/stations/db?metroCd=' + encodeURIComponent(metro) + '&city=' + encodeURIComponent(cityKeyword))
+	        .then(function(res) { return res.json(); })
+	        .then(function(data) {
+	            if (!data || data.length === 0) {
+	                document.getElementById('nearbyList').innerHTML = '<div class="ev-map-empty">주변 충전소 없음</div>';
+	                return;
+	            }
+	            
+	            // DB 필드명 맞게 변환
+	            stations = data.map(function(s) {
+
+				    s.stnPlace = s.name;
+				    s.stnAddr = s.address;
+				
+				    s.lat = parseFloat(s.latitude);
+				    s.lng = parseFloat(s.longitude);
+				
+				    console.log('DB 좌표:', s.stnPlace, s.lat, s.lng);
+				
+				    s.dist =
+				        !isNaN(s.lat) && !isNaN(s.lng)
+				        ? calcDistance(userLocation.lat, userLocation.lng, s.lat, s.lng)
+				        : null;
+				
+				    return s;
+				});
+	            stations.sort(function(a, b) { return (a.dist || 0) - (b.dist || 0); });
+
+	            clearMarkers();
+	            stations.forEach(function(s) {
+	            	if (!isNaN(s.lat) && !isNaN(s.lng)) {
+	            	    addMarker(s.lat, s.lng, '#16a34a', s);
+	            	}
+	            });
+	            renderNearbyList();
+	        });
 	}
 
     function getMetroCd(regionName) {

@@ -3,24 +3,52 @@
     "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.boot.ev_charge.station.StationMapper">
 
-    <insert id="insertStation" parameterType="com.boot.ev_charge.station.StationDto"
-            useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO station (name, address, metro, city, rapid_cnt, slow_cnt, car_type, latitude, longitude)
-        VALUES (#{name}, #{address}, #{metro}, #{city}, #{rapidCnt}, #{slowCnt}, #{carType}, #{latitude}, #{longitude})
-    </insert>
+	<insert id="insertStation"
+		parameterType="com.boot.ev_charge.station.StationDto"
+		useGeneratedKeys="true" keyProperty="id">
+		INSERT INTO station (name,
+		address, metro, city, rapid_cnt, slow_cnt,
+		car_type, latitude,
+		longitude)
+		VALUES (#{name}, #{address}, #{metro}, #{city}, #{rapidCnt},
+		#{slowCnt},
+		#{carType}, #{latitude}, #{longitude})
+	</insert>
 
-    <select id="findAll" resultType="com.boot.ev_charge.station.StationDto">
-        SELECT id, name, address, metro, city, rapid_cnt, slow_cnt, car_type, latitude, longitude
-        FROM station
-    </select>
+	<select id="findAll"
+		resultType="com.boot.ev_charge.station.StationDto">
+		SELECT id, name, address, metro, city, rapid_cnt, slow_cnt,
+		car_type,
+		latitude, longitude
+		FROM station
+	</select>
 
-    <select id="findById" parameterType="Long" resultType="com.boot.ev_charge.station.StationDto">
-        SELECT id, name, address, metro, city, rapid_cnt, slow_cnt, car_type, latitude, longitude
-        FROM station WHERE id = #{id}
-    </select>
+	<select id="findById" parameterType="Long"
+		resultType="com.boot.ev_charge.station.StationDto">
+		SELECT id, name, address, metro, city, rapid_cnt, slow_cnt,
+		car_type,
+		latitude, longitude
+		FROM station WHERE id = #{id}
+	</select>
 
-    <select id="countByAddress" parameterType="String" resultType="int">
-        SELECT COUNT(*) FROM station WHERE address = #{address}
-    </select>
+	<select id="countByAddress" parameterType="String"
+		resultType="int">
+		SELECT COUNT(*) FROM station WHERE address = #{address}
+	</select>
+
+	<select id="findByMetroAndCity"
+		resultType="com.boot.ev_charge.station.StationDto">
+		SELECT id, name, address, metro, city, rapid_cnt, slow_cnt, car_type,
+		latitude, longitude
+		FROM station
+		<where>
+			<if test="metro != null and metro != ''">
+				AND metro = #{metro}
+			</if>
+			<if test="city != null and city != ''">
+				AND city LIKE CONCAT('%', #{city}, '%')
+			</if>
+		</where>
+	</select>
 
 </mapper>

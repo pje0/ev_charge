@@ -3,6 +3,7 @@ package com.boot.ev_charge.station;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Random;
 
 @Service
@@ -48,5 +49,9 @@ public class StationService {
             charger.setStatus(STATUSES[random.nextInt(STATUSES.length)]);
             chargerMapper.insertCharger(charger);
         }
+    }
+    
+    public List<StationDto> getStations(String metro, String city) {
+        return stationMapper.findByMetroAndCity(metro, city);
     }
 }
