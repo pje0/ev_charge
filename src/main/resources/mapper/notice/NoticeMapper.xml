@@ -1,0 +1,79 @@
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.boot.ev_charge.notice.NoticeDAO">
+
+    <!-- [공통] 검색 조건 SQL 조각 (재사용을 위해 분리) -->
+    <sql id="searchCondition">
+        <where>
+            <if test="category != null and category != '전체'">
+                AND n.category = #{category}
+            </if>
+            <if test="searchKeyword != null and searchKeyword != ''">
+                AND (n.title LIKE CONCAT('%', #{searchKeyword}, '%') 
+                     OR n.content LIKE CONCAT('%', #{searchKeyword}, '%'))
+            </if>
+        </where>
+    </sql>
+
+    <!-- 1. 목록 조회: 검색 + 페이징(LIMIT) 반영 -->
+    <select id="selectNoticeList" resultType="com.boot.ev_charge.notice.NoticeDTO">
+        SELECT 
+            n.id, 
+            n.category, 
+            n.title, 
+            n.content, 
+            n.is_pinned AS pinned, 
+            n.views, 
+            n.created_at AS createdAt,
+            u.name AS writerName
+        FROM notice n
+        JOIN user u ON n.writer_id = u.id
+        <include refid="searchCondition" />
+        ORDER BY n.created_at DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <!-- 2. 총 개수 조회: 페이징 하단 번호 계산용 -->
+    <select id="selectNoticeCount" resultType="int">
+        SELECT COUNT(*)
+        FROM notice n
+        <include refid="searchCondition" />
+    </select>
+
+    <!-- 3. 상세 조회 -->
+    <select id="selectNoticeDetail" resultType="com.boot.ev_charge.notice.NoticeDTO">
+        SELECT 
+            n.id, n.category, n.title, n.content, n.writer_id AS writerId,
+            n.is_pinned AS pinned, n.views, n.created_at AS createdAt,
+            u.name AS writerName
+        FROM notice n
+        JOIN user u ON n.writer_id = u.id
+        WHERE n.id = #{id}
+    </select>
+
+    <!-- 4. 조회수 증가 -->
+    <update id="updateViews">
+        UPDATE notice SET views = views + 1 WHERE id = #{id}
+    </update>
+
+    <!-- 5. [관리자] 작성 -->
+    <insert id="insertNotice" parameterType="com.boot.ev_charge.notice.NoticeDTO">
+        INSERT INTO notice (category, title, content, writer_id, is_pinned)
+        VALUES (#{category}, #{title}, #{content}, #{writerId}, #{pinned})
+    </insert>
+
+    <!-- 6. [관리자] 수정 -->
+    <update id="updateNotice" parameterType="com.boot.ev_charge.notice.NoticeDTO">
+        UPDATE notice 
+        SET category = #{category}, title = #{title}, content = #{content}, is_pinned = #{pinned}
+        WHERE id = #{id}
+    </update>
+
+    <!-- 7. [관리자] 삭제 -->
+    <delete id="deleteNotice">
+        DELETE FROM notice WHERE id = #{id}
+    </delete>
+
+</mapper>
