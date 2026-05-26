@@ -1,0 +1,279 @@
+/* ============================================================
+   EV 충전소 - 메인페이지 전용 스타일
+   prefix: ev-main- (타 팀원 CSS 충돌 방지)
+   ============================================================ */
+
+/* ── 히어로 ── */
+.ev-main-hero {
+  position: relative;
+  min-height: 92vh;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  padding-top: 64px;
+}
+.ev-main-hero-bg {
+  position: absolute; inset: 0;
+  background-image: url('https://d2xsxph8kpxj0f.cloudfront.net/310519663677910106/BZdAfi2QX5wBdF2Qd5u7ZV/ev-hero-bg-namjNWCxZvjy9jEF7wZjpg.webp');
+  background-size: cover;
+  background-position: center;
+}
+.ev-main-hero-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(to right,
+    oklch(0.10 0.10 258 / 0.90),
+    oklch(0.10 0.10 258 / 0.70),
+    oklch(0.10 0.10 258 / 0.30));
+}
+.ev-main-hero-content {
+  position: relative;
+  max-width: 640px;
+}
+.ev-main-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.15);
+  color: white;
+  border: 1px solid rgba(255,255,255,0.3);
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 16px;
+  backdrop-filter: blur(4px);
+}
+.ev-main-hero-title {
+  font-size: clamp(36px, 6vw, 64px);
+  font-weight: 800;
+  color: white;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  margin-bottom: 24px;
+}
+.ev-main-hero-title-accent { color: oklch(0.75 0.15 180); }
+.ev-main-hero-desc {
+  font-size: 18px;
+  color: rgba(255,255,255,0.8);
+  margin-bottom: 32px;
+  line-height: 1.7;
+}
+.ev-main-hero-btns { display: flex; gap: 12px; flex-wrap: wrap; }
+
+.ev-main-hero-btn-primary {
+  padding: 12px 24px;
+  background: white;
+  color: oklch(0.38 0.18 258);
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  transition: all 0.15s;
+}
+.ev-main-hero-btn-primary:hover { background: rgba(255,255,255,0.9); }
+
+.ev-main-hero-btn-outline {
+  padding: 12px 24px;
+  background: transparent;
+  color: white;
+  border: 1px solid rgba(255,255,255,0.5);
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  backdrop-filter: blur(4px);
+  transition: all 0.15s;
+}
+.ev-main-hero-btn-outline:hover { background: rgba(255,255,255,0.15); }
+
+/* ── 통계 바 ── */
+.ev-main-stats-bar {
+  background: linear-gradient(to right, oklch(0.38 0.18 258), oklch(0.52 0.13 180));
+  padding: 32px 0;
+}
+.ev-main-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+}
+.ev-main-stats-item { text-align: center; color: white; }
+.ev-main-stats-icon { font-size: 20px; margin-bottom: 8px; opacity: 0.7; }
+.ev-main-stats-value { font-size: 28px; font-weight: 800; }
+.ev-main-stats-label { font-size: 13px; color: rgba(255,255,255,0.7); margin-top: 2px; }
+
+/* ── 섹션 공통 ── */
+.ev-main-section { padding: 80px 0; }
+.ev-main-section-bg-muted { background: oklch(0.95 0.005 258 / 0.4); }
+.ev-main-section-header { text-align: center; margin-bottom: 48px; }
+.ev-main-section-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--ev-muted);
+  color: var(--ev-muted-foreground);
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 12px;
+}
+.ev-main-section-title {
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-bottom: 12px;
+}
+.ev-main-section-desc {
+  color: var(--ev-muted-foreground);
+  max-width: 400px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+/* ── 기능 카드 ── */
+.ev-main-features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+.ev-main-feature-card {
+  background: white;
+  border: 1px solid var(--ev-border);
+  border-radius: 12px;
+  padding: 24px;
+  text-decoration: none;
+  color: inherit;
+  display: block;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.ev-main-feature-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px oklch(0.38 0.18 258 / 0.10);
+}
+.ev-main-feature-icon-wrap {
+  width: 48px; height: 48px;
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+  margin-bottom: 16px;
+  transition: transform 0.2s;
+}
+.ev-main-feature-card:hover .ev-main-feature-icon-wrap { transform: scale(1.1); }
+.ev-main-feature-icon-blue { background: oklch(0.38 0.18 258 / 0.10); }
+.ev-main-feature-icon-teal { background: oklch(0.52 0.13 180 / 0.10); }
+.ev-main-feature-icon-green { background: oklch(0.60 0.17 145 / 0.10); }
+.ev-main-feature-title { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+.ev-main-feature-desc {
+  font-size: 14px;
+  color: var(--ev-muted-foreground);
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+.ev-main-feature-link {
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.ev-main-feature-link-blue { color: oklch(0.38 0.18 258); }
+.ev-main-feature-link-teal { color: oklch(0.52 0.13 180); }
+.ev-main-feature-link-green { color: oklch(0.60 0.17 145); }
+
+/* ── CTA ── */
+.ev-main-cta-inner {
+  border-radius: 16px;
+  overflow: hidden;
+  position: relative;
+}
+.ev-main-cta-bg {
+  position: absolute; inset: 0;
+  background-image: url('https://d2xsxph8kpxj0f.cloudfront.net/310519663677910106/BZdAfi2QX5wBdF2Qd5u7ZV/ev-charger-detail-AdbxcNYnrkxPL7jLXCyqFg.webp');
+  background-size: cover;
+  background-position: center;
+}
+.ev-main-cta-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(to right,
+    oklch(0.10 0.10 258 / 0.92),
+    oklch(0.10 0.10 258 / 0.70));
+}
+.ev-main-cta-content {
+  position: relative;
+  padding: 56px 48px;
+  max-width: 480px;
+}
+.ev-main-cta-title {
+  font-size: 32px;
+  font-weight: 800;
+  color: white;
+  margin-bottom: 16px;
+  line-height: 1.3;
+}
+.ev-main-cta-desc {
+  color: rgba(255,255,255,0.75);
+  margin-bottom: 24px;
+  line-height: 1.7;
+}
+.ev-main-cta-btn {
+  padding: 12px 24px;
+  background: oklch(0.52 0.13 180);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.15s;
+}
+.ev-main-cta-btn:hover { background: oklch(0.45 0.13 180); }
+
+/* ── 푸터 ── */
+.ev-footer {
+  background: oklch(0.15 0.04 258);
+  color: rgba(255,255,255,0.6);
+  padding: 40px 0;
+}
+.ev-footer-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.ev-footer-logo { display: flex; align-items: center; gap: 8px; }
+.ev-footer-logo-icon {
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, oklch(0.38 0.18 258), oklch(0.52 0.13 180));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+}
+.ev-footer-logo-text { font-weight: 700; color: white; }
+.ev-footer-links { display: flex; gap: 16px; font-size: 14px; }
+.ev-footer-copy {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  text-align: center;
+  font-size: 12px;
+  color: rgba(255,255,255,0.4);
+}
+
+@media (max-width: 768px) {
+  .ev-main-stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .ev-main-features-grid { grid-template-columns: 1fr; }
+  .ev-main-cta-content { padding: 40px 24px; }
+}
