@@ -17,7 +17,7 @@ public class NoticeCriteria {
     // 기본 생성자: 처음 게시판 들어왔을 때 초기값 설정
     public NoticeCriteria() {
         this.page = 1;
-        this.limit = 10; // 한 페이지에 10개씩
+        this.limit = 5; // 한 페이지에 5개씩
         this.category = "전체";
         this.searchKeyword = "";
     }

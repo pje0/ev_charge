@@ -9,21 +9,6 @@
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/notice.css">
 </head>
 <body>
-
-    <!-- 공통 헤더 영역 (common.css 적용됨) -->
-    <header class="ev-header">
-        <div class="ev-container ev-header-inner">
-            <a href="/" class="ev-header-logo">
-                <div class="ev-header-logo-icon">E</div>
-                <div><span class="ev-header-logo-bold">EV</span><span class="ev-header-logo-light">충전소</span></div>
-            </a>
-            <nav class="ev-header-nav">
-                <a href="/notice/list" class="ev-header-nav-link active">공지사항</a>
-                <a href="/admin/notice/main" class="ev-header-nav-link ev-header-nav-link-admin">관리자</a>
-            </nav>
-        </div>
-    </header>
-
     <main class="ev-notice-wrapper">
         <div class="ev-container">
             
@@ -32,86 +17,92 @@
                 <p class="ev-notice-subtitle">서비스 점검 및 이벤트 소식을 전해드립니다.</p>
             </section>
 
-            <!-- 검색 및 필터 -->
+            <!-- 1. 검색 및 필터 -->
             <section class="ev-notice-filter-bar">
                 <form action="/notice/list" method="get" class="ev-search-group">
-                    <input type="text" name="searchKeyword" class="ev-search-input" placeholder="검색어를 입력하세요" value="${param.searchKeyword}">
+                    <input type="text" name="searchKeyword" class="ev-search-input" placeholder="검색어를 입력하세요" value="${cri.searchKeyword}">
                     <button type="submit" class="ev-btn ev-btn-primary">검색</button>
                 </form>
 
                 <div class="ev-filter-tabs">
                     <c:forEach var="cat" items="${['전체', '공지', '이벤트', '점검', '안내']}">
-                        <a href="?category=${cat}" class="ev-btn ${ (param.category == cat || (empty param.category && cat == '전체')) ? 'ev-btn-primary' : 'ev-btn-outline' }">
+                        <a href="?category=${cat}" class="ev-btn ${ (cri.category == cat || (empty cri.category && cat == '전체')) ? 'ev-btn-primary' : 'ev-btn-outline' }">
                             ${cat}
                         </a>
                     </c:forEach>
                 </div>
             </section>
 
-            <!-- 리스트 -->
-            <div class="ev-notice-list">
-                <c:set var="pin_count" value="0" />
+            <!-- 2. [상단 고정 공지 전용 영역] 최대 3개까지만 출력 -->
+            <div class="ev-notice-pinned-section" style="margin-bottom: 30px;">
+                <c:set var="pin_limit" value="0" />
                 <c:forEach var="n" items="${noticeList}">
-                    <c:choose>
-                        <c:when test="${n.pinned && pin_count < 3}">
-                            <c:set var="pin_count" value="${pin_count + 1}" />
-                            <div class="ev-notice-card pinned" onclick="fn_show_detail('${n.id}')">
-                                <div class="ev-card-content">
-                                    <div class="ev-card-top">
-                                        <span class="ev-badge-pin">중요</span>
-                                        <span class="ev-category-text">${n.category}</span>
-                                    </div>
-                                    <h3 class="ev-card-title">${n.title}</h3>
-                                    <div class="ev-card-meta">
-                                        <span>${n.writerName}</span>
-                                        <span>${n.createdAt}</span>
-                                        <span>조회 ${n.views}</span>
-                                    </div>
+                    <c:if test="${n.pinned && pin_limit < 3}">
+                        <c:set var="pin_limit" value="${pin_limit + 1}" />
+                        <div class="ev-notice-card pinned" onclick="fn_show_detail('${n.id}')" style="margin-bottom: 12px; border-left: 4px solid var(--ev-primary); background: oklch(0.38 0.18 258 / 0.03);">
+                            <div class="ev-card-content">
+                                <div class="ev-card-top">
+                                    <span class="ev-badge-pin">중요</span>
+                                    <span class="ev-category-text">${n.category}</span>
+                                </div>
+                                <h3 class="ev-card-title">${n.title}</h3>
+                                <div class="ev-card-meta">
+                                    <span>${n.writerName}</span>
+                                    <span>${n.createdAt}</span>
+                                    <span>조회 ${n.views}</span>
                                 </div>
                             </div>
-                        </c:when>
-                        <c:otherwise>
-                            <div class="ev-notice-card" onclick="fn_show_detail('${n.id}')">
-                                <div class="ev-card-content">
-                                    <div class="ev-card-top"><span class="ev-category-text">${n.category}</span></div>
-                                    <h3 class="ev-card-title">${n.title}</h3>
-                                    <div class="ev-card-meta">
-                                        <span>${n.writerName}</span>
-                                        <span>${n.createdAt}</span>
-                                        <span>조회 ${n.views}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </c:otherwise>
-                    </c:choose>
+                        </div>
+                    </c:if>
                 </c:forEach>
             </div>
-                        <!-- ── 페이징 영역 ── -->
+
+            <!-- 구분선 (디자인 요소) -->
+            <div style="height: 1px; background: var(--ev-border); margin: 40px 0;"></div>
+
+            <!-- 3. [전체 공지 리스트 영역] 고정글 포함 모든 데이터를 날짜순으로 출력 -->
+            <div class="ev-notice-list">
+                <c:forEach var="n" items="${noticeList}">
+                    <div class="ev-notice-card" onclick="fn_show_detail('${n.id}')">
+                        <div class="ev-card-content">
+                            <div class="ev-card-top">
+                                <%-- 전체 목록에서도 고정글인 경우 아이콘이나 뱃지로 살짝 표시 --%>
+                                <c:if test="${n.pinned}"><i style="color:var(--ev-primary); margin-right:5px;">📌</i></c:if>
+                                <span class="ev-category-text">${n.category}</span>
+                            </div>
+                            <h3 class="ev-card-title">${n.title}</h3>
+                            <div class="ev-card-meta">
+                                <span>${n.writerName}</span>
+                                <span>${n.createdAt}</span>
+                                <span>조회 ${n.views}</span>
+                            </div>
+                        </div>
+                    </div>
+                </c:forEach>
+                
+                <c:if test="${empty noticeList}">
+                    <div style="text-align: center; padding: 100px 0; color: var(--ev-muted-foreground);">
+                        등록된 공지사항이 없습니다.
+                    </div>
+                </c:if>
+            </div>
+
+            <!-- 4. 페이징 영역 -->
             <div class="ev-pagination">
-                <%-- [이전] 버튼 --%>
                 <c:if test="${cri.page > 1}">
-                    <a href="?page=${cri.page - 1}&category=${cri.category}&searchKeyword=${cri.searchKeyword}" class="ev-page-btn">
-                        &lt;
-                    </a>
+                    <a href="?page=${cri.page - 1}&category=${cri.category}&searchKeyword=${cri.searchKeyword}" class="ev-page-btn">&lt;</a>
                 </c:if>
 
-                <%-- 페이지 번호 --%>
                 <c:forEach var="i" begin="1" end="${totalPages}">
                     <a href="?page=${i}&category=${cri.category}&searchKeyword=${cri.searchKeyword}" 
-                       class="ev-page-btn ${cri.page == i ? 'active' : ''}">
-                        ${i}
-                    </a>
+                       class="ev-page-btn ${cri.page == i ? 'active' : ''}">${i}</a>
                 </c:forEach>
 
-                <%-- [다음] 버튼 --%>
                 <c:if test="${cri.page < totalPages}">
-                    <a href="?page=${cri.page + 1}&category=${cri.category}&searchKeyword=${cri.searchKeyword}" class="ev-page-btn">
-                        &gt;
-                    </a>
+                    <a href="?page=${cri.page + 1}&category=${cri.category}&searchKeyword=${cri.searchKeyword}" class="ev-page-btn">&gt;</a>
                 </c:if>
             </div>
         </div>
-        
     </main>
 
     <!-- 상세보기 모달 -->

@@ -21,7 +21,7 @@ public class InquiryAdminController {
     /**
      * 1. 관리자 문의 대시보드 메인
      */
-    @GetMapping("/main")
+    @GetMapping("/chat")
     public String adminInquiryMain(HttpSession session, Model model) {
         session.setAttribute("adminId", 1L);
         session.setAttribute("userRole", "ADMIN");
@@ -29,7 +29,7 @@ public class InquiryAdminController {
         List<InquiryRoomDTO> rooms = inquiryDAO.selectAllRoomList();
         model.addAttribute("rooms", rooms);
 
-        return "admin/inquiry_main";
+        return "admin/admin_inquiry";
     }
 
     /**

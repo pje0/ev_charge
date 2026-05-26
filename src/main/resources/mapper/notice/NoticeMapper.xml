@@ -31,7 +31,7 @@
         FROM notice n
         JOIN user u ON n.writer_id = u.id
         <include refid="searchCondition" />
-        ORDER BY n.is_pinned DESC, n.created_at DESC
+        ORDER BY n.created_at DESC
         LIMIT #{offset}, #{limit}
     </select>
 
