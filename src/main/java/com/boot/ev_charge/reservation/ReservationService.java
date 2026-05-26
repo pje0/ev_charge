@@ -1,19 +1,22 @@
 package com.boot.ev_charge.reservation;
 
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.boot.ev_charge.station.ChargerDto;
+import com.boot.ev_charge.station.StationDto;
 
 @Service
 public class ReservationService {
 
     @Autowired
-    private ReservationMapper reservationMapper; // 🌟 대소문자 표기법 하나로 통일 (reservationMapper)
+    private ReservationMapper reservationMapper;
 
     // 1. 예약 생성
     @Transactional
@@ -85,9 +88,9 @@ public class ReservationService {
 
     // 7. 예약 자동 만료 처리 스케줄러 (필요 시 주석 해제하여 사용 가능)
     // @Scheduled(fixedRate = 60000)
-    //public void expireReservation() {
-    //    reservationMapper.expireReservation();
-    //}
+    // public void expireReservation() {
+    //     reservationMapper.expireReservation();
+    // }
     
     // 8. 충전기 목록 조회
     public List<ChargerDto> getChargerList() {
@@ -95,7 +98,36 @@ public class ReservationService {
     }
     
     // 9. 특정 충전기의 날짜별 예약된 시간 목록 조회 (Ajax 연동용)
+    // 🌟 가짜로 들어가 있던 return reservationMapper.getStationList(); 를 지우고 진짜 예약을 반환합니다!
     public List<ReservationDto> getReservedTimes(Long chargerId, String date) {
-        return reservationMapper.getReservedTimes(chargerId, date);
+        // XML 쿼리 결과를 진짜로 받아옵니다.
+        List<Map<String, Object>> mapList = reservationMapper.getReservedTimes(chargerId, date);
+        List<ReservationDto> dtoList = new ArrayList<>();
+        
+        if (mapList != null) {
+            for (Map<String, Object> map : mapList) {
+                ReservationDto resDto = new ReservationDto();
+                
+                // MyBatis가 대소문자 구별 없이 맵에 담은 변수명을 안전하게 문자열로 뽑아 Timestamp로 파싱
+                if (map.get("startTime") != null) {
+                    resDto.setStartTime(java.sql.Timestamp.valueOf(map.get("startTime").toString()));
+                }
+                if (map.get("endTime") != null) {
+                    resDto.setEndTime(java.sql.Timestamp.valueOf(map.get("endTime").toString()));
+                }
+                dtoList.add(resDto);
+            }
+        }
+        return dtoList;
+    }
+    
+    // 10. 충전소 목록 조회
+    public List<StationDto> getStationList() {
+        return reservationMapper.getStationList();
+    }
+
+    // 11. 충전소별 충전기 목록 조회
+    public List<ChargerDto> getChargersByStationId(Long stationId) {
+        return reservationMapper.getChargersByStationId(stationId);
     }
 }

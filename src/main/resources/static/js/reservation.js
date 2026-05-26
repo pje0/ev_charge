@@ -1,318 +1,287 @@
-let selectedChargerId = null;
-let selectedChargerName = null;
+// ==========================================
+// 0. 전역 변수 초기화 가드
+// ==========================================
+if (typeof selectedChargerId === 'undefined') { var selectedChargerId = null; }
+if (typeof reservationType === 'undefined') { var reservationType = "TIME"; }
+if (typeof startTime === 'undefined') { var startTime = null; }
+if (typeof endTime === 'undefined') { var endTime = null; }
 
-let reservationType = "TIME";
-let startTime = null;
-let endTime = null;
-
-// 현재 STEP 이동
+// ==========================================
+// 1. 단계 제어 (Step View Control)
+// ==========================================
 function moveStep(step) {
-
-    document.querySelectorAll(".ev-page").forEach(page => {
-        page.classList.add("hidden");
+    document.querySelectorAll(".ev-page").forEach(p => p.classList.add("hidden"));
+    document.getElementById("ev-page-" + step)?.classList.remove("hidden");
+    document.querySelectorAll(".ev-step").forEach((el, idx) => {
+        const stepNum = idx + 1;
+        const circle = el.querySelector(".ev-step-num");
+        const txt = el.querySelector("span");
+        if (stepNum <= step) {
+            el.classList.add("ev-step-on");
+            circle?.classList.add("bg-blue-600", "text-white");
+            circle?.classList.remove("bg-gray-200");
+            txt?.classList.add("font-bold", "text-blue-600");
+        } else {
+            el.classList.remove("ev-step-on");
+            circle?.classList.remove("bg-blue-600", "text-white");
+            circle?.classList.add("bg-gray-200");
+            txt?.classList.remove("font-bold", "text-blue-600");
+        }
     });
+}
 
-    document.getElementById("ev-page-" + step).classList.remove("hidden");
+// ==========================================
+// 2. 충전기 목록 로드 및 상태별 분기 (Ajax)
+// ==========================================
+async function loadChargers(stationId, element) {
+    if (!stationId) return;
+    
+    document.querySelectorAll('.border-blue-500').forEach(el => el.classList.remove('border-blue-500', 'bg-blue-50'));
+    element.classList.add('border-blue-500', 'bg-blue-50');
+    
+    try {
+        const res = await fetch(`/reservation/api/chargers?stationId=` + stationId);
+        const chargers = await res.json();
+        const container = document.getElementById("chargerListContainer");
+        
+        if (chargers.length > 0) {
+            container.innerHTML = chargers.map(c => {
+                const statusLower = c.status ? c.status.toLowerCase() : 'available';
+                
+                // 점검 중 / 서비스 중단 상태
+                if (statusLower === 'maintenance' || statusLower === 'out_of_service') {
+                    return `
+                        <div class="border border-gray-300 bg-gray-100 opacity-60 rounded-xl p-5 select-none pointer-events-none">
+                            <div class="flex justify-between items-center mb-3">
+                                <h3 class="font-bold text-lg text-gray-500">${c.connectorType}</h3>
+                                <span class="text-xs bg-red-100 text-red-700 px-2 py-1 rounded font-medium">점검 중</span>
+                            </div>
+                            <p class="text-gray-400 text-sm">${c.powerKw}kW 충전</p>
+                        </div>`;
+                }
+                
+                // 사용 중 상태
+                if (statusLower === 'charging' || statusLower === 'occupied') {
+                    return `
+                        <div class="border rounded-xl p-5 border-amber-300 bg-amber-50 cursor-not-allowed opacity-80" onclick="alert('현재 다른 차량이 충전 중입니다.')">
+                            <div class="flex justify-between items-center mb-3">
+                                <h3 class="font-bold text-lg text-amber-900">${c.connectorType}</h3>
+                                <span class="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded font-medium">사용 중</span>
+                            </div>
+                            <p class="text-amber-700 text-sm">${c.powerKw}kW 충전</p>
+                        </div>`;
+                }
 
-    document.querySelectorAll(".ev-step").forEach(stepEl => {
-        stepEl.classList.remove("ev-step-on");
-    });
+                // 일반 사용 가능 상태
+                return `
+                    <div class="border rounded-xl p-5 cursor-pointer hover:border-blue-500 transition bg-white" 
+                         onclick="selectCharger(this, '${c.id}', '${c.connectorType}')">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="font-bold text-lg text-gray-900">${c.connectorType}</h3>
+                            <span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded font-medium">사용 가능</span>
+                        </div>
+                        <p class="text-gray-500 text-sm">${c.powerKw}kW 충전</p>
+                    </div>`;
+            }).join('');
+        } else {
+            container.innerHTML = '<div class="col-span-2 text-center py-20 text-gray-400">등록된 충전기가 없습니다.</div>';
+        }
+        
+        setTimeout(loadReservedTimes, 50);
 
-    for (let i = 1; i <= step; i++) {
-        document.getElementById("ev-step-" + i).classList.add("ev-step-on");
-    }
-
-    if (step === 2) {
-        loadReservedTimes();
+    } catch (error) {
+        console.error("충전기 목록 로드 실패:", error);
     }
 }
 
-// 이전 STEP
-function prevStep(step) {
-	moveStep(step);
-}
-
-// 충전기 선택
+// ==========================================
+// 3. 충전기 선택 및 건너뛰기 액션 (🌟 오타 교정 완료)
+// ==========================================
 function selectCharger(element, chargerId, chargerName) {
-
-    document.querySelectorAll(".ev-charge-card")
-        .forEach(card => card.classList.remove("active"));
-
-    element.classList.add("active");
-
-    selectedChargerId = Number(chargerId); // 🔥 타입 고정
-
-    selectedChargerName = chargerName;
-
     document.getElementById("chargerId").value = chargerId;
-
+    selectedChargerId = Number(chargerId);
     document.getElementById("summaryCharger").innerText = chargerName;
-
     moveStep(2);
-
-    // 🔥 step 렌더 이후 1회만 실행
-    setTimeout(() => {
-        loadReservedTimes();
-    }, 50);
+    setTimeout(loadReservedTimes, 50);
 }
 
-// 예약 타입 선택
+function skipCharger() {
+    selectedChargerId = null;
+    document.getElementById("chargerId").value = "";
+    document.getElementById("summaryCharger").innerText = "충전기 미선택";
+    moveStep(2);
+    setTimeout(loadReservedTimes, 50);
+}
+
+// ==========================================
+// 4. 예약 설정 옵션 분기 제어
+// ==========================================
 function selectReservationType(type) {
+    reservationType = type;
+    document.getElementById("reservationType").value = type;
+    document.querySelectorAll(".ev-res-type-btn").forEach(btn => btn.classList.remove("active"));
 
-	reservationType = type;
-
-	document.getElementById("reservationType").value = type;
-
-	document.querySelectorAll(".ev-res-type-btn").forEach(btn => {
-		btn.classList.remove("active", "in-range");
-	});
-
-	if(type === "TIME") {
-
-		document.getElementById("btnTime").classList.add("active");
-
-		document.getElementById("timeBox").classList.remove("hidden");
-		document.getElementById("targetBox").classList.add("hidden");
-
-	} else {
-
-		document.getElementById("btnTarget").classList.add("active");
-
-		document.getElementById("timeBox").classList.add("hidden");
-		document.getElementById("targetBox").classList.remove("hidden");
-	}
+    if(type === "TIME") {
+        document.getElementById("btnTime").classList.add("active");
+        document.getElementById("timeBox").classList.remove("hidden");
+        document.getElementById("targetBox").classList.add("hidden");
+    } else {
+        document.getElementById("btnTarget").classList.add("active");
+        document.getElementById("timeBox").classList.add("hidden");
+        document.getElementById("targetBox").classList.remove("hidden");
+    }
 }
 
-// 시간 선택
+// ==========================================
+// 5. 드래그앤드롭 슬롯형 시간 선택 알고리즘
+// ==========================================
 function selectTime(element, time) {
-    // 이미 disabled된 버튼이면 아무 동작도 하지 않음
     if (element.classList.contains("disabled")) return;
-
     if (startTime !== null && endTime !== null) {
         startTime = null;
         endTime = null;
-        document.querySelectorAll(".ev-time-btn")
-            .forEach(btn => btn.classList.remove("active", "in-range"));
+        document.querySelectorAll(".ev-time-btn").forEach(btn => btn.classList.remove("active", "in-range"));
     }
-
     if (startTime === null) {
         startTime = time;
         element.classList.add("active");
         document.getElementById("summaryReserve").innerText = "시작 시간: " + startTime;
         return;
     }
-
     if (startTime === time) {
         startTime = null;
         element.classList.remove("active");
         document.getElementById("summaryReserve").innerText = "-";
         return;
     }
-
     let tempStart = startTime;
     let tempEnd = time;
+    if (time < startTime) { tempEnd = startTime; tempStart = time; }
 
-    if (time < startTime) {
-        tempEnd = startTime;
-        tempStart = time;
-    }
-
-    // 🔥 시작 시간과 종료 시간 사이에 이미 예약된(disabled) 버튼이 있는지 체크
     let hasDisabledSlot = false;
     document.querySelectorAll(".ev-time-btn").forEach(btn => {
         const t = btn.dataset.time;
-        if (t >= tempStart && t <= tempEnd && btn.classList.contains("disabled")) {
-            hasDisabledSlot = true;
-        }
+        if (t >= tempStart && t <= tempEnd && btn.classList.contains("disabled")) { hasDisabledSlot = true; }
     });
+    if (hasDisabledSlot) { alert("선택하신 구간 사이에 이미 예약된 시간이 포함되어 있습니다."); return; }
 
-    if (hasDisabledSlot) {
-        alert("선택하신 구간 사이에 이미 예약된 시간이 포함되어 있습니다.");
-        return; // 진행을 막음
-    }
-
-    // 검증을 통과하면 최종 적용
     startTime = tempStart;
     endTime = tempEnd;
-
     document.querySelectorAll(".ev-time-btn").forEach(btn => {
         const t = btn.dataset.time;
-        
-        // disabled 상태가 아닌 버튼들만 스타일 핸들링
         if (!btn.classList.contains("disabled")) {
             btn.classList.remove("active", "in-range");
-
-            if (t === startTime || t === endTime) {
-                btn.classList.add("active");
-            }
-            if (t > startTime && t < endTime) {
-                btn.classList.add("in-range");
-            }
+            if (t === startTime || t === endTime) btn.classList.add("active");
+            if (t > startTime && t < endTime) btn.classList.add("in-range");
         }
     });
-
     const date = document.getElementById("reservationDate").value;
     document.getElementById("startTime").value = date + " " + startTime + ":00";
     document.getElementById("endTime").value = date + " " + endTime + ":00";
-
     document.getElementById("summaryReserve").innerText = startTime + " ~ " + endTime;
-}	
-
-// 예약 제출
-function submitReservation() {
-
-	// 시간 예약
-	if(reservationType === "TIME") {
-		if(startTime == null || endTime == null) {
-			alert("예약 시간을 선택하세요.");
-			return;
-		}
-	} else {
-		document.getElementById("startTime").disabled = true;
-		document.getElementById("endTime").disabled = true;
-	}
-
-	document.getElementById("reservationForm").submit();
 }
 
-// 목표 충전량 슬라이더 변경
 function changeTargetPercent(value) {
-	document.getElementById("targetPercentText").innerText = value + "%";
-	document.getElementById("summaryReserve").innerText = "목표 충전량 " + value + "%";
+    document.getElementById("targetPercentText").innerText = value + "%";
+    document.getElementById("summaryReserve").innerText = "목표 충전량 " + value + "%";
 }
 
-// 빠른 선택 버튼
 function quickTarget(value) {
-	document.getElementById("targetPercent").value = value;
-	changeTargetPercent(value);
+    document.getElementById("targetPercent").value = value;
+    changeTargetPercent(value);
 }
 
-// 충전기 선택 건너뛰기
-function skipCharger() {
-
-    selectedChargerId = null;
-    selectedChargerName = "미선택";
-
-    // 선택 스타일 제거
-    document.querySelectorAll(".ev-charge-card").forEach(card => {
-        card.classList.remove("border-blue-600", "bg-blue-50");
-    });
-
-    // hidden input 초기화
-    document.getElementById("chargerId").value = "";
-
-    // 요약 변경
-    document.getElementById("summaryCharger").innerText = "충전기 미선택";
-
-    // STEP1 숨김 / STEP2 표시
-    document.getElementById("ev-page-1").classList.add("hidden");
-    document.getElementById("ev-page-2").classList.remove("hidden");
-
-    // ===== 🌟 상단 STEP 표시 변경 통일 =====
-    document.querySelectorAll(".ev-step").forEach(stepEl => {
-        stepEl.classList.remove("ev-step-on");
-    });
-
-    for (let i = 1; i <= 2; i++) {
-        document.getElementById("ev-step-" + i)?.classList.add("ev-step-on");
+// ==========================================
+// 6. 예약 최종 서브밋 및 400에러 프리벤션
+// ==========================================
+function submitReservation() {
+    const type = document.getElementById("reservationType").value;
+    
+    if (type === "TIME") {
+        if (startTime == null || endTime == null) {
+            alert("예약 시간을 선택하세요.");
+            return;
+        }
+    } else if (type === "TARGET") {
+        const now = new Date();
+        const offset = now.getTimezoneOffset() * 60000;
+        const localISOTime = new Date(now.getTime() - offset).toISOString();
+        const formattedNow = localISOTime.replace('T', ' ').substring(0, 19);
+        
+        document.getElementById("startTime").value = formattedNow;
+        document.getElementById("endTime").value = formattedNow;
     }
+    
+    document.getElementById("reservationForm").submit();
 }
 
-// 예약된 시간 조회 + UI 차단
+// ==========================================
+// 7. 실시간 예약/과거 시간대 비활성화 (MIME/시차 보정형)
+// ==========================================
 async function loadReservedTimes() {
-    const chargerId = selectedChargerId;
+    const chargerId = selectedChargerId; 
     const date = document.getElementById("reservationDate")?.value;
+    if (!date) return;
 
-    console.log("chargerId:", chargerId);
-    console.log("date:", date);
-
-    // 1. 초기값 방어
-    if (!chargerId || chargerId === "" || !date) {
-        console.warn("early return");
-        return;
-    }
-
-    // 2. 다른 날짜/충전기 선택 시를 위해 기존disabled 및 이벤트 제거된 상태 초기화
     document.querySelectorAll(".ev-time-btn").forEach(btn => {
         btn.classList.remove("disabled");
         btn.onclick = function() { selectTime(this, this.dataset.time); }; 
     });
 
     try {
-        const url = "/reservation/reserved-times?chargerId=" + chargerId + "&date=" + date;
-        const response = await fetch(url);
-
-        if (!response.ok) {
-            throw new Error(`서버 에러 발생 (Status: ${response.status})`);
-        }
-
-        const reservedList = await response.json();
-
-        if (!Array.isArray(reservedList)) {
-            console.error("서버에서 받은 데이터가 배열 형식이 아닙니다.", reservedList);
-            return;
-        }
-
-        // 3. 예약된 시간 버튼 비활성화 처리
-        reservedList.forEach(r => {
-            const start = r.startTime.substring(11, 16); 
-            const end = r.endTime.substring(11, 16);
-
-            document.querySelectorAll(".ev-time-btn").forEach(btn => {
-                const t = btn.dataset.time;
-
-                if (t >= start && t < end) {
-                    btn.classList.add("disabled");
-                    btn.classList.remove("active", "in-range"); 
-                    btn.onclick = null; 
-                }
-            });
-        });
+        const sendChargerId = chargerId ? chargerId : 0;
+        const url = `/reservation/reserved-times?chargerId=${sendChargerId}&date=${date}`;
         
-    	// 과거 시간 차단 로직
-    	const todayStr = new Date().toISOString().split('T')[0];
+        const response = await fetch(url);
+        if (response.ok) {
+            const reservedList = await response.json();
+            
+            reservedList.forEach(r => {
+                if (!r.startTime || !r.endTime) return; 
+                
+                const startDate = new Date(r.startTime);
+                const endDate = new Date(r.endTime);
+                
+                const startHours = String(startDate.getHours()).padStart(2, '0');
+                const startMinutes = String(startDate.getMinutes()).padStart(2, '0');
+                const start = `${startHours}:${startMinutes}`;
+                
+                const endHours = String(endDate.getHours()).padStart(2, '0');
+                const endMinutes = String(endDate.getMinutes()).padStart(2, '0');
+                const end = `${endHours}:${endMinutes}`;
+                
+                document.querySelectorAll(".ev-time-btn").forEach(btn => {
+                    const t = btn.dataset.time;
+                    if (t >= start && t < end) {
+                        btn.classList.add("disabled");
+                        btn.classList.remove("active", "in-range"); 
+                        btn.onclick = null; 
+                    }
+                });
+            });
+        }
+    } catch (error) { 
+        console.error("예약 시간 조회 실패:", error); 
+    }
 
-    	if (date === todayStr) {
-    	    const now = new Date();
-    	    const currentHours = now.getHours();
-    	    const currentMinutes = now.getMinutes();
-
-    	    document.querySelectorAll(".ev-time-btn").forEach(btn => {
-    	        const t = btn.dataset.time; 
-    	        const [h, m] = t.split(":").map(Number);
-
-    	        if (h < currentHours || (h === currentHours && m < currentMinutes)) {
-    	            btn.classList.add("disabled");
-    	            btn.classList.remove("active", "in-range");
-    	            btn.onclick = null;
-    	        }
-    	    });
-    	}
-
-    } catch (error) {
-        console.error("예약 시간 로드 중 오류 발생:", error);
-        alert("예약 데이터를 불러오는 중 오류가 발생했습니다. 백엔드 로그를 확인하세요.");
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (date === todayStr) {
+        const now = new Date();
+        const currentHours = now.getHours();
+        const currentMinutes = now.getMinutes();
+        document.querySelectorAll(".ev-time-btn").forEach(btn => {
+            const t = btn.dataset.time; 
+            const [h, m] = t.split(":").map(Number);
+            if (h < currentHours || (h === currentHours && m < currentMinutes)) {
+                btn.classList.add("disabled"); 
+                btn.classList.remove("active", "in-range"); 
+                btn.onclick = null;
+            }
+        });
     }
 }
 
-// 날짜 변경 시 예약 시간 조회
+// DOM 로드 완료 후 리스너 동기화
 window.addEventListener("DOMContentLoaded", () => {
-    const reservationDate = document.getElementById("reservationDate");
-    if (reservationDate) {
-        reservationDate.addEventListener("change", loadReservedTimes);
-    }
+    document.getElementById("reservationDate")?.addEventListener("change", loadReservedTimes);
 });
-
-function toMinutes(t) {
-    const [h, m] = t.split(":").map(Number);
-    return h * 60 + m;
-}
-
-function isReservedSlot(time, reservedList) {
-    const t = toMinutes(time);
-    return reservedList.some(r => {
-        const start = toMinutes(r.startTime);
-        const end = toMinutes(r.endTime);
-        return t >= start && t < end;
-    });
-}

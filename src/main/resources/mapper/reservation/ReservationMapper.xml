@@ -76,25 +76,20 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     <!-- ===================================================== -->
     <!-- 시간 중복 검사 -->
     <!-- ===================================================== -->
-    <select id="countDuplicateReservation"
+	<select id="countDuplicateReservation"
             parameterType="com.boot.ev_charge.reservation.ReservationDto"
             resultType="int">
 
-        select count(*)
-        from reservation r
-        join reservation_time rt
-            on r.id = rt.reservation_id
-
-        where r.charger_id = #{chargerId}
-        and r.status = 'RESERVED'
-
+        SELECT count(*)
+        FROM reservation r
+        JOIN reservation_time rt
+            ON r.id = rt.reservation_id
+        WHERE r.status = 'RESERVED'
         <![CDATA[
-            and rt.start_time < #{endTime}
-            and rt.end_time > #{startTime}
+            AND rt.start_time < #{endTime}
+            AND rt.end_time > #{startTime}
         ]]>
-
     </select>
-
 
     <!-- ===================================================== -->
     <!-- 예약 상세 조회 -->
@@ -171,6 +166,21 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 
 
     <!-- ===================================================== -->
+    <!-- 충전 시작 -->
+    <!-- ===================================================== -->
+	<update id="startCharging"
+            parameterType="long">
+
+        update reservation
+        set
+            status = 'CHARGING',
+            actual_start_time = now()
+        where id = #{reservationId}
+
+    </update>
+
+
+    <!-- ===================================================== -->
     <!-- 충전 완료 -->
     <!-- ===================================================== -->
     <update id="completeCharging"
@@ -220,7 +230,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     <!-- ===================================================== -->
     <!-- 충전기 목록 조회 -->
     <!-- ===================================================== -->
-    <select id="getChargerList"
+	<select id="getChargerList"
             resultType="com.boot.ev_charge.station.ChargerDto">
 
         select
@@ -235,16 +245,43 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     </select>
     
 	<select id="getReservedTimes" resultType="map">
-	    SELECT 
-	        DATE_FORMAT(rt.start_time, '%Y-%m-%d %H:%i:%s') AS startTime,
-	        DATE_FORMAT(rt.end_time, '%Y-%m-%d %H:%i:%s') AS endTime
-	    FROM reservation r
-	    JOIN reservation_time rt
-	        ON r.id = rt.reservation_id
-	    WHERE r.charger_id = #{chargerId}
-	      AND DATE(rt.start_time) = #{date}
-	      AND r.reservation_type = 'TIME'
-	      AND r.status = 'RESERVED'
-	</select>
+        SELECT 
+            DATE_FORMAT(rt.start_time, '%Y-%m-%d %H:%i:%s') AS startTime,
+            DATE_FORMAT(rt.end_time, '%Y-%m-%d %H:%i:%s') AS endTime
+        FROM reservation r
+        JOIN reservation_time rt
+            ON r.id = rt.reservation_id
+        WHERE DATE(rt.start_time) = #{date}
+          AND r.reservation_type = 'TIME'
+          AND r.status = 'RESERVED'
+    </select>
+
+    <select id="getStationList" resultType="com.boot.ev_charge.station.StationDto">
+        select 
+            id,
+            name,
+            address,
+            metro,
+            city,
+            rapid_cnt as rapidCnt,
+            slow_cnt as slowCnt,
+            car_type as carType,
+            latitude,
+            longitude
+        from station
+        order by name asc
+    </select>
+    
+    <select id="getChargersByStationId" parameterType="long" resultType="com.boot.ev_charge.station.ChargerDto">
+        select
+            id,
+            station_id as stationId,
+            connector_type as connectorType,
+            power_kw as powerKw,
+            status
+        from charger
+        where station_id = #{stationId}
+        order by id asc
+    </select>
 
 </mapper>
