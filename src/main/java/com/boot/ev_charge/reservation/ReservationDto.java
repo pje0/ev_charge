@@ -31,14 +31,9 @@ public class ReservationDto {
     private Timestamp endTime;   // 예약 종료 시간
 
     // TARGET 예약
-<<<<<<< feature/조성민
     private Integer targetKwh;   // 목표 충전량(kWh)
     private Integer maxMinutes;  // 최대 충전 가능 시간(분)
     
     // 예약 생성 시간 관리
     private Timestamp createdAt; // 예약 생성 일시
-=======
-    private Integer targetKwh;
-    private Integer maxMinutes;
->>>>>>> 5a22b00 도중 저장
 }

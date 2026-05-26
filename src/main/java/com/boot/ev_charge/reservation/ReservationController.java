@@ -1,21 +1,19 @@
 package com.boot.ev_charge.reservation;
 
 import java.util.List;
-import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-<<<<<<< feature/조성민
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
-=======
-import org.springframework.web.bind.annotation.RestController;
->>>>>>> 5a22b00 도중 저장
 
-<<<<<<< feature/조성민
 import com.boot.ev_charge.station.ChargerDto;
 import com.boot.ev_charge.user.UserDto;
 import com.boot.ev_charge.user.UserService;
@@ -24,48 +22,37 @@ import lombok.extern.slf4j.Slf4j;
 
 @Controller
 @Slf4j
-=======
-@RestController
->>>>>>> 5a22b00 도중 저장
 @RequestMapping("/reservation")
 public class ReservationController {
 
     @Autowired
     private ReservationService reservationService;
+    
+    @Autowired
+    private UserService userService; // 🌟 누락되었던 의존성 주입 주석 해제
 
-<<<<<<< feature/조성민
-    // 예약 페이지
+    // 1. 예약 페이지 로드
     @GetMapping("")
     public String reservationPage(Model model) {
-
         log.info("@# @# [GET] /reservation -> reservationPage() 호출");
 
-        // 오늘 날짜
+        // 오늘 날짜 구하기
         String today = java.time.LocalDate.now().toString();
-
         model.addAttribute("today", today);
 
         // 충전기 목록 조회
         List<ChargerDto> chargerList = reservationService.getChargerList();
-
         model.addAttribute("chargerList", chargerList);
 
         log.info("@# 리턴할 뷰 경로: reservation/reservation");
-
         return "reservation/reservation";
     }
-=======
->>>>>>> 5a22b00 도중 저장
 
-    // 예약 생성
+    // 2. 예약 생성 처리
     @PostMapping("/create")
-<<<<<<< feature/조성민
-    public String createReservation(ReservationDto reservationDto, @AuthenticationPrincipal UserDetails userDetails, Model model) {
-=======
-    public String createReservation(@RequestBody ReservationDto dto) {
->>>>>>> 5a22b00 도중 저장
-
-<<<<<<< feature/조성민
+    public String createReservation(ReservationDto reservationDto, 
+                                    @AuthenticationPrincipal UserDetails userDetails, 
+                                    Model model) {
     	// 로그인 여부 확인
     	if (userDetails == null) {
 			return "redirect:/login";
@@ -83,22 +70,15 @@ public class ReservationController {
         reservationService.createReservation(reservationDto);
 
         // 생성된 예약 상세 조회
-        ReservationDto reservation =
-        		reservationService.getReservationDetail(reservationDto.getId());
+        ReservationDto reservation = reservationService.getReservationDetail(reservationDto.getId());
 
         // 화면 전달
         model.addAttribute("reservation", reservation);
 
         return "reservation/reservationSuccess";
-=======
-        reservationService.createReservation(dto);
-
-        return "예약 완료";
->>>>>>> 5a22b00 도중 저장
     }
-<<<<<<< feature/조성민
     
-    // 예약 목록
+    // 3. 내 예약 목록 조회 (마이페이지용)
     @GetMapping("/my")
     public String myReservation(@AuthenticationPrincipal UserDetails userDetails, Model model) {
     	log.info("@# [GET] /reservation/my -> myReservation() 호출");
@@ -122,27 +102,19 @@ public class ReservationController {
     	
     	return "reservation/myReservation";
     }
-=======
 
->>>>>>> 5a22b00 도중 저장
-
-    // 예약 상세 조회
+    // 4. 예약 단건 상세 조회
     @GetMapping("/{reservationId}")
-<<<<<<< feature/조성민
-    public String getReservationDetail(@PathVariable Long reservationId, Model model, @AuthenticationPrincipal UserDetails userDetails) {
-    	
+    public String getReservationDetail(@PathVariable Long reservationId, 
+                                       Model model, 
+                                       @AuthenticationPrincipal UserDetails userDetails) {
     	// 로그인 여부 확인
     	if (userDetails == null) {
     		return "redirect:/login";
     	}
     	
     	log.info("@# [GET] /reservation/{} -> getReservationDetail() 호출", reservationId);
-=======
-    public ReservationDto getReservationDetail(
-            @PathVariable Long reservationId) {
->>>>>>> 5a22b00 도중 저장
 
-<<<<<<< feature/조성민
     	ReservationDto reservation = reservationService.getReservationDetail(reservationId);
     	log.info("@# 조회된 상세 데이터: {}", reservation);
     	
@@ -150,76 +122,57 @@ public class ReservationController {
     	log.info("@# 리턴할 뷰 경로: reservation/reservationDetail");
     	
         return "reservation/reservationDetail";
-=======
-        return reservationService.getReservationDetail(reservationId);
->>>>>>> 5a22b00 도중 저장
     }
 
-
-    // 회원 예약 목록 조회
+    // 5. 특정 회원 기준 예약 리스트 반환 (필요시 관리자 페이지 등에서 활용)
     @GetMapping("/user/{userId}")
-    public List<ReservationDto> getReservationListByUser(
-            @PathVariable Long userId) {
-
+    @ResponseBody
+    public List<ReservationDto> getReservationListByUser(@PathVariable Long userId) {
         return reservationService.getReservationListByUser(userId);
     }
 
-
-    // 충전 시작
+    // 6. 충전 시작 처리
     @PostMapping("/start/{reservationId}")
+    @ResponseBody
     public String startCharging(@PathVariable Long reservationId) {
     	log.info("@# [POST] /reservation/start/{} -> startCharging() 호출", reservationId);
-
         reservationService.startCharging(reservationId);
-        log.info("@# 충전 시작 상태 변경 완료 -> 목록으로 리다이렉트");
-
         return "충전 시작";
     }
 
-
-    // 충전 완료
+    // 7. 충전 완료 처리
     @PostMapping("/complete/{reservationId}")
+    @ResponseBody
     public String completeCharging(@PathVariable Long reservationId) {
     	log.info("@# [POST] /reservation/complete/{} -> completeCharging() 호출", reservationId);
-
         reservationService.completeCharging(reservationId);
-        log.info("@# 충전 완료 상태 변경 완료 -> 목록으로 리다이렉트");
-
         return "충전 완료";
     }
 
-
-    // 예약 취소
+    // 8. 예약 취소 처리
     @PostMapping("/cancel/{reservationId}")
+    @ResponseBody
     public String cancelReservation(@PathVariable Long reservationId) {
     	log.info("@# [POST] /reservation/cancel/{} -> cancelReservation() 호출", reservationId);
-
         reservationService.cancelReservation(reservationId);
-        log.info("@# 예약 취소 완료 -> 목록으로 리다이렉트");
-
         return "예약 취소 완료";
     }
     
+    // 9. 충전기별 비활성화된 시간 Ajax 조회 (JSP의 fetch 연동용 API)
     @GetMapping("/reserved-times")
     @ResponseBody
-    public List<ReservationDto> getReservedTimes(
-            @RequestParam("chargerId") Long chargerId,
-            @RequestParam("date") String date) {
+    public List<ReservationDto> getReservedTimes(@RequestParam("chargerId") Long chargerId,
+                                                 @RequestParam("date") String date) {
 
         log.info("@# @# [GET] /reservation/reserved-times 호출 -> chargerId: {}, date: {}", chargerId, date);
 
         try {
-            // 서비스 레이어 호출
         	List<ReservationDto> reservedTimes = reservationService.getReservedTimes(chargerId, date);
             log.info("@# 조회된 예약 시간 개수: {}건", reservedTimes != null ? reservedTimes.size() : 0);
-            
             return reservedTimes;
             
         } catch (Exception e) {
-            // 🔥 이 로그가 STS 콘솔에 에러의 진짜 원인(NPE, SQL 구문 오류 등)을 출력해 줍니다.
             log.error("@# [오류 발생] 예약 시간 조회 중 에러 발생: {}", e.getMessage(), e);
-            
-            // 서버 오류로 아예 뻗어버리는(500) 현상을 방지하기 위해 안전하게 빈 리스트 반환
             return java.util.Collections.emptyList(); 
         }
     }
