@@ -22,8 +22,8 @@ public class InquiryUserController {
     public String myChatPage(HttpSession session, Model model) {
     	
         // [테스트용] 홍길동 유저(id: 2)로 세션 강제 주입
-        session.setAttribute("userId", 3L); 
-        session.setAttribute("userName", "김철수");
+        session.setAttribute("userId", 2L); 
+        session.setAttribute("userName", "홍길동");
         session.setAttribute("userRole", "USER");
     	
         Long userId = (Long) session.getAttribute("userId");
