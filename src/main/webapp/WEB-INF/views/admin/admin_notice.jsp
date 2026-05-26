@@ -1,6 +1,5 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core"%>
-<div style="color:red;">디버깅 - 넘어온 데이터 개수: ${noticeList.size()}</div>
 <div class="ev-admin-card" style="background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
     
     <!-- 1. 헤더 및 필터 영역 -->
