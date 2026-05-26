@@ -1,240 +1,577 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %> <%-- 🌟 이 줄을 추가하세요 --%>
+
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>예약하기 - EV 충전소</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="/css/common.css">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        * { font-family: 'Noto Sans KR', sans-serif; }
-        .ev-step-active { color: #1e40af; font-weight: 700; }
-        .ev-step-active .ev-step-num { background-color: #1e40af; color: white; }
-        .ev-step-complete .ev-step-num { background-color: #10b981; color: white; }
-    </style>
-    <script src="<c:url value='/js/reservation.js' />"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>EV 충전 예약</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<link rel="stylesheet" href="/css/common.css">
+
+<style>
+	.ev-step-on {
+		color: #2563eb;
+		font-weight: 700;
+	}
+
+	.ev-step-on .ev-step-num {
+		background-color: #2563eb;
+		color: white;
+	}
+
+	.ev-time-btn.active {
+		background-color: #2563eb;
+		color: white;
+		border-color: #2563eb;
+	}
+	
+	.ev-time-btn.in-range {
+		background-color: #dbeafe;
+		color: #1d4ed8;
+		border-color: #93c5fd;
+	}
+
+	.ev-res-type-btn.active {
+		background-color: #2563eb;
+		color: white;
+	}
+	
+	.ev-time-btn.disabled {
+		background-color: #e5e7eb;
+		color: #9ca3af;
+		border-color: #d1d5db;
+		cursor: not-allowed;
+		pointer-events: none;
+		opacity: 0.7;
+	}
+	
+	.ev-time-btn.disabled:hover {
+		background-color: #e5e7eb;
+	}
+	
+	.ev-time-btn.disabled.active {
+		background-color: #e5e7eb !important;
+		color: #9ca3af !important;
+	}
+</style>
+
+<script>
+
+	let selectedChargerId = null;
+	let selectedChargerName = null;
+
+	let reservationType = "TIME";
+	let startTime = null;
+	let endTime = null;
+
+	// 현재 STEP 이동
+	function moveStep(step) {
+	
+	    document.querySelectorAll(".ev-page").forEach(page => {
+	        page.classList.add("hidden");
+	    });
+	
+	    document.getElementById("ev-page-" + step).classList.remove("hidden");
+	
+	    document.querySelectorAll(".ev-step").forEach(stepEl => {
+	        stepEl.classList.remove("ev-step-on");
+	    });
+	
+	    for (let i = 1; i <= step; i++) {
+	        document.getElementById("ev-step-" + i).classList.add("ev-step-on");
+	    }
+	
+	    if (step === 2) {
+	        loadReservedTimes();
+	    }
+	}
+
+	// 이전 STEP
+	function prevStep(step) {
+		moveStep(step);
+	}
+
+	// 충전기 선택
+	function selectCharger(element, chargerId, chargerName) {
+
+	    document.querySelectorAll(".ev-charge-card")
+	        .forEach(card => card.classList.remove("active"));
+	
+	    element.classList.add("active");
+	
+	    selectedChargerId = Number(chargerId); // 🔥 타입 고정
+	
+	    selectedChargerName = chargerName;
+	
+	    document.getElementById("chargerId").value = chargerId;
+	
+	    document.getElementById("summaryCharger").innerText = chargerName;
+	
+	    moveStep(2);
+	
+	    // 🔥 step 렌더 이후 1회만 실행
+	    setTimeout(() => {
+	        loadReservedTimes();
+	    }, 50);
+	}
+
+	// 예약 타입 선택
+	function selectReservationType(type) {
+
+		reservationType = type;
+
+		document.getElementById("reservationType").value = type;
+
+		document.querySelectorAll(".ev-res-type-btn").forEach(btn => {
+			btn.classList.remove("active", "in-range");
+		});
+
+		if(type === "TIME") {
+
+			document.getElementById("btnTime").classList.add("active");
+
+			document.getElementById("timeBox").classList.remove("hidden");
+			document.getElementById("targetBox").classList.add("hidden");
+
+		} else {
+
+			document.getElementById("btnTarget").classList.add("active");
+
+			document.getElementById("timeBox").classList.add("hidden");
+			document.getElementById("targetBox").classList.remove("hidden");
+		}
+	}
+
+	// 시간 선택
+	function selectTime(element, time) {
+	    // 이미 disabled된 버튼이면 아무 동작도 하지 않음
+	    if (element.classList.contains("disabled")) return;
+	
+	    if (startTime !== null && endTime !== null) {
+	        startTime = null;
+	        endTime = null;
+	        document.querySelectorAll(".ev-time-btn")
+	            .forEach(btn => btn.classList.remove("active", "in-range"));
+	    }
+	
+	    if (startTime === null) {
+	        startTime = time;
+	        element.classList.add("active");
+	        document.getElementById("summaryReserve").innerText = "시작 시간: " + startTime;
+	        return;
+	    }
+	
+	    if (startTime === time) {
+	        startTime = null;
+	        element.classList.remove("active");
+	        document.getElementById("summaryReserve").innerText = "-";
+	        return;
+	    }
+	
+	    let tempStart = startTime;
+	    let tempEnd = time;
+	
+	    if (time < startTime) {
+	        tempEnd = startTime;
+	        tempStart = time;
+	    }
+	
+	    // 🔥 시작 시간과 종료 시간 사이에 이미 예약된(disabled) 버튼이 있는지 체크
+	    let hasDisabledSlot = false;
+	    document.querySelectorAll(".ev-time-btn").forEach(btn => {
+	        const t = btn.dataset.time;
+	        if (t >= tempStart && t <= tempEnd && btn.classList.contains("disabled")) {
+	            hasDisabledSlot = true;
+	        }
+	    });
+	
+	    if (hasDisabledSlot) {
+	        alert("선택하신 구간 사이에 이미 예약된 시간이 포함되어 있습니다.");
+	        return; // 진행을 막음
+	    }
+	
+	    // 검증을 통과하면 최종 적용
+	    startTime = tempStart;
+	    endTime = tempEnd;
+	
+	    document.querySelectorAll(".ev-time-btn").forEach(btn => {
+	        const t = btn.dataset.time;
+	        
+	        // disabled 상태가 아닌 버튼들만 스타일 핸들링
+	        if (!btn.classList.contains("disabled")) {
+	            btn.classList.remove("active", "in-range");
+	
+	            if (t === startTime || t === endTime) {
+	                btn.classList.add("active");
+	            }
+	            if (t > startTime && t < endTime) {
+	                btn.classList.add("in-range");
+	            }
+	        }
+	    });
+	
+	    const date = document.getElementById("reservationDate").value;
+	    document.getElementById("startTime").value = date + " " + startTime + ":00";
+	    document.getElementById("endTime").value = date + " " + endTime + ":00";
+	
+	    document.getElementById("summaryReserve").innerText = startTime + " ~ " + endTime;
+	}	
+
+	// 예약 제출
+	function submitReservation() {
+
+		// 시간 예약
+		if(reservationType === "TIME") {
+			if(startTime == null || endTime == null) {
+				alert("예약 시간을 선택하세요.");
+				return;
+			}
+		} else {
+			document.getElementById("startTime").disabled = true;
+			document.getElementById("endTime").disabled = true;
+		}
+	
+		document.getElementById("reservationForm").submit();
+	}
+	
+	// 목표 충전량 슬라이더 변경
+	function changeTargetPercent(value) {
+		document.getElementById("targetPercentText").innerText = value + "%";
+		document.getElementById("summaryReserve").innerText = "목표 충전량 " + value + "%";
+	}
+
+	// 빠른 선택 버튼
+	function quickTarget(value) {
+		document.getElementById("targetPercent").value = value;
+		changeTargetPercent(value);
+	}
+	
+	// 충전기 선택 건너뛰기
+	function skipCharger() {
+
+	    selectedChargerId = null;
+	    selectedChargerName = "미선택";
+
+	    // 선택 스타일 제거
+	    document.querySelectorAll(".ev-charge-card").forEach(card => {
+	        card.classList.remove("border-blue-600", "bg-blue-50");
+	    });
+
+	    // hidden input 초기화
+	    document.getElementById("chargerId").value = "";
+
+	    // 요약 변경
+	    document.getElementById("summaryCharger").innerText = "충전기 미선택";
+
+	    // STEP1 숨김 / STEP2 표시
+	    document.getElementById("ev-page-1").classList.add("hidden");
+	    document.getElementById("ev-page-2").classList.remove("hidden");
+
+	    // ===== 🌟 상단 STEP 표시 변경 통일 =====
+	    document.querySelectorAll(".ev-step").forEach(stepEl => {
+	        stepEl.classList.remove("ev-step-on");
+	    });
+
+	    for (let i = 1; i <= 2; i++) {
+	        document.getElementById("ev-step-" + i)?.classList.add("ev-step-on");
+	    }
+	}
+	
+	// 예약된 시간 조회 + UI 차단
+	async function loadReservedTimes() {
+	    const chargerId = selectedChargerId;
+	    const date = document.getElementById("reservationDate")?.value;
+
+	    console.log("chargerId:", chargerId);
+	    console.log("date:", date);
+
+	    // 1. 초기값 방어
+	    if (!chargerId || chargerId === "" || !date) {
+	        console.warn("early return");
+	        return;
+	    }
+
+	    // 2. 다른 날짜/충전기 선택 시를 위해 기존disabled 및 이벤트 제거된 상태 초기화
+	    document.querySelectorAll(".ev-time-btn").forEach(btn => {
+	        btn.classList.remove("disabled");
+	        btn.onclick = function() { selectTime(this, this.dataset.time); }; 
+	    });
+
+	    try {
+	        const url = "/reservation/reserved-times?chargerId=" + chargerId + "&date=" + date;
+	        const response = await fetch(url);
+
+	        if (!response.ok) {
+	            throw new Error(`서버 에러 발생 (Status: ${response.status})`);
+	        }
+
+	        const reservedList = await response.json();
+
+	        if (!Array.isArray(reservedList)) {
+	            console.error("서버에서 받은 데이터가 배열 형식이 아닙니다.", reservedList);
+	            return;
+	        }
+
+	        // 3. 예약된 시간 버튼 비활성화 처리
+	        reservedList.forEach(r => {
+	            const start = r.startTime.substring(11, 16); 
+	            const end = r.endTime.substring(11, 16);
+
+	            document.querySelectorAll(".ev-time-btn").forEach(btn => {
+	                const t = btn.dataset.time;
+
+	                if (t >= start && t < end) {
+	                    btn.classList.add("disabled");
+	                    btn.classList.remove("active", "in-range"); 
+	                    btn.onclick = null; 
+	                }
+	            });
+	        });
+	        
+	    	// 과거 시간 차단 로직
+	    	const todayStr = new Date().toISOString().split('T')[0];
+
+	    	if (date === todayStr) {
+	    	    const now = new Date();
+	    	    const currentHours = now.getHours();
+	    	    const currentMinutes = now.getMinutes();
+
+	    	    document.querySelectorAll(".ev-time-btn").forEach(btn => {
+	    	        const t = btn.dataset.time; 
+	    	        const [h, m] = t.split(":").map(Number);
+
+	    	        if (h < currentHours || (h === currentHours && m < currentMinutes)) {
+	    	            btn.classList.add("disabled");
+	    	            btn.classList.remove("active", "in-range");
+	    	            btn.onclick = null;
+	    	        }
+	    	    });
+	    	}
+
+	    } catch (error) {
+	        console.error("예약 시간 로드 중 오류 발생:", error);
+	        alert("예약 데이터를 불러오는 중 오류가 발생했습니다. 백엔드 로그를 확인하세요.");
+	    }
+	}
+
+	// 날짜 변경 시 예약 시간 조회
+	window.addEventListener("DOMContentLoaded", () => {
+	    const reservationDate = document.getElementById("reservationDate");
+	    if (reservationDate) {
+	        reservationDate.addEventListener("change", loadReservedTimes);
+	    }
+	});
+	
+	function toMinutes(t) {
+	    const [h, m] = t.split(":").map(Number);
+	    return h * 60 + m;
+	}
+
+	function isReservedSlot(time, reservedList) {
+	    const t = toMinutes(time);
+	    return reservedList.some(r => {
+	        const start = toMinutes(r.startTime);
+	        const end = toMinutes(r.endTime);
+	        return t >= start && t < end;
+	    });
+	}
+</script>
+
 </head>
-<body class="bg-gray-50 text-gray-800">
 
-    <jsp:include page="/WEB-INF/views/layout/header.jsp" />
+<body class="bg-gray-100">
 
-    <main class="ev-reservation-main pt-24 pb-16 min-h-screen">
-        <div class="container mx-auto px-4 max-w-6xl">
-            
-            <div id="ev-reservation-header" class="mb-6">
-                <h1 class="text-3xl font-bold text-gray-900 mb-2">충전 예약</h1>
-                <p class="text-gray-500">원하는 충전소와 시간을 선택하여 예약하세요.</p>
-            </div>
+<jsp:include page="/WEB-INF/views/layout/header.jsp" />
 
-            <div id="ev-reservation-step-bar" class="flex items-center gap-4 text-sm text-gray-400 mb-8 bg-white p-4 rounded-xl border border-gray-100 shadow-sm max-w-3xl">
-                <div id="ev-step-ind-1" class="flex items-center gap-2 ev-step-active">
-                    <span class="ev-step-num w-5 h-5 flex items-center justify-center rounded-full bg-gray-200 text-xs text-gray-600">1</span>
-                    <span>충전소 선택</span>
-                </div>
-                <div class="h-px bg-gray-200 flex-1"></div>
-                <div id="ev-step-ind-2" class="flex items-center gap-2">
-                    <span class="ev-step-num w-5 h-5 flex items-center justify-center rounded-full bg-gray-200 text-xs text-gray-600">2</span>
-                    <span>충전기 선택</span>
-                </div>
-                <div class="h-px bg-gray-200 flex-1"></div>
-                <div id="ev-step-ind-3" class="flex items-center gap-2">
-                    <span class="ev-step-num w-5 h-5 flex items-center justify-center rounded-full bg-gray-200 text-xs text-gray-600">3</span>
-                    <span>예약 설정</span>
-                </div>
-                <div class="h-px bg-gray-200 flex-1"></div>
-                <div id="ev-step-ind-4" class="flex items-center gap-2">
-                    <span class="ev-step-num w-5 h-5 flex items-center justify-center rounded-full bg-gray-200 text-xs text-gray-600">4</span>
-                    <span>예약 확인</span>
-                </div>
-            </div>
+<main class="max-w-5xl mx-auto pt-24 pb-16 px-4">
 
-            <div id="ev-reservation-body-grid" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                
-                <div class="lg:col-span-2 space-y-6">
-                    
-                    <form id="ev-reservation-form" action="/reservation/create" method="POST" onsubmit="return false;">
-                        <input type="hidden" name="chargerId" id="ev-submit-charger-id">
-                        <input type="hidden" name="reservationType" id="ev-submit-res-type" value="TIME">
-                        <input type="hidden" name="startTime" id="ev-submit-start-time">
-                        <input type="hidden" name="endTime" id="ev-submit-end-time">
-                        <input type="hidden" name="targetKwh" id="ev-submit-target-kwh">
+	<div class="mb-8">
+		<h1 class="text-3xl font-bold text-gray-900">충전 예약</h1>
+		<p class="text-gray-500 mt-2">충전기를 선택하고 예약을 진행하세요.</p>
+	</div>
 
-                        <div id="ev-page-step-1" class="ev-step-page space-y-4">
-                            <h3 class="text-lg font-bold flex items-center gap-2 text-gray-900 mb-2">
-                                <span class="text-blue-600">📍</span> 충전소 선택
-                            </h3>
-                            
-                            <div id="btn-station-gangnam" class="ev-station-card bg-white border-2 border-transparent hover:border-blue-500 rounded-2xl p-5 shadow-sm cursor-pointer transition flex justify-between items-center group" 
-                                 data-name="강남 테헤란로 충전소" data-id="1">
-                                <div class="space-y-2">
-                                    <div class="flex items-center gap-2">
-                                        <h4 class="text-base font-bold text-gray-900">강남 테헤란로 충전소</h4>
-                                        <span class="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-medium">2기 가용</span>
-                                    </div>
-                                    <p class="text-sm text-gray-400">📍 서울특별시 강남구 테헤란로 152</p>
-                                    <div class="flex gap-1.5 text-xs text-gray-500 pt-1">
-                                        <span class="bg-gray-100 px-2 py-1 rounded">DC콤보</span>
-                                        <span class="bg-gray-100 px-2 py-1 rounded">AC완속</span>
-                                    </div>
-                                </div>
-                                <span class="text-gray-300 group-hover:text-blue-500 font-bold text-xl">❯</span>
-                            </div>
+	<div class="bg-white rounded-xl shadow-sm border p-5 mb-8">
+		<div class="flex items-center gap-5 text-sm">
+			<div id="ev-step-1" class="ev-step ev-step-on flex items-center gap-2">
+				<div class="ev-step-num w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center">1</div>
+				<span>충전기 선택</span>
+			</div>
+			<div class="flex-1 h-px bg-gray-200"></div>
+			<div id="ev-step-2" class="ev-step flex items-center gap-2">
+				<div class="ev-step-num w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center">2</div>
+				<span>예약 설정</span>
+			</div>
+			<div class="flex-1 h-px bg-gray-200"></div>
+			<div id="ev-step-3" class="ev-step flex items-center gap-2">
+				<div class="ev-step-num w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center">3</div>
+				<span>예약 확인</span>
+			</div>
+		</div>
+	</div>
 
-                            <div id="btn-station-seocho" class="ev-station-card bg-white border-2 border-transparent hover:border-blue-500 rounded-2xl p-5 shadow-sm cursor-pointer transition flex justify-between items-center group" 
-                                 data-name="서초 반포대로 충전소" data-id="2">
-                                <div class="space-y-2">
-                                    <div class="flex items-center gap-2">
-                                        <h4 class="text-base font-bold text-gray-900">서초 반포대로 충전소</h4>
-                                        <span class="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-medium">2기 가용</span>
-                                    </div>
-                                    <p class="text-sm text-gray-400">📍 서울특별시 서초구 반포대로 58</p>
-                                    <div class="flex gap-1.5 text-xs text-gray-500 pt-1">
-                                        <span class="bg-gray-100 px-2 py-1 rounded">DC콤보</span>
-                                        <span class="bg-gray-100 px-2 py-1 rounded">AC완속</span>
-                                    </div>
-                                </div>
-                                <span class="text-gray-300 group-hover:text-blue-500 font-bold text-xl">❯</span>
-                            </div>
-                        </div>
+	<form id="reservationForm" action="/reservation/create" method="post">
+		<input type="hidden" name="chargerId" id="chargerId">
+		<input type="hidden" name="reservationType" id="reservationType" value="TIME">
+		<input type="hidden" name="startTime" id="startTime">
+		<input type="hidden" name="endTime" id="endTime">
 
-                        <div id="ev-page-step-2" class="ev-step-page space-y-4 hidden">
-                            <div class="flex items-center gap-2 mb-2 text-sm text-gray-500 cursor-pointer" onclick="goBack(1)">
-                                <span>❮ 돌아가기</span> <strong class="text-gray-900 text-base font-bold">⚡ 충전기 선택</strong>
-                            </div>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div class="ev-charger-card bg-white border-2 border-transparent hover:border-blue-500 p-5 rounded-2xl shadow-sm cursor-pointer transition relative"
-                                     data-name="DC콤보 (100kW)" data-id="1">
-                                    <span class="absolute top-4 right-4 bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full">사용 가능</span>
-                                    <div class="text-blue-500 text-2xl mb-2">⚡</div>
-                                    <h4 class="font-bold text-gray-900">DC콤보</h4>
-                                    <p class="text-sm text-gray-400">100kW 급속</p>
-                                </div>
-                                <div class="bg-white p-5 rounded-2xl shadow-sm opacity-60 relative cursor-not-allowed">
-                                    <span class="absolute top-4 right-4 bg-orange-100 text-orange-700 text-xs px-2 py-0.5 rounded-full">사용 중</span>
-                                    <div class="text-gray-400 text-2xl mb-2">⚡</div>
-                                    <h4 class="font-bold text-gray-700">DC콤보</h4>
-                                    <p class="text-sm text-gray-400">100kW 급속 (사용불가)</p>
-                                </div>
-                            </div>
-                        </div>
+		<div id="ev-page-1" class="ev-page">
+			<h2 class="text-xl font-bold mb-5">충전기 선택</h2>
 
-                        <div id="ev-page-step-3" class="ev-step-page space-y-6 hidden">
-                            <div class="flex items-center gap-2 text-sm text-gray-500 cursor-pointer" onclick="goBack(2)">
-                                <span>❮ 돌아가기</span> <strong class="text-gray-900 text-base font-bold">📅 예약 설정</strong>
-                            </div>
-                            
-                            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                                <label class="block text-sm font-bold text-gray-900 mb-2">날짜 선택</label>
-                                <input type="date"
-									   id="ev-reservation-date"
-									   value="2026-05-23"
-									   class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-gray-700 focus:outline-none focus:border-blue-500">
-                            </div>
+			<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+			    <c:forEach var="charger" items="${chargerList}">
+				    <%-- 상태값을 소문자로 치환하여 대소문자 문제 완전 방어 --%>
+				    <c:set var="statusLower" value="${fn:toLowerCase(charger.status)}" />
+				
+				    <c:choose>
+				        <%-- 🌟 변경: 상태가 'maintenance' 이거나 'out_of_service'인 경우 모두 점검 중(회색) 처리 --%>
+				        <c:when test="${statusLower eq 'maintenance' or statusLower eq 'out_of_service'}">
+				            <div class="border border-gray-300 bg-gray-100 opacity-60 rounded-xl p-5 select-none pointer-events-none">
+				                <div class="flex justify-between items-center mb-3">
+				                    <h3 class="font-bold text-lg text-gray-500">${charger.connectorType}</h3>
+				                    <span class="text-xs bg-red-100 text-red-700 px-2 py-1 rounded font-medium">점검 중</span>
+				                </div>
+				                <p class="text-gray-400 text-sm">${charger.powerKw}kW 충전</p>
+				            </div>
+				        </c:when>
+				
+				        <%-- 2. 사용 가능(available) 또는 사용 중(in_use) 상태일 때만 클릭 활성화 --%>
+				        <c:otherwise>
+				            <div class="border-2 border-gray-200 bg-white rounded-xl p-5 transition ev-charge-card cursor-pointer hover:border-blue-500"
+				                 onclick="selectCharger(this, '${charger.id}', '${charger.connectorType}')">
+				                <div class="flex justify-between items-center mb-3">
+				                    <h3 class="font-bold text-lg text-gray-900">${charger.connectorType}</h3>
+				                    
+				                    <c:choose>
+				                        <c:when test="${statusLower eq 'available'}">
+				                            <span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded font-medium">사용 가능</span>
+				                        </c:when>
+				                        <c:when test="${statusLower eq 'in_use'}">
+				                            <span class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded font-medium">사용 중</span>
+				                        </c:when>
+				                        <c:otherwise>
+				                            <span class="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded font-medium">${charger.status}</span>
+				                        </c:otherwise>
+				                    </c:choose>
+				                </div>
+				                <p class="text-gray-500 text-sm">${charger.powerKw}kW 충전</p>
+				            </div>
+				        </c:otherwise>
+				    </c:choose>
+				</c:forEach>
+			</div>
 
-                            <div class="bg-gray-200/60 p-1 rounded-xl grid grid-cols-2 text-center text-sm font-medium">
-                                <button type="button" id="ev-tab-time" onclick="switchSubMethod('TIME')"
-                                		class="py-2.5 rounded-lg bg-white text-gray-900 shadow-sm">
-                                		🕒 시간대 예약
-                             	</button>
-                                <button type="button" id="ev-tab-target" onclick="switchSubMethod('TARGET')"
-                                		class="py-2.5 rounded-lg text-gray-500 hover:text-gray-900">
-                                		🎯 목표 충전량 예약
-                                </button>
-                            </div>
+			<div class="flex justify-end mt-6">
+				<button type="button" onclick="skipCharger()" class="text-sm text-gray-500 hover:text-blue-600">
+					충전기 선택 건너뛰기 →
+				</button>
+			</div>
+		</div>
 
-                            <div id="ev-sub-form-time" class="bg-white p-6 rounded-2xl shadow-sm space-y-4">
-                                <p class="text-xs text-gray-400">시작 시간과 종료 시간을 차례대로 선택하세요.</p>
-                                <div id="ev-time-tile-container" class="grid grid-cols-6 gap-2 text-center text-xs font-medium">
-                                    <div class="ev-time-tile border border-gray-200 rounded-lg py-2 cursor-pointer hover:bg-gray-50"
-									     data-time="07:00">07:00</div>
-									<div class="ev-time-tile border border-gray-200 rounded-lg py-2 cursor-pointer hover:bg-gray-50"
-									     data-time="08:00">08:00</div>
-									<div class="ev-time-tile border border-gray-200 rounded-lg py-2 cursor-pointer hover:bg-gray-50"
-									     data-time="09:00">09:00</div>
-									<div class="ev-time-tile border border-gray-200 rounded-lg py-2 cursor-pointer hover:bg-gray-50"
-									     data-time="10:00">10:00</div>
-									<div class="ev-time-tile border border-gray-200 rounded-lg py-2 cursor-pointer hover:bg-gray-50"
-									     data-time="11:00">11:00</div>
-									<div class="ev-time-tile border border-gray-200 rounded-lg py-2 cursor-pointer hover:bg-gray-50"
-									     data-time="12:00">12:00</div>
-                                </div>
-                                <div class="text-sm text-blue-600 font-medium pt-2" id="ev-time-selection-txt">선택: 미선택</div>
-                            </div>
+		<div id="ev-page-2" class="ev-page hidden">
+			<h2 class="text-xl font-bold mb-5">예약 설정</h2>
 
-                            <div id="ev-sub-form-target" class="bg-white p-6 rounded-2xl shadow-sm space-y-6 hidden">
-                                <div class="space-y-2">
-                                    <div class="flex justify-between font-bold text-sm">
-                                        <span>목표 충전량</span>
-                                        <span class="text-blue-600" id="ev-slider-val">30 kWh</span>
-                                    </div>
-                                    <input type="range" min="5" max="100" value="30" oninput="updateSlider(this.value)" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
-                                </div>
-                            </div>
+			<div class="bg-white rounded-xl border shadow-sm p-5 mb-5">
+				<label class="block font-bold mb-2">예약 날짜</label>
+				<input type="date" id="reservationDate" value="${today}" class="border rounded-lg px-4 py-2 w-full">
+			</div>
 
-                            <button type="button" onclick="goNext(4)" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl transition shadow-lg text-center block">다음 단계 ❯</button>
-                        </div>
+			<div class="grid grid-cols-2 gap-3 mb-5">
+				<button type="button" id="btnTime" class="ev-res-type-btn active border rounded-xl py-3 font-bold" onclick="selectReservationType('TIME')">시간 예약</button>
+				<button type="button" id="btnTarget" class="ev-res-type-btn border rounded-xl py-3 font-bold" onclick="selectReservationType('TARGET')">목표 충전량</button>
+			</div>
 
-                        <div id="ev-page-step-4" class="ev-step-page space-y-6 hidden">
-                            <div class="flex items-center gap-2 text-sm text-gray-500 cursor-pointer" onclick="goBack(3)">
-                                <span>❮ 돌아가기</span> <strong class="text-gray-900 text-base font-bold">👀 예약 확인</strong>
-                            </div>
-                            
-                            <div class="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
-                                <table class="w-full text-sm">
-                                    <tr class="border-b border-gray-100"><td class="p-4 font-medium text-gray-400">📍 충전소</td><td class="p-4 font-bold text-right text-gray-900" id="ev-final-station">강남 테헤란로 충전소</td></tr>
-                                    <tr class="border-b border-gray-100"><td class="p-4 font-medium text-gray-400">⚡ 충전기</td><td class="p-4 font-bold text-right text-gray-900" id="ev-final-charger">DC콤보 (100kW)</td></tr>
-                                    <tr class="border-b border-gray-100"><td class="p-4 font-medium text-gray-400">🕒 시간 / 목표</td><td class="p-4 font-bold text-right text-gray-900" id="ev-final-target">-</td></tr>
-                                </table>
-                            </div>
+			<div id="timeBox" class="bg-white rounded-xl border shadow-sm p-5">
+				<h3 class="font-bold mb-4">시간 선택</h3>
+				<div class="grid grid-cols-6 gap-2">
+					<div class="ev-time-btn border rounded-lg py-2 text-center cursor-pointer" data-time="09:00" onclick="selectTime(this, '09:00')">09:00</div>
+					<div class="ev-time-btn border rounded-lg py-2 text-center cursor-pointer" data-time="09:30" onclick="selectTime(this, '09:30')">09:30</div>
+					<div class="ev-time-btn border rounded-lg py-2 text-center cursor-pointer" data-time="10:00" onclick="selectTime(this, '10:00')">10:00</div>
+					<div class="ev-time-btn border rounded-lg py-2 text-center cursor-pointer" data-time="10:30" onclick="selectTime(this, '10:30')">10:30</div>
+					<div class="ev-time-btn border rounded-lg py-2 text-center cursor-pointer" data-time="11:00" onclick="selectTime(this, '11:00')">11:00</div>
+					<div class="ev-time-btn border rounded-lg py-2 text-center cursor-pointer" data-time="11:30" onclick="selectTime(this, '11:30')">11:30</div>
+					<div class="ev-time-btn border rounded-lg py-2 text-center cursor-pointer" data-time="12:00" onclick="selectTime(this, '12:00')">12:00</div>
+					<div class="ev-time-btn border rounded-lg py-2 text-center cursor-pointer" data-time="12:30" onclick="selectTime(this, '12:30')">12:30</div>
+					<div class="ev-time-btn border rounded-lg py-2 text-center cursor-pointer" data-time="13:00" onclick="selectTime(this, '13:00')">13:00</div>
+					<div class="ev-time-btn border rounded-lg py-2 text-center cursor-pointer" data-time="13:30" onclick="selectTime(this, '13:30')">13:30</div>
+					<div class="ev-time-btn border rounded-lg py-2 text-center cursor-pointer" data-time="14:00" onclick="selectTime(this, '14:00')">14:00</div>
+					<div class="ev-time-btn border rounded-lg py-2 text-center cursor-pointer" data-time="14:30" onclick="selectTime(this, '14:30')">14:30</div>
+					<div class="ev-time-btn border rounded-lg py-2 text-center cursor-pointer" data-time="15:00" onclick="selectTime(this, '15:00')">15:00</div>
+					<div class="ev-time-btn border rounded-lg py-2 text-center cursor-pointer" data-time="15:30" onclick="selectTime(this, '15:30')">15:30</div>
+					<div class="ev-time-btn border rounded-lg py-2 text-center cursor-pointer" data-time="16:00" onclick="selectTime(this, '16:00')">16:00</div>
+					<div class="ev-time-btn border rounded-lg py-2 text-center cursor-pointer" data-time="16:30" onclick="selectTime(this, '16:30')">16:30</div>
+					<div class="ev-time-btn border rounded-lg py-2 text-center cursor-pointer" data-time="17:00" onclick="selectTime(this, '17:00')">17:00</div>
+					<div class="ev-time-btn border rounded-lg py-2 text-center cursor-pointer" data-time="17:30" onclick="selectTime(this, '17:30')">17:30</div>
+					<div class="ev-time-btn border rounded-lg py-2 text-center cursor-pointer" data-time="18:00" onclick="selectTime(this, '18:00')">18:00</div>
+					<div class="ev-time-btn border rounded-lg py-2 text-center cursor-pointer" data-time="18:30" onclick="selectTime(this, '18:30')">18:30</div>
+					<div class="ev-time-btn border rounded-lg py-2 text-center cursor-pointer" data-time="19:00" onclick="selectTime(this, '19:00')">19:00</div>
+					<div class="ev-time-btn border rounded-lg py-2 text-center cursor-pointer" data-time="19:30" onclick="selectTime(this, '19:30')">19:30</div>
+					<div class="ev-time-btn border rounded-lg py-2 text-center cursor-pointer" data-time="20:00" onclick="selectTime(this, '20:00')">20:00</div>
+					<div class="ev-time-btn border rounded-lg py-2 text-center cursor-pointer" data-time="20:30" onclick="selectTime(this, '20:30')">20:30</div>
+					<div class="ev-time-btn border rounded-lg py-2 text-center cursor-pointer" data-time="21:00" onclick="selectTime(this, '21:00')">21:00</div>
+					<div class="ev-time-btn border rounded-lg py-2 text-center cursor-pointer" data-time="21:30" onclick="selectTime(this, '21:30')">21:30</div>
+					<div class="ev-time-btn border rounded-lg py-2 text-center cursor-pointer" data-time="22:00" onclick="selectTime(this, '22:00')">22:00</div>
+					<div class="ev-time-btn border rounded-lg py-2 text-center cursor-pointer" data-time="22:30" onclick="selectTime(this, '22:30')">22:30</div>
+					<div class="ev-time-btn border rounded-lg py-2 text-center cursor-pointer" data-time="23:00" onclick="selectTime(this, '23:00')">23:00</div>
+					<div class="ev-time-btn border rounded-lg py-2 text-center cursor-pointer" data-time="23:30" onclick="selectTime(this, '23:30')">23:30</div>
+				</div>
+			</div>
 
-                            <button type="button" onclick="submitFinalBooking()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl transition shadow-lg flex items-center justify-center gap-2">
-                                ✓ 예약 확정
-                            </button>
-                        </div>
-                    </form>
-                </div>
+			<div id="targetBox" class="bg-white rounded-xl border shadow-sm p-5 hidden">
+				<h3 class="font-bold mb-5">목표 충전량 설정</h3>
+				<div class="mb-4">
+					<div class="flex justify-between items-center mb-2">
+						<span class="text-sm text-gray-500">목표 충전 퍼센트</span>
+						<span id="targetPercentText" class="font-bold text-blue-600 text-lg">50%</span>
+					</div>
+					<input type="range" id="targetPercent" name="targetKwh" min="5" max="100" step="5" value="50" oninput="changeTargetPercent(this.value)" class="w-full h-2 rounded-lg cursor-pointer">
+				</div>
+				<div>
+					<p class="text-sm text-gray-500 mb-3">빠른 선택</p>
+					<div class="grid grid-cols-5 gap-2">
+						<button type="button" onclick="quickTarget(20)" class="border rounded-lg py-2 text-sm hover:bg-blue-50">20%</button>
+						<button type="button" onclick="quickTarget(40)" class="border rounded-lg py-2 text-sm hover:bg-blue-50">40%</button>
+						<button type="button" onclick="quickTarget(60)" class="border rounded-lg py-2 text-sm hover:bg-blue-50">60%</button>
+						<button type="button" onclick="quickTarget(80)" class="border rounded-lg py-2 text-sm hover:bg-blue-50">80%</button>
+						<button type="button" onclick="quickTarget(100)" class="border rounded-lg py-2 text-sm hover:bg-blue-50">100%</button>
+					</div>
+				</div>
+			</div>
 
-                <div class="space-y-6">
-                    <div class="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm space-y-4">
-                        <h4 class="font-bold text-gray-900 text-base">예약 요약</h4>
-                        <ul class="space-y-3 text-sm font-medium">
-                            <li class="flex items-center gap-3">
-                                <span id="ev-summary-badge-1" class="w-5 h-5 flex items-center justify-center rounded-full bg-blue-100 text-blue-600 text-xs">1</span>
-                                <span id="ev-summary-txt-1" class="text-gray-900 font-bold">충전소 미선택</span>
-                            </li>
-                            <li class="flex items-center gap-3">
-                                <span id="ev-summary-badge-2" class="w-5 h-5 flex items-center justify-center rounded-full bg-gray-100 text-gray-400 text-xs">2</span>
-                                <span id="ev-summary-txt-2" class="text-gray-400">충전기 미선택</span>
-                            </li>
-                            <li class="flex items-center gap-3">
-                                <span id="ev-summary-badge-3" class="w-5 h-5 flex items-center justify-center rounded-full bg-gray-100 text-gray-400 text-xs">3</span>
-                                <span id="ev-summary-txt-3" class="text-gray-400">예약 설정 미완료</span>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
+			<div class="mt-6 flex justify-between">
+				<button type="button" onclick="prevStep(1)" class="border border-gray-300 bg-white hover:bg-gray-100 text-gray-700 px-6 py-3 rounded-xl font-bold">이전 단계</button>
+				<button type="button" onclick="moveStep(3)" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-bold">다음 단계</button>
+			</div>
+		</div>
 
-            <div id="ev-success-modal" class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-                <div class="bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl text-center space-y-6">
-                    <div class="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-3xl mx-auto font-bold">✓</div>
-                    <h2 class="text-2xl font-black text-gray-900">예약 완료!</h2>
-                    <div class="bg-gray-50 rounded-2xl p-4 text-left text-xs space-y-3 font-medium border border-gray-100">
-                        <div class="flex justify-between"><span>충전소</span><span class="text-gray-900 font-bold" id="ev-pop-station">-</span></div>
-                        <div class="flex justify-between"><span>충전기</span><span class="text-gray-900 font-bold" id="ev-pop-charger">-</span></div>
-                        <div class="flex justify-between"><span>예약 내역</span><span class="text-gray-900 font-bold" id="ev-pop-time">-</span></div>
-                    </div>
-                    <div class="grid grid-cols-2 gap-3 text-sm font-bold">
-                        <button type="button" onclick="location.reload()" class="border border-gray-200 py-3 rounded-xl">새 예약</button>
-                        <button type="button" onclick="location.href='/reservation/my'" class="bg-blue-600 text-white py-3 rounded-xl">내 예약 확인</button>
-                    </div>
-                </div>
-            </div>
+		<div id="ev-page-3" class="ev-page hidden">
+			<h2 class="text-xl font-bold mb-5">예약 확인</h2>
+			<div class="bg-white rounded-xl border shadow-sm overflow-hidden">
+				<table class="w-full">
+					<tr class="border-b">
+						<td class="p-4 font-bold bg-gray-50 w-40">충전기</td>
+						<td class="p-4" id="summaryCharger">-</td>
+					</tr>
+					<tr>
+						<td class="p-4 font-bold bg-gray-50">예약 정보</td>
+						<td class="p-4" id="summaryReserve">-</td>
+					</tr>
+				</table>
+			</div>
 
-        </div>
-    </main>
+			<div class="mt-6 flex justify-between">
+				<button type="button" onclick="prevStep(2)" class="border border-gray-300 bg-white hover:bg-gray-100 text-gray-700 px-6 py-3 rounded-xl font-bold">이전 단계</button>
+				<button type="button" onclick="submitReservation()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-bold">예약 확정</button>
+			</div>
+		</div>
+	</form>
+</main>
+
 </body>
 </html>
