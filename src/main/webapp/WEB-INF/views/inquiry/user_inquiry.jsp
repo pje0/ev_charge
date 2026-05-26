@@ -70,6 +70,46 @@
 	            }
 	        });
 	    }
+    $(document).ready(function() {
+        scrollToBottom(); // 초기 로드 시 하단 이동
+
+        // 3초마다 새 메시지 체크
+        setInterval(function() {
+            $.ajax({
+                url: "${pageContext.request.contextPath}/user/inquiry/messages",
+                type: "GET",
+                data: { roomId: "${roomId}" },
+                success: function(list) {
+                    // 현재 화면에 있는 메시지 개수 체크
+                    const currentCount = $("#chatArea .msg").length;
+                    
+                    // 서버에서 가져온 리스트가 더 많을 때만 실행
+                    if (list.length > currentCount) {
+                        let html = "";
+                        
+                        // 새로 추가된 메시지부터 루프 시작
+                        for (let i = currentCount; i < list.length; i++) {
+                            const msg = list[i];
+
+                            // 필드명이 message인지 Message인지 둘 다 체크 (안전장치)
+                            const content = msg.message || msg.Message || "내용이 없습니다";
+                            const role = msg.senderRole || msg.SenderRole;
+                            
+                            const isMe = (role === 'USER');
+                            
+                            html += '<div class="msg ' + (isMe ? 'me' : 'admin') + '">';
+                            html += '    <span class="txt">' + content + '</span>';
+                            html += '</div>';
+                        }
+                        
+                        // 화면에 추가하고 스크롤 내리기
+                        $("#chatArea").append(html);
+                        scrollToBottom();
+                    }
+                }
+            });
+        }, 3000); // 3초 주기
+    });
 	</script>
 </body>
 </html>

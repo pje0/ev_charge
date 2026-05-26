@@ -60,4 +60,14 @@ public class InquiryUserController {
         inquiryService.sendMessageFromUser(userId, content);
         return "ok";
     }
+ // 채팅 내역만 가져오는 API (폴링용)
+    @GetMapping("/messages")
+    @ResponseBody
+    public List<InquiryMessageDTO> getMessages(@RequestParam("roomId") Long roomId, HttpSession session) {
+        // 세션에서 현재 유저 권한 확인 (읽음 처리 로직 때문)
+        String userRole = (String) session.getAttribute("userRole");
+        
+        // DB에서 해당 방의 전체 메시지 리스트 반환
+        return inquiryService.getChatHistory(roomId, userRole);
+    }
 }
