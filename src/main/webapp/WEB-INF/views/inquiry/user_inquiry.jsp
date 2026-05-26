@@ -18,13 +18,19 @@
         <div class="chat-window">
             
             <%-- 대화 내역 --%>
-            <div id="chatArea" class="chat-content">
-                <c:forEach var="msg" items="${messages}">
-                    <div class="msg ${msg.senderRole == 'USER' ? 'me' : 'admin'}">
-                        <span class="txt">${msg.message}</span>
-                    </div>
-                </c:forEach>
-            </div>
+			<div id="chatArea" class="chat-content">
+			    <c:forEach var="msg" items="${messages}">
+			        <div class="msg ${msg.senderRole == 'USER' ? 'me' : 'admin'}">
+			            <%-- 초기 로드 시에도 읽음 상태 표시 추가 --%>
+			            <c:if test="${msg.senderRole == 'USER'}">
+			                <span class="read-status ${msg.isRead == 'N' ? 'unread' : ''}">
+			                    ${msg.isRead == 'Y' ? '읽음' : '읽지 않음'}
+			                </span>
+			            </c:if>
+			            <span class="txt">${msg.message}</span>
+			        </div>
+			    </c:forEach>
+			</div>
 
             <%-- 입력란 --%>
             <div class="chat-input-wrap">
@@ -36,6 +42,8 @@
     </div>
 
     <script>
+    let currentRoomId = "${roomId}"; // 방 번호 저장
+    let lastMessageCount = ${messages.size()}; // 초기 메시지 개수 저장 (JSTL로 주입)
     // 1. 스크롤을 맨 아래로 내리는 공통 함수
     function scrollToBottom() {
         const area = document.getElementById('chatArea');
@@ -80,35 +88,37 @@
                 type: "GET",
                 data: { roomId: "${roomId}" },
                 success: function(list) {
-                    // 현재 화면에 있는 메시지 개수 체크
-                    const currentCount = $("#chatArea .msg").length;
+                    let html = "";
                     
-                    // 서버에서 가져온 리스트가 더 많을 때만 실행
-                    if (list.length > currentCount) {
-                        let html = "";
-                        
-                        // 새로 추가된 메시지부터 루프 시작
-                        for (let i = currentCount; i < list.length; i++) {
-                            const msg = list[i];
+                    list.forEach(msg => {
+                        const isMe = (msg.senderRole === 'USER');
+                        // 1. 읽음 상태 값 판별 (DB 컬럼명 확인 필수)
+                        const isRead = (msg.isRead === 'Y' || msg.is_read === 'Y');
+                        const statusText = isRead ? "읽음" : "읽지 않음";
+                        const statusClass = isRead ? "" : "unread";
 
-                            // 필드명이 message인지 Message인지 둘 다 체크 (안전장치)
-                            const content = msg.message || msg.Message || "내용이 없습니다";
-                            const role = msg.senderRole || msg.SenderRole;
-                            
-                            const isMe = (role === 'USER');
-                            
-                            html += '<div class="msg ' + (isMe ? 'me' : 'admin') + '">';
-                            html += '    <span class="txt">' + content + '</span>';
-                            html += '</div>';
+                        html += '<div class="msg ' + (isMe ? 'me' : 'admin') + '">';
+                        
+                        // 2. [추가] 내가 보낸 메시지일 때만 상태 텍스트 삽입
+                        if (isMe) {
+                            html += '<span class="read-status ' + statusClass + '">' + statusText + '</span>';
                         }
                         
-                        // 화면에 추가하고 스크롤 내리기
-                        $("#chatArea").append(html);
+                        html += '    <span class="txt">' + (msg.message || msg.Message) + '</span>';
+                        html += '</div>';
+                    });
+                    
+                    // 3. [핵심] 전체를 다시 그려야 기존 '읽지 않음'이 '읽음'으로 업데이트됨
+                    $("#chatArea").html(html);
+                    
+                    // 4. 메시지 개수가 늘어났을 때만 스크롤 하단 이동
+                    if (list.length > lastMessageCount) {
                         scrollToBottom();
+                        lastMessageCount = list.length;
                     }
                 }
             });
-        }, 3000); // 3초 주기
+        }, 3000);
     });
 	</script>
 </body>

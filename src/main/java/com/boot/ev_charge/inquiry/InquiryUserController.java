@@ -35,7 +35,7 @@ public class InquiryUserController {
         
         if (room != null) {
             // 대화 내역 로드 (USER 권한으로 조회)
-            List<InquiryMessageDTO> messages = inquiryService.getChatHistory(room.getId(), "USER");
+            List<InquiryMessageDTO> messages = inquiryService.getChatHistory(room.getId());
             model.addAttribute("messages", messages);
             model.addAttribute("roomId", room.getId());
         }
@@ -68,6 +68,6 @@ public class InquiryUserController {
         String userRole = (String) session.getAttribute("userRole");
         
         // DB에서 해당 방의 전체 메시지 리스트 반환
-        return inquiryService.getChatHistory(roomId, userRole);
+        return inquiryService.getChatHistory(roomId);
     }
 }

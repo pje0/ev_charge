@@ -16,29 +16,25 @@ public class InquiryServiceImpl implements InquiryService {
      * 논리: OPEN된 방 검색 -> 없으면 생성 -> 생성된(혹은 기존) ID로 메시지 저장
      */
     @Override
-    @Transactional // 방 생성과 메시지 저장이 동시에 성공해야 함
+    @Transactional
     public void sendMessageFromUser(Long userId, String content) {
-        // 1. 해당 유저의 활성화된(OPEN) 방이 있는지 확인
         InquiryRoomDTO room = inquiryDAO.findOpenRoomByUserId(userId);
         
-        // 2. 방이 없다면 새로 생성
         if (room == null) {
             room = InquiryRoomDTO.builder()
                     .userId(userId)
                     .status("OPEN")
                     .build();
-            // MyBatis의 useGeneratedKeys로 인해 room 객체에 id가 자동으로 채워짐
             inquiryDAO.createRoom(room); 
         }
 
-        // 3. 메시지 객체 생성 및 저장
         InquiryMessageDTO message = InquiryMessageDTO.builder()
                 .roomId(room.getId())
                 .senderId(userId)
                 .senderRole("USER")
                 .message(content)
                 .messageType("TEXT")
-                .isRead("N") // 유저가 보낸 것은 관리자가 읽어야 하므로 N
+                .isRead("N")
                 .build();
         
         inquiryDAO.insertMessage(message);
@@ -46,15 +42,22 @@ public class InquiryServiceImpl implements InquiryService {
 
     /**
      * [공통] 채팅 내역 조회
-     * 논리: 관리자(ADMIN)가 조회하는 경우에만 읽음(is_read = 'Y') 처리 수행
+     * 논리: 실시간 폴링 시 중복 읽음 처리를 방지하기 위해 단순 조회만 수행
+     */
+    @Override
+    public List<InquiryMessageDTO> getChatHistory(Long roomId) {
+        // 이제 관리자가 조회해도 여기서 자동으로 읽음 처리를 하지 않습니다.
+        return inquiryDAO.selectMessageList(roomId);
+    }
+
+    /**
+     * [관리자] 읽음 처리 전용
+     * 논리: 관리자가 방을 클릭하는 시점에 명시적으로 호출하여 읽음(is_read = 'Y') 처리 수행
      */
     @Override
     @Transactional
-    public List<InquiryMessageDTO> getChatHistory(Long roomId, String userRole) {
-        if ("ADMIN".equals(userRole)) {
-            inquiryDAO.updateReadStatus(roomId);
-        }
-        return inquiryDAO.selectMessageList(roomId);
+    public void markAsRead(Long roomId) {
+        inquiryDAO.updateReadStatus(roomId);
     }
 
     /**
@@ -64,17 +67,15 @@ public class InquiryServiceImpl implements InquiryService {
     @Override
     @Transactional
     public void replyFromAdmin(Long adminId, Long roomId, String content) {
-        // 1. 해당 방에 관리자가 배정되지 않았다면 현재 관리자로 배정
         inquiryDAO.updateRoomAdmin(roomId, adminId);
 
-        // 2. 관리자 답변 메시지 저장
         InquiryMessageDTO message = InquiryMessageDTO.builder()
                 .roomId(roomId)
                 .senderId(adminId)
                 .senderRole("ADMIN")
                 .message(content)
                 .messageType("TEXT")
-                .isRead("Y") // 관리자가 쓴 글은 이미 확인된 상태이므로 Y
+                .isRead("Y")
                 .build();
 
         inquiryDAO.insertMessage(message);

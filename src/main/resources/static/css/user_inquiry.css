@@ -3,7 +3,7 @@
     width: 100%;
     max-width: 600px;
     height: 700px;
-    margin: 80px auto; /* 헤더 공간 확보 */
+    margin: 80px auto;
     display: flex;
     flex-direction: column;
     background: #ffffff;
@@ -24,31 +24,70 @@
     gap: 12px;
 }
 
-/* 메시지 공통 */
-.msg { display: flex; width: 100%; }
-.msg .txt {
+/* 메시지 공통 레이아웃 */
+.msg { 
+    display: flex; 
+    width: 100%; 
+    align-items: flex-end; 
+    gap: 8px;
+    margin-bottom: 15px;
+}
+
+/* 🔵 내 메시지 (오른쪽 정렬) */
+.msg.me { 
+    justify-content: flex-end; /* 무조건 오른쪽 끝 정렬 */
+}
+
+/* 내 말풍선: order를 주어 무조건 뒤(오른쪽)로 보냄 */
+.msg.me .txt {
+    order: 2; 
+    background: var(--ev-primary);
+    color: white;
+    border-bottom-right-radius: 2px;
     max-width: 70%;
     padding: 10px 14px;
     font-size: 14px;
     line-height: 1.5;
     border-radius: 12px;
+    word-break: break-all;
 }
 
-/* 유저 메시지 (오른쪽) */
-.msg.me { justify-content: flex-end; }
-.msg.me .txt {
-    background: var(--ev-primary);
-    color: white;
-    border-bottom-right-radius: 2px;
+/* 내 읽음 표시: order를 주어 무조건 앞(왼쪽)으로 보냄 */
+.msg.me .read-status {
+    order: 1; 
+    margin-left: auto; /* ⭐ 핵심: 왼쪽 공간을 다 밀어서 '읽음+말풍선' 뭉치를 오른쪽으로 붙임 */
 }
 
-/* 관리자 메시지 (왼쪽) */
-.msg.admin { justify-content: flex-start; }
+/* ⚪ 관리자 메시지 (왼쪽 정렬) */
+.msg.admin { 
+    justify-content: flex-start; 
+}
+
 .msg.admin .txt {
     background: white;
     border: 1px solid var(--ev-border);
     color: var(--ev-foreground);
     border-bottom-left-radius: 2px;
+    max-width: 70%;
+    padding: 10px 14px;
+    font-size: 14px;
+    line-height: 1.5;
+    border-radius: 12px;
+    word-break: break-all;
+}
+
+/* 읽음 상태 텍스트 스타일 */
+.read-status {
+    font-size: 10px;
+    color: #a1a1aa;
+    white-space: nowrap;
+    line-height: 1;
+    margin-bottom: 2px; /* 말풍선 바닥선에 맞춤 */
+}
+
+.read-status.unread {
+    color: var(--ev-primary);
+    font-weight: bold;
 }
 
 /* 입력창 영역 */
@@ -68,5 +107,4 @@
     font-size: 14px;
     outline: none;
 }
-
 #msgInput:focus { border-color: var(--ev-primary); }
