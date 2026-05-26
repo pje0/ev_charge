@@ -1,0 +1,46 @@
+@charset "UTF-8";
+
+.ev-step-on {
+	color: #2563eb;
+	font-weight: 700;
+}
+
+.ev-step-on .ev-step-num {
+	background-color: #2563eb;
+	color: white;
+}
+
+.ev-time-btn.active {
+	background-color: #2563eb;
+	color: white;
+	border-color: #2563eb;
+}
+
+.ev-time-btn.in-range {
+	background-color: #dbeafe;
+	color: #1d4ed8;
+	border-color: #93c5fd;
+}
+
+.ev-res-type-btn.active {
+	background-color: #2563eb;
+	color: white;
+}
+
+.ev-time-btn.disabled {
+	background-color: #e5e7eb;
+	color: #9ca3af;
+	border-color: #d1d5db;
+	cursor: not-allowed;
+	pointer-events: none;
+	opacity: 0.7;
+}
+
+.ev-time-btn.disabled:hover {
+	background-color: #e5e7eb;
+}
+
+.ev-time-btn.disabled.active {
+	background-color: #e5e7eb !important;
+	color: #9ca3af !important;
+}

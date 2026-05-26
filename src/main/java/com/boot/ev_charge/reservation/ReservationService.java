@@ -1,11 +1,14 @@
 package com.boot.ev_charge.reservation;
 
+import java.sql.Timestamp;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import com.boot.ev_charge.station.ChargerDto;
 
 @Service
 public class ReservationService {
@@ -18,31 +21,37 @@ public class ReservationService {
     @Transactional
     public void createReservation(ReservationDto dto) {
 
-        // 시간 예약 중복 검사
+        // 1. 기본 검증 먼저
         if ("TIME".equals(dto.getReservationType())) {
 
-            int count = reservationMapper.countDuplicateReservation(dto);
+            int startMinute = dto.getStartTime().toLocalDateTime().getMinute();
+            int endMinute = dto.getEndTime().toLocalDateTime().getMinute();
 
+            if (!((startMinute == 0 || startMinute == 30) && (endMinute == 0 || endMinute == 30))) {
+                throw new RuntimeException("30분 단위 예약만 가능합니다.");
+            }
+
+            if (!dto.getEndTime().after(dto.getStartTime())) {
+                throw new RuntimeException("종료시간은 시작 시간 이후여야 합니다.");
+            }
+
+            if (dto.getStartTime().before(new Timestamp(System.currentTimeMillis()))) {
+                throw new RuntimeException("과거 시간은 예약할 수 없습니다.");
+            }
+
+            int count = reservationMapper.countDuplicateReservation(dto);
             if (count > 0) {
                 throw new RuntimeException("이미 예약된 시간입니다.");
             }
         }
 
-        // 공통 예약 생성
+        // 2. DB 저장은 마지막 1번만
         reservationMapper.insertReservation(dto);
 
-
-        // 시간 예약 생성
         if ("TIME".equals(dto.getReservationType())) {
-
-        	reservationMapper.insertReservationTime(dto);
-        }
-
-
-        // 목표 충전량 예약 생성
-        if ("TARGET".equals(dto.getReservationType())) {
-
-        	reservationMapper.insertReservationTarget(dto);
+            reservationMapper.insertReservationTime(dto);
+        } else if ("TARGET".equals(dto.getReservationType())) {
+            reservationMapper.insertReservationTarget(dto);
         }
     }
 
@@ -82,10 +91,20 @@ public class ReservationService {
     }
 
 
-    // 예약 자동 만료 처리
-    @Scheduled(fixedRate = 60000)
-    public void expireReservation() {
+    // 예약 자동 만료 처리 (예약 시간이 지날 시 자동 만료)
+//    @Scheduled(fixedRate = 60000)
+//    public void expireReservation() {
+//
+//    	reservationMapper.expireReservation();
+//    }
+    
+    // 충전기 목록 조회
+    public List<ChargerDto> getChargerList() {
 
-    	reservationMapper.expireReservation();
+        return reservationMapper.getChargerList();
+    }
+    
+    public List<ReservationDto> getReservedTimes(Long chargerId, String date) {
+        return reservationMapper.getReservedTimes(chargerId, date);
     }
 }

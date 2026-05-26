@@ -3,6 +3,9 @@ package com.boot.ev_charge.reservation;
 import java.util.List;
 
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+
+import com.boot.ev_charge.station.ChargerDto;
 
 @Mapper
 public interface ReservationMapper {
@@ -16,4 +19,6 @@ public interface ReservationMapper {
     int completeCharging(Long reservationId);
     int cancelReservation(Long reservationId);
     int expireReservation();
+    List<ChargerDto> getChargerList();
+    List<ReservationDto> getReservedTimes(@Param("chargerId") Long chargerId, @Param("date") String date);
 }
