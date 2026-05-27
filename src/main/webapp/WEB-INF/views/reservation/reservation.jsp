@@ -133,7 +133,7 @@
                         <span class="text-xs text-gray-400">목표 충전 범위</span>
                         <span id="targetPercentText" class="font-bold text-blue-600 text-base">20%</span>
                     </div>
-                    <input type="range" id="targetPercent" name="targetKwh" min="5" max="100" step="5" value="20" 
+                    <input type="range" id="targetPercent" name="targetKwh" min="0" max="100" step="5" value="0" 
                            oninput="changeTargetPercent(this.value)" 
                            class="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer"
                            style="background: linear-gradient(to right, #2563eb 0%, #e5e7eb 0%, #e5e7eb 100%);">
