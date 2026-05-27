@@ -538,7 +538,7 @@ function calculateMaxAvailableInterval() {
 }
 
 // =====================================================
-// 9. 실시간 예약/과거 시간대 비활성화 (v1.0 하이브리드 세이프 가드)
+// 9. 실시간 예약/과거 시간대 비활성화 및 동기화 처리 (v1.2 과거 날짜 잠금 통합본)
 // =====================================================
 async function loadReservedTimes() {
     if (isFetchingReservedTimes) return;
@@ -566,7 +566,24 @@ async function loadReservedTimes() {
     const now = new Date();
     const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`; 
 
-    if (date === todayStr) {
+    // =====================================================
+    // 2. [날짜 검증 패치] 과거 날짜 일괄 잠금 및 오늘 날짜 과거 슬롯 차단
+    // =====================================================
+    const selectedDateObj = new Date(date + "T00:00:00");
+    const todayDateObj = new Date(todayStr + "T00:00:00");
+
+    if (selectedDateObj < todayDateObj) {
+        // 🚨 케이스 A: 선택한 날짜가 오늘보다 과거인 경우 -> 모든 타임 슬롯을 강제로 회색 잠금
+        console.log("📆 [과거 날짜 감지] 선택한 날짜가 오늘보다 이전이므로 모든 슬롯을 잠급니다.");
+        document.querySelectorAll(".ev-time-btn").forEach(btn => {
+            btn.classList.add("disabled"); 
+            btn.style.setProperty("background-color", "#e5e7eb", "important");
+            btn.style.setProperty("color", "#9ca3af", "important");
+            btn.style.setProperty("pointer-events", "none", "important");
+            btn.style.setProperty("cursor", "not-allowed", "important");
+        });
+    } else if (date === todayStr) {
+        // 🚨 케이스 B: 선택한 날짜가 오늘인 경우 -> 현재 시각 기준 이전 슬롯만 부분 잠금
         const currentHours = now.getHours();
         const currentMinutes = now.getMinutes();
 
@@ -602,7 +619,7 @@ async function loadReservedTimes() {
             const reservedList = await response.json();
             console.log("📦 [서버가 리턴한 실시간 예약 데이터] : ", reservedList);
             
-			// =====================================================
+            // =====================================================
             // 🟢 [v1.1] 타임존 강제 동기화형 정밀 시/분 파서
             // =====================================================
             const parseToMinutes = (timeInput) => {
@@ -635,8 +652,8 @@ async function loadReservedTimes() {
                 return null;
             };
 
+            // 3. 서버 DB 예약 내역 중복 누적 잠금
             reservedList.forEach((r, index) => {
-                // 🟢 객체 내부 맵핑 명칭의 스네이크 케이스와 카멜 케이스의 이중 교차 검증 유연화 격벽 보정
                 const rawStartTime = r.startTime || r.start_time || r.START_TIME;
                 const rawEndTime = r.endTime || r.end_time || r.END_TIME;
 
@@ -661,7 +678,6 @@ async function loadReservedTimes() {
                     
                     if (btnMin === null) return;
 
-                    // 범위 내부 매핑 적중 시 인라인 물리 속성을 도포하여 화면 잠금 처리
                     if (Number(btnMin) >= Number(startMin) && Number(btnMin) < Number(endMin)) {
                         btn.classList.add("disabled"); 
                         btn.style.setProperty("background-color", "#e5e7eb", "important"); 
@@ -679,12 +695,12 @@ async function loadReservedTimes() {
                 changeTargetPercent(currentSliderVal, false);
             }
         }
-    } catch (error) { 
+	} catch (error) { 
         console.error("예약 시간 조회 실패:", error); 
-    } finally {
+    } finally { // 🟢 'finally' 키워드를 정확하게 복구하여 문법 충돌을 종결합니다.
         isFetchingReservedTimes = false;
     }
-}
+} // 🟢 loadReservedTimes 함수 종료 중괄호
 
 // ==========================================
 // 10. 예약 최종 제출 및 컨트롤러 포맷 조율
