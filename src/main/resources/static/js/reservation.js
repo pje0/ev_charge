@@ -538,7 +538,7 @@ function calculateMaxAvailableInterval() {
 }
 
 // =====================================================
-// 9. 실시간 예약/과거 시간대 비활성화 및 동기화 처리 (v1.2 과거 날짜 잠금 통합본)
+// 9. 실시간 예약/과거 시간대 비활성화 및 동기화 (v1.4 본인 예약 식별 제어판)
 // =====================================================
 async function loadReservedTimes() {
     if (isFetchingReservedTimes) return;
@@ -553,7 +553,7 @@ async function loadReservedTimes() {
 
     isFetchingReservedTimes = true;
 
-    // 1. 초기 청소
+    // 1. 초기 청소 (버튼 기본 상태 복구 및 본인 예약 식별 텍스트 청소)
     document.querySelectorAll(".ev-time-btn").forEach(btn => {
         btn.classList.remove("disabled", "active", "in-range");
         btn.style.removeProperty("background-color");
@@ -561,20 +561,21 @@ async function loadReservedTimes() {
         btn.style.removeProperty("pointer-events");
         btn.style.removeProperty("cursor");
         btn.style.removeProperty("border-color");
+        
+        // 데이터 속성에 백업해 둔 원본 시간 문자열(09:00 등)로 텍스트 원상복구
+        if(btn.dataset.time) {
+            btn.innerText = btn.dataset.time;
+        }
     });
     
     const now = new Date();
     const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`; 
 
-    // =====================================================
-    // 2. [날짜 검증 패치] 과거 날짜 일괄 잠금 및 오늘 날짜 과거 슬롯 차단
-    // =====================================================
+    // 2. 과거 날짜 및 오늘 과거 슬롯 선제 잠금
     const selectedDateObj = new Date(date + "T00:00:00");
     const todayDateObj = new Date(todayStr + "T00:00:00");
 
     if (selectedDateObj < todayDateObj) {
-        // 🚨 케이스 A: 선택한 날짜가 오늘보다 과거인 경우 -> 모든 타임 슬롯을 강제로 회색 잠금
-        console.log("📆 [과거 날짜 감지] 선택한 날짜가 오늘보다 이전이므로 모든 슬롯을 잠급니다.");
         document.querySelectorAll(".ev-time-btn").forEach(btn => {
             btn.classList.add("disabled"); 
             btn.style.setProperty("background-color", "#e5e7eb", "important");
@@ -583,7 +584,6 @@ async function loadReservedTimes() {
             btn.style.setProperty("cursor", "not-allowed", "important");
         });
     } else if (date === todayStr) {
-        // 🚨 케이스 B: 선택한 날짜가 오늘인 경우 -> 현재 시각 기준 이전 슬롯만 부분 잠금
         const currentHours = now.getHours();
         const currentMinutes = now.getMinutes();
 
@@ -619,30 +619,20 @@ async function loadReservedTimes() {
             const reservedList = await response.json();
             console.log("📦 [서버가 리턴한 실시간 예약 데이터] : ", reservedList);
             
-            // =====================================================
-            // 🟢 [v1.1] 타임존 강제 동기화형 정밀 시/분 파서
-            // =====================================================
+            // 타임존 강제 동기화형 정밀 시/분 파서
             const parseToMinutes = (timeInput) => {
                 if (timeInput === null || timeInput === undefined) return null;
-                
-                // 케이스 1: ISO 8601 문자열 포맷인 경우 ("2026-05-27T06:00:00.000+00:00" 등)
                 if (typeof timeInput === 'string' && (timeInput.includes('T') || timeInput.includes('Z'))) {
-                    const d = new Date(timeInput); // 브라우저가 자동으로 로컬 타임존(KST)으로 변환함
+                    const d = new Date(timeInput);
                     return (d.getHours() * 60) + d.getMinutes();
                 }
-                
-                // 케이스 2: 순수 숫자형 밀리초 타임스탬프인 경우
                 if (typeof timeInput === 'number' || !isNaN(timeInput)) {
                     const d = new Date(Number(timeInput));
                     return (d.getHours() * 60) + d.getMinutes();
                 }
-                
-                // 케이스 3: 자바 LocalDateTime 배열 형태로 넘어온 경우
                 if (Array.isArray(timeInput) && timeInput.length >= 5) {
                     return (parseInt(timeInput[3], 10) * 60) + parseInt(timeInput[4], 10);
                 }
-                
-                // 케이스 4: 일반 DB 공백 분리형 문자열 포맷인 경우 ("2026-05-27 18:30:00")
                 if (typeof timeInput === 'string') {
                     let pureTime = timeInput.includes(' ') ? timeInput.split(' ')[1] : timeInput;
                     const match = pureTime.match(/^(\d{2}):(\d{2})/);
@@ -652,12 +642,10 @@ async function loadReservedTimes() {
                 return null;
             };
 
-            // 3. 서버 DB 예약 내역 중복 누적 잠금
+            // 3. 서버 DB 예약 내역 중복 누적 잠금 및 본인 식별 가드 가동
             reservedList.forEach((r, index) => {
                 const rawStartTime = r.startTime || r.start_time || r.START_TIME;
                 const rawEndTime = r.endTime || r.end_time || r.END_TIME;
-
-                console.log(`🔍 [개체 내부 타겟 추적 (${index})] startTime:`, rawStartTime, ` / endTime:`, rawEndTime);
 
                 if (!rawStartTime || !rawEndTime) return; 
 
@@ -670,8 +658,15 @@ async function loadReservedTimes() {
                 endMin = endMin % 1440;
                 if (endMin <= startMin) endMin += 1440;
 
-                console.log(`📌 [v1.0 회색 장벽 빌드 타겟 범위 분 연산] : ${startMin}분 ~ ${endMin}분`);
+                // 🟢 [본인 예약 식별 코어]
+                // 현재 JSP 페이지 로그인 세션의 유저 ID 세팅값 검증 (기본값 1번 연동 보정)
+                // 만약 전역 변수나 세션 변수로 관리되는 유저 고유 ID가 따로 있다면 Number(자바스크립트_유저ID)로 매핑 가능합니다.
+                const currentSessionUserId = 1; 
+                const resUserId = r.userId || r.user_id || r.USER_ID;
                 
+                // 해당 예약의 소유주가 현재 로그인한 본인인지 여부 판별 boolean
+                const isMyReservation = (Number(resUserId) === Number(currentSessionUserId));
+
                 document.querySelectorAll(".ev-time-btn").forEach(btn => {
                     const tStr = btn.dataset.time; 
                     const btnMin = parseToMinutes(tStr);
@@ -679,11 +674,24 @@ async function loadReservedTimes() {
                     if (btnMin === null) return;
 
                     if (Number(btnMin) >= Number(startMin) && Number(btnMin) < Number(endMin)) {
+                        // 🔒 타인/본인 관계 없이 예약된 슬롯은 공통적으로 회색 선택 불가 잠금
                         btn.classList.add("disabled"); 
                         btn.style.setProperty("background-color", "#e5e7eb", "important"); 
                         btn.style.setProperty("color", "#9ca3af", "important");           
                         btn.style.setProperty("pointer-events", "none", "important");      
                         btn.style.setProperty("cursor", "not-allowed", "important");
+                        
+                        // 🟢 [텍스트 분기 출력 가드]
+                        if (isMyReservation) {
+                            // 본인이 예약한 방이면 차량 종류 데이터 매핑 노출
+                            const carLabel = r.carType || r.car_type || "내 예약";
+                            btn.innerText = carLabel; 
+                            btn.style.setProperty("color", "#2563eb", "important"); //본인 구별용 파란 글씨 포인트
+                            btn.style.setProperty("font-weight", "700", "important");
+                        } else {
+                            // 타인이 예약한 구역이면 상세 내용을 숨기고 "예약 불가" 혹은 원래 시간만 유지
+                            btn.innerText = "마감";
+                        }
                     }
                 });
             });
@@ -695,12 +703,12 @@ async function loadReservedTimes() {
                 changeTargetPercent(currentSliderVal, false);
             }
         }
-	} catch (error) { 
+    } catch (error) { 
         console.error("예약 시간 조회 실패:", error); 
-    } finally { // 🟢 'finally' 키워드를 정확하게 복구하여 문법 충돌을 종결합니다.
+    } finally {
         isFetchingReservedTimes = false;
     }
-} // 🟢 loadReservedTimes 함수 종료 중괄호
+}
 
 // ==========================================
 // 10. 예약 최종 제출 및 컨트롤러 포맷 조율
