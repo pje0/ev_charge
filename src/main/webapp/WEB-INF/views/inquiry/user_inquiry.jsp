@@ -7,39 +7,53 @@
     <title>1:1 문의</title>
     <%-- 1. 공통 CSS 및 전용 CSS --%>
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/common.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/notice.css"> <%-- 공지사항 규격 상속을 위해 함께 유지 --%>
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/user_inquiry.css">
     
     <%-- 2. jQuery (static 폴더 경로 규칙 적용) --%>
     <script src="${pageContext.request.contextPath}/js/jquery.js"></script>
 </head>
 <body>
+	<jsp:include page="/WEB-INF/views/layout/header.jsp" />
 
-    <div class="ev-container">
-        <div class="chat-window">
+    <!-- 💡 공지사항 전용 래퍼 클래스를 그대로 사용하여 고정 헤더 간섭 회피 및 배치선 일치 -->
+    <main class="ev-notice-wrapper">
+        <div class="ev-container">
             
-            <%-- 대화 내역 --%>
-			<div id="chatArea" class="chat-content">
-			    <c:forEach var="msg" items="${messages}">
-			        <div class="msg ${msg.senderRole == 'USER' ? 'me' : 'admin'}">
-			            <%-- 초기 로드 시에도 읽음 상태 표시 추가 --%>
-			            <c:if test="${msg.senderRole == 'USER'}">
-			                <span class="read-status ${msg.isRead == 'N' ? 'unread' : ''}">
-			                    ${msg.isRead == 'Y' ? '읽음' : '읽지 않음'}
-			                </span>
-			            </c:if>
-			            <span class="txt">${msg.message}</span>
-			        </div>
-			    </c:forEach>
-			</div>
+            <!-- 📢 공지사항 전용 헤더 및 폰트 디자인 클래스를 고스란히 이식 -->
+            <section class="ev-notice-header">
+                <h1 class="ev-notice-title">1:1 문의</h1>
+                <p class="ev-notice-subtitle">서비스 이용 중 궁금한 점이나 불편한 사항을 보내주시면 신속하게 답변해 드립니다.</p>
+            </section>
 
-            <%-- 입력란 --%>
-            <div class="chat-input-wrap">
-                <input type="text" id="msgInput" placeholder="메시지 입력..." onkeypress="if(event.keyCode==13) send()">
-                <button type="button" class="ev-btn ev-btn-primary" onclick="send()">전송</button>
+            <!-- 채팅창 영역 -->
+            <div class="chat-window">
+                
+                <%-- 대화 내역 --%>
+                <div id="chatArea" class="chat-content">
+                    <c:forEach var="msg" items="${messages}">
+                        <div class="msg ${msg.senderRole == 'USER' ? 'me' : 'admin'}">
+                            <%-- 초기 로드 시에도 읽음 상태 표시 추가 --%>
+                            <c:if test="${msg.senderRole == 'USER'}">
+                                <span class="read-status ${msg.isRead == 'N' ? 'unread' : ''}">
+                                    ${msg.isRead == 'Y' ? '읽음' : '읽지 않음'}
+                                </span>
+                            </c:if>
+                            <span class="txt">${msg.message}</span>
+                        </div>
+                    </c:forEach>
+                </div>
+
+                <%-- 입력란 --%>
+                <div class="chat-input-wrap">
+                    <input type="text" id="msgInput" placeholder="메시지 입력..." onkeypress="if(event.keyCode==13) send()">
+                    <!-- 💡 정렬 보정이 끝난 inquiry-send-btn 클래스 적용 -->
+                    <button type="button" class="ev-btn ev-btn-primary inquiry-send-btn" onclick="send()">전송</button>
+                </div>
+                
             </div>
-            
         </div>
-    </div>
+    </main>
 
     <script>
     let currentRoomId = "${roomId}"; // 방 번호 저장

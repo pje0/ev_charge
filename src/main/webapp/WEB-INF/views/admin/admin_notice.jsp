@@ -1,6 +1,18 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core"%>
-<div class="ev-admin-card" style="background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>공지사항 관리</title>
+    
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/common.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/admin_notice.css">
+</head>
+<body>
+
+<div class="ev-admin-card" style="background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin: 20px;">
     
     <!-- 1. 헤더 및 필터 영역 -->
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:25px;">
@@ -18,9 +30,9 @@
         </div>
         
         <button class="ev-btn ev-btn-primary" 
-        onclick="location.href='${pageContext.request.contextPath}/admin/notice/write'">
-		    + 새 공지 작성
-		</button>
+                onclick="location.href='${pageContext.request.contextPath}/admin/notice/write'">
+            + 새 공지 작성
+        </button>
     </div>
 
     <!-- 2. 게시글 테이블 -->
@@ -74,12 +86,12 @@
         </tbody>
     </table>
 
-    <%-- 페이징 영역 (필요시 추가) --%>
+    <%-- 페이징 영역 --%>
     <c:if test="${totalPages > 1}">
         <div style="margin-top: 30px; display: flex; justify-content: center; gap: 5px;">
-            <%-- 간단한 페이징 로직 --%>
             <c:forEach var="i" begin="1" end="${totalPages}">
-                <button class="ev-btn ${cri.page == i ? 'ev-btn-primary' : 'ev-btn-outline'}" 
+                <%-- class 속성 맨 뒤에 page-btn 추가 --%>
+                <button class="ev-btn ${cri.page == i ? 'ev-btn-primary' : 'ev-btn-outline'} page-btn" 
                         style="min-width: 35px; height: 35px; padding: 0;"
                         onclick="location.href='${pageContext.request.contextPath}/admin/adminpage?page=${i}&category=${cri.category}'">
                     ${i}
@@ -98,8 +110,9 @@
     // 공지사항 삭제 (Service 연동)
     function fn_remove_notice(id) {
         if(!confirm("해당 공지사항을 정말로 삭제하시겠습니까?")) return;
-        
-        // 삭제 후 현재 보고 있던 페이지와 카테고리로 돌아오도록 설정 가능
         location.href = "${pageContext.request.contextPath}/admin/notice/delete/" + id;
     }
 </script>
+
+</body>
+</html>

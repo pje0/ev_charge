@@ -10,6 +10,7 @@
     <script src="${pageContext.request.contextPath}/js/jquery.js"></script>
 </head>
 <body class="ev-background">
+<jsp:include page="/WEB-INF/views/layout/header.jsp" />
 
 <div class="ev-container" style="max-width: 800px; margin-top: 50px;">
     <div class="ev-admin-card">

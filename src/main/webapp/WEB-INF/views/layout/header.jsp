@@ -36,12 +36,12 @@
 			<a href="/map" class="ev-header-nav-link"> 충전소 지도 </a> <a
 				href="/reservation" class="ev-header-nav-link"> 예약하기 </a> <a
 				href="/calculator" class="ev-header-nav-link"> 충전 요금 계산기 </a> <a
-				href="/status" class="ev-header-nav-link"> 1:1 문의 </a> <a
-				href="/notices" class="ev-header-nav-link"> 공지사항 </a>
+				href="/user/inquiry/chat" class="ev-header-nav-link"> 1:1 문의 </a> <a
+				href="/notice/list" class="ev-header-nav-link"> 공지사항 </a>
 
 			<sec:authorize access="hasRole('ADMIN')">
 
-				<a href="/admin" class="ev-header-nav-link ev-header-nav-link-admin">
+				<a href="/admin/adminpage" class="ev-header-nav-link ev-header-nav-link-admin">
 
 					관리자 </a>
 

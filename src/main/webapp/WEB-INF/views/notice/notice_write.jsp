@@ -9,8 +9,9 @@
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/notice.css">
     <script src="${pageContext.request.contextPath}/js/jquery.js"></script>
 </head>
-<body class="ev-background">
 
+<body class="ev-background">
+<jsp:include page="/WEB-INF/views/layout/header.jsp" />
 <div class="ev-container" style="max-width: 800px; margin-top: 50px;">
     <div class="ev-admin-card">
         <header class="ev-notice-header" style="margin-bottom: 30px; border-bottom: 1px solid var(--ev-border); padding-bottom: 20px;">
@@ -58,21 +59,48 @@
 <script>
 function fn_submit_notice() {
     // 간단한 유효성 검사
-    const title = $('input[name="title"]').val();
+    let title = $('input[name="title"]').val().trim();
     const content = $('textarea[name="content"]').val();
+    const category = $('select[name="category"]').val();
+    const isPinned = $('#is_pinned').is(':checked'); // 상단 고정 체크 여부 (true/false)
 
     if(!title || !content) {
         alert("제목과 내용을 모두 입력해주세요.");
         return;
     }
 
-    // 데이터 조립 (Spring @RequestBody와 매핑되도록 JSON 구조 생성)
+    /* 📌 1. [추가] 상단 고정 선택 시 [중요] 태그 자동 처리 */
+    if (isPinned) {
+        const importantPrefix = "[중요]";
+        // 사용자가 직접 [중요]를 타이핑한 경우 중복 방지
+        if (!title.startsWith(importantPrefix)) {
+            title = importantPrefix + " " + title;
+        }
+    }
+
+    /* 📌 2. 카테고리 태그 자동 처리 로직 (일반 공지가 아닐 때만) */
+    if (category !== "공지") {
+        const categoryPrefix = "[" + category + "]";
+        
+        // 사용자가 직접 [점검] 등을 타이핑한 경우 중복 방지
+        // 만약 상단 고정되어 앞에 [중요]가 붙었더라도, 전체 문자열에 카테고리 태그가 없으면 추가합니다.
+        if (!title.includes(categoryPrefix)) {
+            // [중요]가 맨 앞에 있다면 [중요] [점검] 제목 순서로 오도록 가공
+            if (title.startsWith("[중요]")) {
+                title = title.replace("[중요]", "[중요] " + categoryPrefix);
+            } else {
+                title = categoryPrefix + " " + title;
+            }
+        }
+    }
+
+    // 데이터 조립 (최종 가공된 title 값이 반영됩니다)
     const formData = {
-        category: $('select[name="category"]').val(),
+        category: category,
         title: title,
         content: content,
         writerId: $('input[name="writerId"]').val(),
-        pinned: $('#is_pinned').is(':checked')
+        pinned: isPinned
     };
 
     // AJAX 전송

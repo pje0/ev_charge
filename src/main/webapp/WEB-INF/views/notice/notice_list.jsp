@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/notice.css">
 </head>
 <body>
+<jsp:include page="/WEB-INF/views/layout/header.jsp" />
     <main class="ev-notice-wrapper">
         <div class="ev-container">
             

@@ -1,9 +1,14 @@
-/* 채팅창 전체 레이아웃 */
+/* ==========================================================================
+   EV 충전소 - 1:1 문의 전용 스타일 (user_inquiry.css)
+   ========================================================================== */
+
+/* ── 채팅창 전체 레이아웃 ── */
 .chat-window {
     width: 100%;
     max-width: 600px;
     height: 700px;
-    margin: 80px auto;
+    /* 💡 수정: 상단 fixed 헤더 및 타이틀 영역과의 자연스러운 간격을 위해 마진을 조정합니다 */
+    margin: 0 auto; 
     display: flex;
     flex-direction: column;
     background: #ffffff;
@@ -35,10 +40,10 @@
 
 /* 🔵 내 메시지 (오른쪽 정렬) */
 .msg.me { 
-    justify-content: flex-end; /* 무조건 오른쪽 끝 정렬 */
+    justify-content: flex-end; 
 }
 
-/* 내 말풍선: order를 주어 무조건 뒤(오른쪽)로 보냄 */
+/* 내 말풍선 */
 .msg.me .txt {
     order: 2; 
     background: var(--ev-primary);
@@ -52,10 +57,10 @@
     word-break: break-all;
 }
 
-/* 내 읽음 표시: order를 주어 무조건 앞(왼쪽)으로 보냄 */
+/* 내 읽음 표시 */
 .msg.me .read-status {
     order: 1; 
-    margin-left: auto; /* ⭐ 핵심: 왼쪽 공간을 다 밀어서 '읽음+말풍선' 뭉치를 오른쪽으로 붙임 */
+    margin-left: auto; 
 }
 
 /* ⚪ 관리자 메시지 (왼쪽 정렬) */
@@ -82,7 +87,7 @@
     color: #a1a1aa;
     white-space: nowrap;
     line-height: 1;
-    margin-bottom: 2px; /* 말풍선 바닥선에 맞춤 */
+    margin-bottom: 2px; 
 }
 
 .read-status.unread {
@@ -108,3 +113,12 @@
     outline: none;
 }
 #msgInput:focus { border-color: var(--ev-primary); }
+
+/* ── 💡 추가: 우측 하단 전송 버튼 정렬 및 규격 보정 ── */
+.inquiry-send-btn {
+    justify-content: center !important; /* 글자 가로 정중앙 정렬 */
+    align-items: center !important;     /* 글자 세로 정중앙 정렬 */
+    text-align: center !important;
+    gap: 0 !important;                  /* 공통 CSS의 gap 여백 제거로 글자 쏠림 완전히 제거 */
+    padding: 0 20px !important;         /* 전송 버튼 고유 규격 패딩 확보 */
+}
