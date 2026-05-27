@@ -2,7 +2,10 @@ package com.boot.ev_charge.mypage;
 
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken; // 🌟 추가: 세션 갱신 토큰용
+import org.springframework.security.core.Authentication; // 🌟 추가: 인증 객체용
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.context.SecurityContextHolder; // 🌟 추가: 세션 저장소용
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -41,9 +44,28 @@ public class MyPageController {
     }
 
     // 2. 회원 정보 수정 처리
+ // 💡 MyPageController 내부의 updateUserInfo 메서드를 이 방식으로 덮어쓰기 해보세요.
     @PostMapping("/update")
     public String updateUserInfo(@ModelAttribute MyPageDto myPageDto, RedirectAttributes ra) {
+        
+        // 🌟 파라미터 주입 대신, 시큐리티 컨텍스트에서 직접 로그인 아이디를 꺼내오는 가장 확실한 방법
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        String loginId = auth.getName(); // 현재 로그인한 유저의 아이디 (예: admin)
+        
+        // 유저 아이디 기반으로 DB에서 식별자(PK)를 조회하여 주입
+        UserDto currentUser = userService.findByLoginId(loginId);
+        myPageDto.setUserId(currentUser.getId().intValue());
+        
         if (myPageService.updateUserInfo(myPageDto)) {
+            // 수정 성공 시 세션 갱신
+            org.springframework.security.authentication.UsernamePasswordAuthenticationToken newAuth = 
+                new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                    auth.getPrincipal(), 
+                    myPageDto.getPassword() != null ? myPageDto.getPassword() : auth.getCredentials(), 
+                    auth.getAuthorities()
+                );
+            org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(newAuth);
+            
             ra.addFlashAttribute("message", "회원 정보가 수정되었습니다.");
         } else {
             ra.addFlashAttribute("error", "비밀번호 검증에 실패했습니다.");

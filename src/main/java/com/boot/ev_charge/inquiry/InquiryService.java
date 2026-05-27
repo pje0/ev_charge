@@ -9,7 +9,7 @@ import java.util.List;
 public class InquiryService  {
 
     @Autowired
-    private InquiryMapper inquiryDAO;
+    private InquiryMapper inquiryMapper;
 
     /**
      * [추가] 방 확보 로직 (컨트롤러와 전송 로직에서 공통 사용)
@@ -17,15 +17,15 @@ public class InquiryService  {
      */
     @Transactional
     public InquiryRoomDTO getOrCreateRoom(Long userId) {
-        InquiryRoomDTO room = inquiryDAO.findOpenRoomByUserId(userId);
+        InquiryRoomDTO room = inquiryMapper.findOpenRoomByUserId(userId);
         if (room == null) {
             room = InquiryRoomDTO.builder()
                     .userId(userId)
                     .status("OPEN")
                     .build();
-            inquiryDAO.createRoom(room); // XML의 useGeneratedKeys로 id 채워짐
+            inquiryMapper.createRoom(room); // XML의 useGeneratedKeys로 id 채워짐
             // 생성된 ID를 확실히 포함하기 위해 재조회
-            room = inquiryDAO.findOpenRoomByUserId(userId);
+            room = inquiryMapper.findOpenRoomByUserId(userId);
         }
         return room;
     }
@@ -47,14 +47,14 @@ public class InquiryService  {
                 .isRead("N")
                 .build();
         
-        inquiryDAO.insertMessage(message);
+        inquiryMapper.insertMessage(message);
     }
 
     /**
      * [공통] 채팅 내역 조회 (기존 유지)
      */
     public List<InquiryMessageDTO> getChatHistory(Long roomId) {
-        return inquiryDAO.selectMessageList(roomId);
+        return inquiryMapper.selectMessageList(roomId);
     }
 
     /**
@@ -62,7 +62,7 @@ public class InquiryService  {
      */
     @Transactional
     public void markAsRead(Long roomId) {
-        inquiryDAO.updateReadStatus(roomId);
+        inquiryMapper.updateReadStatus(roomId);
     }
 
     /**
@@ -70,7 +70,7 @@ public class InquiryService  {
      */
     @Transactional
     public void replyFromAdmin(Long adminId, Long roomId, String content) {
-        inquiryDAO.updateRoomAdmin(roomId, adminId);
+        inquiryMapper.updateRoomAdmin(roomId, adminId);
 
         InquiryMessageDTO message = InquiryMessageDTO.builder()
                 .roomId(roomId)
@@ -81,7 +81,7 @@ public class InquiryService  {
                 .isRead("Y")
                 .build();
 
-        inquiryDAO.insertMessage(message);
+        inquiryMapper.insertMessage(message);
     }
 
     /**
@@ -89,6 +89,6 @@ public class InquiryService  {
      */
     @Transactional
     public void closeInquiry(Long roomId) {
-        inquiryDAO.closeRoom(roomId);
+        inquiryMapper.closeRoom(roomId);
     }
 }

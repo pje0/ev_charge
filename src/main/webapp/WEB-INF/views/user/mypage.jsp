@@ -7,9 +7,10 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>마이페이지 - EV 충전소</title>
+    <title>마이페이지</title>
     <script src="https://cdn.tailwindcss.com"></script>
-	<link rel="stylesheet" href="/css/common.css">
+	<link rel="stylesheet" href="${pageContext.request.contextPath}/css/common.css">
+	<script src="${pageContext.request.contextPath}/js/jquery.js"></script>
 </head>
 <body class="bg-gray-50">
     <jsp:include page="/WEB-INF/views/layout/header.jsp" />
@@ -89,4 +90,17 @@
         </div>
     </main>
 </body>
+<script>
+    window.onload = function() {
+        // 컨트롤러의 ra.addFlashAttribute("message", ...) 처리
+        <c:if test="${not empty message}">
+            alert("${message}");
+        </c:if>
+        
+        // 컨트롤러의 ra.addFlashAttribute("error", ...) 처리
+        <c:if test="${not empty error}">
+            alert("${error}");
+        </c:if>
+    };
+</script>
 </html>

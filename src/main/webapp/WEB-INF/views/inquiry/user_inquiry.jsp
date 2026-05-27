@@ -7,7 +7,7 @@
     <title>1:1 문의</title>
     <%-- 1. 공통 CSS 및 전용 CSS --%>
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/common.css">
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/notice.css"> <%-- 공지사항 규격 상속을 위해 함께 유지 --%>
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/notice.css">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/user_inquiry.css">
     
     <%-- 2. jQuery (static 폴더 경로 규칙 적용) --%>
