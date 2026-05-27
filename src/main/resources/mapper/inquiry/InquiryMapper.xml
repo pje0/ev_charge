@@ -3,7 +3,7 @@
     "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
 
-<mapper namespace="com.boot.ev_charge.inquiry.InquiryDAO">
+<mapper namespace="com.boot.ev_charge.inquiry.InquiryMapper">
 
     <!-- 1. 유저의 활성화된 방 찾기 -->
     <select id="findOpenRoomByUserId" resultType="com.boot.ev_charge.inquiry.InquiryRoomDTO">

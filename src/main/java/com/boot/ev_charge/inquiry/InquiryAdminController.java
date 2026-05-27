@@ -20,7 +20,7 @@ public class InquiryAdminController {
     private InquiryService inquiryService;
 
     @Autowired
-    private InquiryDAO inquiryDAO;
+    private InquiryMapper inquiryDAO;
 
     // 유저 정보를 안전하게 조회하기 위해 기존 머지된 서비스를 주입합니다.
     @Autowired

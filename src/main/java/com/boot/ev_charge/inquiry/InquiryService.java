@@ -1,28 +1,94 @@
 package com.boot.ev_charge.inquiry;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
-public interface InquiryService {
-	 // [추가] 사용자의 활성 방을 가져오거나, 없으면 새로 생성해서 반환
-    InquiryRoomDTO getOrCreateRoom(Long userId);
+@Service
+public class InquiryService  {
 
-     //[사용자] 메시지 전송
-     //방이 없으면 생성하고, 있으면 기존 방에 메시지를 저장합니다.
-    void sendMessageFromUser(Long userId, String content);
+    @Autowired
+    private InquiryMapper inquiryDAO;
 
-     //[공통] 채팅 내역 조회
-     //단순 조회를 수행하며, 실시간 폴링 시 데이터 갱신 용도로 사용합니다.
-    List<InquiryMessageDTO> getChatHistory(Long roomId);
+    /**
+     * [추가] 방 확보 로직 (컨트롤러와 전송 로직에서 공통 사용)
+     * 논리: OPEN된 방 검색 -> 없으면 생성하여 반환
+     */
+    @Transactional
+    public InquiryRoomDTO getOrCreateRoom(Long userId) {
+        InquiryRoomDTO room = inquiryDAO.findOpenRoomByUserId(userId);
+        if (room == null) {
+            room = InquiryRoomDTO.builder()
+                    .userId(userId)
+                    .status("OPEN")
+                    .build();
+            inquiryDAO.createRoom(room); // XML의 useGeneratedKeys로 id 채워짐
+            // 생성된 ID를 확실히 포함하기 위해 재조회
+            room = inquiryDAO.findOpenRoomByUserId(userId);
+        }
+        return room;
+    }
 
-     //[관리자] 읽음 처리 전용
-     //관리자가 방을 클릭했을 때 명시적으로 호출하여 유저의 메시지를 '읽음' 처리합니다.
-    void markAsRead(Long roomId);
-   
-     //[관리자] 답변 전송
-     //답변 저장과 동시에 담당 관리자를 배정합니다.
-    void replyFromAdmin(Long adminId, Long roomId, String content);
+    /**
+     * [사용자] 메시지 전송 로직 (기존 로직 유지)
+     */
+    @Transactional
+    public void sendMessageFromUser(Long userId, String content) {
+        // 기존의 직접 조회/생성 로직 대신 공통 메서드 호출로 보완
+        InquiryRoomDTO room = getOrCreateRoom(userId);
 
-     //[관리자] 문의 종료
-     //상담이 완료된 티켓을 CLOSED 상태로 변경합니다.
-    void closeInquiry(Long roomId);
+        InquiryMessageDTO message = InquiryMessageDTO.builder()
+                .roomId(room.getId())
+                .senderId(userId)
+                .senderRole("USER")
+                .message(content)
+                .messageType("TEXT")
+                .isRead("N")
+                .build();
+        
+        inquiryDAO.insertMessage(message);
+    }
+
+    /**
+     * [공통] 채팅 내역 조회 (기존 유지)
+     */
+    public List<InquiryMessageDTO> getChatHistory(Long roomId) {
+        return inquiryDAO.selectMessageList(roomId);
+    }
+
+    /**
+     * [관리자] 읽음 처리 전용 (기존 유지)
+     */
+    @Transactional
+    public void markAsRead(Long roomId) {
+        inquiryDAO.updateReadStatus(roomId);
+    }
+
+    /**
+     * [관리자] 답변 전송 로직 (기존 유지)
+     */
+    @Transactional
+    public void replyFromAdmin(Long adminId, Long roomId, String content) {
+        inquiryDAO.updateRoomAdmin(roomId, adminId);
+
+        InquiryMessageDTO message = InquiryMessageDTO.builder()
+                .roomId(roomId)
+                .senderId(adminId)
+                .senderRole("ADMIN")
+                .message(content)
+                .messageType("TEXT")
+                .isRead("Y")
+                .build();
+
+        inquiryDAO.insertMessage(message);
+    }
+
+    /**
+     * [관리자] 문의 종료 로직 (기존 유지)
+     */
+    @Transactional
+    public void closeInquiry(Long roomId) {
+        inquiryDAO.closeRoom(roomId);
+    }
 }
