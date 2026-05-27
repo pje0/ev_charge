@@ -6,7 +6,7 @@
     <meta charset="UTF-8">
     <title>정보 수정 - EV 충전소</title>
     <script src="https://cdn.tailwindcss.com"></script>
-	<link rel="stylesheet" href="/css/common.css">
+	<link rel="stylesheet" href="${pageContext.request.contextPath}/css/common.css">
 </head>
 <body class="bg-gray-50">
     <main class="pt-20 pb-12">
@@ -29,6 +29,13 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">이메일</label>
                         <input type="email" name="email" value="${myPageDto.email}" required 
+                               class="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+
+                    <!-- 🌟 추가: 전화번호 입력 필드 (MyPageDto의 phone 변수명과 일치) -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">전화번호</label>
+                        <input type="tel" name="phone" value="${myPageDto.phone}" placeholder="010-0000-0000"
                                class="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
                     </div>
 

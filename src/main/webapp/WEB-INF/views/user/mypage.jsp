@@ -31,7 +31,19 @@
                             </div>
                             <h2 class="ev-mp-user-name">${myPageDto.name}</h2>
                             <p class="ev-mp-user-email">${myPageDto.email}</p>
-                            <span class="mt-2 text-xs px-2 py-0.5 bg-[oklch(0.52_0.13_180_/_0.15)] text-[var(--ev-accent)] border border-[oklch(0.52_0.13_180_/_0.3)] rounded-md font-semibold">관리자</span>
+                            <!-- 🎯 DB의 role 컬럼 값(ADMIN / USER)을 기반으로 한 동적 권한 뱃지 분기 처리 -->
+							<c:choose>
+							    <c:when test="${myPageDto.role eq 'ADMIN'}">
+							        <span class="mt-2 text-xs px-2 py-0.5 bg-[oklch(0.52_0.13_180_/_0.15)] text-[var(--ev-accent)] border border-[oklch(0.52_0.13_180_/_0.3)] rounded-md font-semibold">
+							            관리자
+							        </span>
+							    </c:when>
+							    <c:otherwise>
+							        <span class="mt-2 text-xs px-2 py-0.5 bg-blue-50 text-blue-600 border border-blue-200 rounded-md font-semibold">
+							            일반 회원
+							        </span>
+							    </c:otherwise>
+							</c:choose>
                         </div>
                         
                         <div class="h-[1px] bg-[var(--ev-border)] my-4"></div>
