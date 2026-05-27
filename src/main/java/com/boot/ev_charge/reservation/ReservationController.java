@@ -86,7 +86,7 @@ public class ReservationController {
     // 4. 내 예약 목록 조회 (마이페이지용)
     @GetMapping("/my")
     public String myReservation(@AuthenticationPrincipal UserDetails userDetails, Model model) {
-        log.info("@# [GET] /reservation/my -> myReservation() 호출");
+        log.info("@# [GET] /user/mypage -> mypage() 호출");
         
         if (userDetails == null) {
             log.warn("@# [경고] 내 예약 목록 요청했으나 세션 없음");
@@ -100,7 +100,7 @@ public class ReservationController {
         
         model.addAttribute("reservationList", reservationList);
         
-        return "reservation/myReservation";
+        return "reservation/mypage";
     }
 
     // 5. 예약 단건 상세 조회
@@ -178,8 +178,10 @@ public class ReservationController {
         }
 
         try {
+            // 🟢 [버그 해결] 메서드를 연속 두 번 호출하여 MyBatis 1차 캐시를 오염시키던 코드를 
+            // 단 한 번만 조회하여 리스트 개체를 온전히 리턴하도록 전면 수정합니다.
             List<ReservationDto> reservedTimes = reservationService.getReservedTimes(chargerId, stationId, date);
-            return reservationService.getReservedTimes(chargerId, stationId, date);
+            return reservedTimes;
         } catch (Exception e) {
             log.error("@# [오류 발생] 예약 시간 조회 중 에러 발생: {}", e.getMessage(), e);
             return java.util.Collections.emptyList(); 

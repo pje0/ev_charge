@@ -32,6 +32,7 @@ public class ReservationDto {
 
     // TARGET 예약
     private Integer targetKwh;   // 목표 충전량(kWh)
+    private Integer targetPercent; // 추가: 프론트엔드 % 값 수신 전용 필드
     private Integer maxMinutes;  // 최대 충전 가능 시간(분)
     
     // 예약 생성 시간 관리

@@ -56,7 +56,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     <!-- ===================================================== -->
     <!-- 목표 충전량 예약 생성 -->
     <!-- ===================================================== -->
-    <insert id="insertReservationTarget"
+	<insert id="insertReservationTarget"
             parameterType="com.boot.ev_charge.reservation.ReservationDto">
 
         insert into reservation_target (
@@ -69,7 +69,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             #{targetKwh},
             #{maxMinutes}
         )
-
+        
     </insert>
 
 
@@ -86,13 +86,13 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             ON r.id = rt.reservation_id
         WHERE r.status = 'RESERVED'
           AND r.charger_id = #{chargerId}
-        <![CDATA[
-          -- 파라미터가 정상적으로 들어왔을 때만 비교 연산 가동
           AND #{startTime} IS NOT NULL 
           AND #{endTime} IS NOT NULL
+          <![CDATA[
+          -- 기존 예약의 시간대와 새로 신청한 시간대가 1분이라도 겹치는지 검사
           AND rt.start_time < #{endTime}
           AND rt.end_time > #{startTime}
-        ]]>
+          ]]>
     </select>
 
     <!-- ===================================================== -->
@@ -250,6 +250,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     
 	<select id="getReservedTimes" resultType="com.boot.ev_charge.reservation.ReservationDto">
         SELECT 
+            r.id AS id,
+            r.charger_id AS chargerId,
             DATE_FORMAT(rt.start_time, '%Y-%m-%d %H:%i:%s') AS startTime,
             DATE_FORMAT(rt.end_time, '%Y-%m-%d %H:%i:%s') AS endTime
         FROM reservation r
@@ -257,7 +259,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             ON r.id = rt.reservation_id
         JOIN charger c
             ON r.charger_id = c.id
-        WHERE DATE(rt.start_time) = #{date}
+        WHERE 
+          rt.start_time LIKE CONCAT(#{date}, '%')
           AND r.reservation_type IN ('TIME', 'TARGET')
           AND r.status = 'RESERVED'
           <choose>
@@ -268,7 +271,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
                   AND r.charger_id = 0
               </otherwise>
           </choose>
-    </select>
+	</select>
     
     <select id="getStationList" resultType="com.boot.ev_charge.station.StationDto">
         select 

@@ -44,3 +44,33 @@
 	background-color: #e5e7eb !important;
 	color: #9ca3af !important;
 } 
+
+/* =========================================================================
+   🟢 [최종 무기] 슬라이더바 동그란 핀 너머 파란색 번짐 차단 전용 디자인 셋업
+   ========================================================================= */
+input[type="range"]::-webkit-slider-runnable-track {
+    background: transparent !important; /* 브라우저 기본 트랙 배경 강제 제거 */
+    border-radius: 8px;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    appearance: none;
+    -webkit-appearance: none;
+    background: #2563eb !important; /* 둥근 핀 자체의 색상을 명시적으로 고정 */
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+    width: 16px;
+    height: 16px;
+    margin-top: -5px; /* 트랙 중심 정렬 */
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    position: relative;
+    z-index: 10;
+}
+
+/* range 인풋 자체의 박스 사이징 규격을 통일하여 그라데이션 오차를 원천 봉쇄합니다 */
+input[type="range"] {
+    box-sizing: border-box !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}

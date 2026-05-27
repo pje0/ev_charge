@@ -52,10 +52,12 @@
         <input type="hidden" name="startTime" id="startTime">
         <input type="hidden" name="endTime" id="endTime">
 
-        <div id="ev-page-1" class="ev-page grid grid-cols-12 gap-4">
-            <div class="col-span-12 lg:col-span-4 bg-white p-4 rounded-lg border shadow-sm h-[420px] overflow-y-auto">
-                <h2 class="text-base font-bold mb-3 text-gray-800 border-b pb-1.5">충전소 선택</h2>
-                <div class="space-y-2">
+		<div id="ev-page-1" class="ev-page grid grid-cols-12 gap-4">
+            
+            <div class="col-span-12 lg:col-span-4 bg-white p-4 rounded-lg border shadow-sm h-[420px] flex flex-col">
+                <h2 class="text-base font-bold mb-3 text-gray-800 border-b pb-1.5 flex-none">충전소 선택</h2>
+                
+                <div class="space-y-2 overflow-y-auto pr-1 flex-1 h-[340px]">
                     <c:forEach var="station" items="${stationList}">
                         <div class="p-3 border border-gray-200 rounded-md cursor-pointer hover:border-blue-500 hover:bg-blue-50/50 transition" onclick="loadChargers('${station.id}', this)">
                             <h3 class="font-bold text-gray-900 text-sm">${station.name}</h3>
@@ -64,17 +66,21 @@
                     </c:forEach>
                 </div>
             </div>
-            <div class="col-span-12 lg:col-span-8 bg-white p-4 rounded-lg border shadow-sm h-[420px] overflow-y-auto relative">
-                <h2 class="text-base font-bold mb-3 text-gray-800 border-b pb-1.5">충전기 선택</h2>
-                <div id="chargerListContainer" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            
+            <div class="col-span-12 lg:col-span-8 bg-white p-4 rounded-lg border shadow-sm h-[420px] flex flex-col relative">
+                <h2 class="text-base font-bold mb-3 text-gray-800 border-b pb-1.5 flex-none">충전기 선택</h2>
+                
+                <div id="chargerListContainer" class="grid grid-cols-1 md:grid-cols-2 gap-3 overflow-y-auto pr-1 flex-1 h-[320px] content-start">
                     <div class="col-span-2 text-center py-24 text-gray-400 text-xs">충전소를 선택해주세요.</div>
                 </div>
-                <div class="absolute bottom-4 right-4">
+                
+                <div class="absolute bottom-4 right-4 bg-white pl-2">
                     <button type="button" onclick="skipCharger()" class="text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 px-3 py-1.5 rounded border border-blue-200 transition">
                         충전기 선택 건너뛰기 →
                     </button>
                 </div>
             </div>
+
         </div>
 
 		<div id="ev-page-2" class="ev-page hidden max-w-3xl mx-auto">
@@ -127,27 +133,27 @@
             </div>
 
 			<div id="targetBox" class="bg-white rounded-lg border shadow-sm p-4 mt-4 hidden">
-                <h3 class="font-bold mb-3 text-gray-700 text-xs">목표 충전량 설정</h3>
-                <div class="mb-3">
-                    <div class="flex justify-between items-center mb-1">
-                        <span class="text-xs text-gray-400">목표 충전 범위</span>
-                        <span id="targetPercentText" class="font-bold text-blue-600 text-base">20%</span>
-                    </div>
-                    <input type="range" id="targetPercent" name="targetKwh" min="0" max="100" step="5" value="0" 
-                           oninput="changeTargetPercent(this.value)" 
-                           class="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                           style="background: linear-gradient(to right, #2563eb 0%, #e5e7eb 0%, #e5e7eb 100%);">
-                </div>
-                <div>
-                    <div class="grid grid-cols-5 gap-1.5">
-                        <button type="button" onclick="quickTarget(20)" class="border rounded py-1.5 text-xs font-medium text-gray-600 hover:bg-blue-50 hover:text-blue-600 transition">20%</button>
-                        <button type="button" onclick="quickTarget(40)" class="border rounded py-1.5 text-xs font-medium text-gray-600 hover:bg-blue-50 hover:text-blue-600 transition">40%</button>
-                        <button type="button" onclick="quickTarget(60)" class="border rounded py-1.5 text-xs font-medium text-gray-600 hover:bg-blue-50 hover:text-blue-600 transition">60%</button>
-                        <button type="button" onclick="quickTarget(80)" class="border rounded py-1.5 text-xs font-medium text-gray-600 hover:bg-blue-50 hover:text-blue-600 transition">80%</button>
-                        <button type="button" onclick="quickTarget(100)" class="border rounded py-1.5 text-xs font-medium text-gray-600 hover:bg-blue-50 hover:text-blue-600 transition">100%</button>
-                    </div>
-                </div>
-            </div>
+			    <h3 class="font-bold mb-3 text-gray-700 text-xs">목표 충전량 설정</h3>
+			    <div class="mb-3">
+			        <div class="flex justify-between items-center mb-1">
+			            <span class="text-xs text-gray-400">목표 충전 범위</span>
+			            <span id="targetPercentText" class="font-bold text-blue-600 text-base">20%</span>
+			        </div>
+			        
+			        <input type="range" id="targetPercent" name="targetPercent" min="0" max="100" step="5" value="20" 
+			               class="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer focus:outline-none accent-blue-600 m-0 p-0 block"
+			               style="-webkit-appearance: none; box-sizing: border-box;">
+			    </div>
+			    <div>
+			        <div class="grid grid-cols-5 gap-1.5">
+			            <button type="button" onclick="quickTarget(20)" class="border rounded py-1.5 text-xs font-medium text-gray-600 hover:bg-blue-50 hover:text-blue-600 transition">20%</button>
+			            <button type="button" onclick="quickTarget(40)" class="border rounded py-1.5 text-xs font-medium text-gray-600 hover:bg-blue-50 hover:text-blue-600 transition">40%</button>
+			            <button type="button" onclick="quickTarget(60)" class="border rounded py-1.5 text-xs font-medium text-gray-600 hover:bg-blue-50 hover:text-blue-600 transition">60%</button>
+			            <button type="button" onclick="quickTarget(80)" class="border rounded py-1.5 text-xs font-medium text-gray-600 hover:bg-blue-50 hover:text-blue-600 transition">80%</button>
+			            <button type="button" onclick="quickTarget(100)" class="border rounded py-1.5 text-xs font-medium text-gray-600 hover:bg-blue-50 hover:text-blue-600 transition">100%</button>
+			        </div>
+			    </div>
+			</div>
 
             <div class="mt-4 flex justify-between">
                 <button type="button" onclick="moveStep(1)" class="border border-gray-300 bg-white hover:bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-bold text-xs transition">이전 단계</button>
