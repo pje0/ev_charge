@@ -436,14 +436,17 @@ function selectTime(element, time) {
     startTime = time; 
     element.classList.add("active");
     
-    const slider = document.getElementById("targetPercent");
-    if (slider) {
-        lastSafeTargetPercent = 5; 
-        slider.value = 5;
-        updateSliderBackground(5);
-        document.getElementById("targetPercentText").innerText = "5%";
-    }
-    syncTimeButtonsByTarget();
+	// 🛠️ selectTime 함수 내 슬라이더 초기화 부분을 이렇게 수정하세요
+	const slider = document.getElementById("targetPercent");
+	if (slider) {
+	    // 1. 강제 초기화(5%)를 삭제하고, 현재 슬라이더 값을 유지합니다.
+	    const currentVal = Number(slider.value);
+	    
+	    // 2. 현재 설정된 %를 유지하면서 시간대만 새로 연산(syncTimeButtonsByTarget 호출)
+	    // syncTimeButtonsByTarget()이 내부적으로 targetPercent 값을 읽어서
+	    // 다시 시작 시간(startTime)에 맞춰 종료 시간(endTime)을 계산합니다.
+	    syncTimeButtonsByTarget();
+	}
 }
 
 // =========================================================================
