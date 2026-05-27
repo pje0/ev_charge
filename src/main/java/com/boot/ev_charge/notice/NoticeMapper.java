@@ -4,7 +4,7 @@ import org.apache.ibatis.annotations.Mapper;
 import java.util.List;
 
 @Mapper
-public interface NoticeDAO {
+public interface NoticeMapper {
     // 1. [통합] 공지사항 목록 조회 (검색 + 페이징 + 카테고리)
     List<NoticeDTO> selectNoticeList(NoticeCriteria cri);
 
