@@ -8,6 +8,7 @@ if (typeof startTime === 'undefined') { var startTime = null; }
 if (typeof endTime === 'undefined') { var endTime = null; }
 if (typeof maxContinuousMinutes === 'undefined') { var maxContinuousMinutes = 1440; }
 if (typeof isFetchingReservedTimes === 'undefined') { var isFetchingReservedTimes = false; }
+if (typeof selectedChargerKw === 'undefined') { var selectedChargerKw = 50.0; } // 기본값 50
 
 // ==========================================
 // 1. 단계 제어 (Step View Control)
@@ -62,6 +63,12 @@ async function loadChargers(stationId, element) {
     document.querySelectorAll('.border-blue-500').forEach(el => el.classList.remove('border-blue-500', 'bg-blue-50'));
     element.classList.add('border-blue-500', 'bg-blue-50');
     
+    startTime = null;
+    endTime = null;
+    document.getElementById("startTime").value = "";
+    document.getElementById("endTime").value = "";
+    document.getElementById("summaryTime").innerText = "-";
+    
     try {
         const res = await fetch(`/reservation/api/chargers?stationId=` + stationId);
         const chargers = await res.json();
@@ -85,7 +92,7 @@ async function loadChargers(stationId, element) {
                 if (statusLower === 'charging' || statusLower === 'occupied' || statusLower === 'in_use') {
                     return `
                         <div class="border border-amber-200 bg-amber-50/30 rounded-lg p-3 cursor-pointer hover:border-blue-500 hover:bg-blue-50/50 transition" 
-                             onclick="selectCharger(this, '${c.id}', '${c.connectorType}')">
+                             onclick="selectCharger(this, '${c.id}', '${c.connectorType}', ${c.powerKw})">
                             <div class="flex justify-between items-center mb-1">
                                 <h3 class="font-bold text-amber-900 text-sm">${c.connectorType}</h3>
                                 <span class="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-medium">현재 사용 중 (예약 가능)</span>
@@ -96,7 +103,7 @@ async function loadChargers(stationId, element) {
 
                 return `
                     <div class="border border-gray-200 rounded-lg p-3 cursor-pointer hover:border-blue-500 hover:bg-blue-50/50 transition bg-white" 
-                         onclick="selectCharger(this, '${c.id}', '${c.connectorType}')">
+                         onclick="selectCharger(this, '${c.id}', '${c.connectorType}', ${c.powerKw})">
                         <div class="flex justify-between items-center mb-1">
                             <h3 class="font-bold text-gray-900 text-sm">${c.connectorType}</h3>
                             <span class="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-medium">사용 가능</span>
@@ -108,7 +115,7 @@ async function loadChargers(stationId, element) {
             container.innerHTML = '<div class="col-span-2 text-center py-24 text-gray-400 text-xs">등록된 충전기가 없습니다.</div>';
         }
         
-        setTimeout(loadReservedTimes, 50);
+        await loadReservedTimes();
 
     } catch (error) {
         console.error("충전기 목록 로드 실패:", error);
@@ -118,12 +125,26 @@ async function loadChargers(stationId, element) {
 // ==========================================
 // 3. 충전기 선택 및 건너뛰기 액션
 // ==========================================
-function selectCharger(element, chargerId, chargerName) {
+function selectCharger(element, chargerId, chargerName, powerKw) {
     document.getElementById("chargerId").value = chargerId;
     selectedChargerId = Number(chargerId);
+    selectedChargerKw = Number(powerKw || 50.0); // 🟢 충전기 출력 kW 저장
     document.getElementById("summaryCharger").innerText = chargerName;
+    
+    // 🟢 [핵심 추가] 다른 충전기를 클릭하는 순간, 기존 충전기에서 선택했던 시간 정보를 유저 모르게 싹 비웁니다.
+    startTime = null;
+    endTime = null;
+    if (document.getElementById("startTime")) document.getElementById("startTime").value = "";
+    if (document.getElementById("endTime")) document.getElementById("endTime").value = "";
+    if (document.getElementById("summaryTime")) document.getElementById("summaryTime").innerText = "-";
+    
+    // 버튼들의 선택 스타일(active, in-range)도 깨끗이 지웁니다.
+    document.querySelectorAll(".ev-time-btn").forEach(btn => btn.classList.remove("active", "in-range"));
+
     moveStep(2);
-    setTimeout(loadReservedTimes, 50);
+    
+    // 🟢 [수정] 충전기 ID가 완전히 바인딩된 직후 안전하게 예약 시간대를 호출합니다.
+    loadReservedTimes();
 }
 
 function skipCharger() {
@@ -169,7 +190,8 @@ function updateSliderBackground(value) {
 // 5-1. 공통 소요 시간 연산 독립 함수 (코드 중복 해제)
 // ==========================================
 function calculateRequiredMinutes(targetVal) {
-    const chargerKw = 50.0; 
+    // 🟢 고정값 50.0 대신 현재 선택된 충전기의 실제 출력 kW를 대입합니다.
+    const chargerKw = selectedChargerKw; 
     const batteryCapacity = 70.0; 
     const currentPercent = 0.0; 
 
@@ -179,12 +201,13 @@ function calculateRequiredMinutes(targetVal) {
     let durationHours = requiredKwh / chargerKw;
     let requiredMinutes = Math.ceil(durationHours * 60) + 15; 
 
-    if (targetVal > 80) { 
+    // 완속 충전기(7kW)는 보통 80% 구간에서 급속처럼 충전 속도가 급격히 줄어들지 않으므로 
+    // 급속(출력이 큰 경우)일 때만 80% 가드를 주는 것이 더 정확합니다.
+    if (chargerKw > 20 && targetVal > 80) { 
         requiredMinutes += Math.ceil(((batteryCapacity * (targetVal - 80) / 100.0) / chargerKw) * 0.5 * 60);
     }
     return requiredMinutes;
 }
-
 // ==========================================
 // 6. 목표 충전량 실시간 제약 가드 락
 // ==========================================
@@ -439,10 +462,15 @@ async function loadReservedTimes() {
 
     isFetchingReservedTimes = true;
 
+    // 🟢 [강력 초기화] 다른 충전기를 누를 때마다 이전 잠금 스타일을 찌꺼기 없이 완벽하게 리셋
     document.querySelectorAll(".ev-time-btn").forEach(btn => {
         btn.classList.remove("disabled", "active", "in-range");
+        btn.style.removeProperty("background-color");
+        btn.style.removeProperty("color");
+        btn.style.removeProperty("pointer-events");
+        btn.style.removeProperty("cursor");
     });
-
+	
     const now = new Date();
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -479,31 +507,50 @@ async function loadReservedTimes() {
         if (response.ok) {
             const reservedList = await response.json();
             
+			// 3. 🌟 DB 예약 데이터 2차 누적 잠금 (포맷 무관 분 단위 숫자 비교 보정판)
             reservedList.forEach(r => {
                 if (!r.startTime || !r.endTime) return; 
                 
-                const startMatch = r.startTime.match(/(\d{2}):(\d{2})/);
-                const endMatch = r.endTime.match(/(\d{2}):(\d{2})/);
+                // 어떤 포맷이 와도 시/분만 안전하게 파싱하는 함수
+                const parseToMinutes = (timeStr) => {
+                    const match = timeStr.match(/(\d{2}):(\d{2})/);
+                    if (!match) return null;
+                    let h = Number(match[1]);
+                    let m = Number(match[2]);
+                    return (h * 60) + m; // 분 단위로 변환 (예: 02:30 -> 150분)
+                };
+
+                let startMin = parseToMinutes(r.startTime);
+                let endMin = parseToMinutes(r.endTime);
+
+                if (startMin === null || endMin === null) return; 
+
+                // 🟢 [시차 보정] DB 값이 UTC 기준일 테므로 9시간(540분)을 더해 KST로 변환
+                startMin = (startMin + 540) % 1440;
+                endMin = (endMin + 540) % 1440;
                 
-                if (!startMatch || !endMatch) return;
+                // 만약 종료 시간이 자정을 넘어가거나 역전될 때를 대비한 안전 Guard
+                if (endMin <= startMin) endMin += 1440;
+
+                console.log(`@# [숫자 변환 잠금선]: ${startMin}분 ~ ${endMin}분`);
                 
-                let sH = Number(startMatch[1]);
-                let sM = Number(startMatch[2]);
-                let eH = Number(endMatch[1]);
-                let eM = Number(endMatch[2]);
-                
-                sH = (sH + 9) % 24;
-                eH = (eH + 9) % 24;
-                
-                const start = `${String(sH).padStart(2, '0')}:${String(sM).padStart(2, '0')}`;
-                const end = `${String(eH).padStart(2, '0')}:${String(eM).padStart(2, '0')}`;
-                
-                console.log(`@# [9시간 시차 교정 완료]: ${start} ~ ${end}`);
-                
+                // 화면의 타임 버튼들을 순회
                 document.querySelectorAll(".ev-time-btn").forEach(btn => {
-                    const t = btn.dataset.time; 
-                    if (btn.classList.contains("disabled") || (t >= start && t < end)) {
+                    const tStr = btn.dataset.time; // 예: "11:30"
+                    const btnMin = parseToMinutes(tStr);
+                    
+                    if (btnMin === null) return;
+
+                    // 🟢 [핵심 비교] 버튼의 분(Minute)이 예약 시작분과 종료분 사이에 정확히 물리는지 검사
+                    if (btnMin >= startMin && btnMin < endMin) {
+                        // 1. 논리 및 클래스 잠금
                         btn.classList.add("disabled"); 
+                        
+                        // 2. 인라인 CSS 스타일 강제 주입 (눈으로 확실히 보이게 처리)
+                        btn.style.setProperty("background-color", "#e5e7eb", "important"); // 연회색
+                        btn.style.setProperty("color", "#9ca3af", "important");           // 흐린 글자
+                        btn.style.setProperty("pointer-events", "none", "important");      // 클릭 금지
+                        btn.style.setProperty("cursor", "not-allowed", "important");
                     }
                 });
             });
@@ -529,20 +576,41 @@ async function loadReservedTimes() {
 // ==========================================
 function submitReservation() {
     const type = document.getElementById("reservationType").value;
+    const date = document.getElementById("reservationDate")?.value;
     
+    // 현재 날짜 및 시간 구하기
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const todayStr = `${year}-${month}-${day}`; 
+
     if (type === "TIME") {
         if (startTime == null || endTime == null) {
             alert("예약 시간을 선택하세요.");
             return;
         }
     } else if (type === "TARGET") {
-        // TARGET 모드일 때도 자동으로 잡힌 가용 예약 시작/종료 시간이 폼 데이터에 실리도록 덮어쓰기 방지 처리
         if (!startTime || !endTime) {
             alert("예약 가능한 시간대가 존재하지 않아 예약을 진행할 수 없습니다.");
             return;
         }
     }
+
+    // 🟢 [추가] 과거 시간 제출 방지 가드 락
+    if (date === todayStr && startTime) {
+        const [startH, startM] = startTime.split(":").map(Number);
+        if (startH < now.getHours() || (startH === now.getHours() && startM < now.getMinutes())) {
+            alert("현재 시간보다 이전의 시간대는 예약할 수 없습니다. 다른 시간대를 골라주세요.");
+            return;
+        }
+    }
     
+    if (!date) {
+        alert("예약 날짜를 선택해 주세요.");
+        return;
+    }
+
     document.getElementById("reservationForm").submit();
 }
 

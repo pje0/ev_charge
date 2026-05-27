@@ -46,6 +46,11 @@ public class ReservationService {
                 throw new RuntimeException("과거 시간은 예약할 수 없습니다.");
             }
 
+            // 🟢 [디버깅용 로그 추가] 검증 직전에 값이 제대로 채워졌는지 콘솔에 출력해봅니다.
+            System.out.println("## [백엔드 진입] chargerId: " + dto.getChargerId());
+            System.out.println("## [백엔드 진입] startTime: " + dto.getStartTime());
+            System.out.println("## [백엔드 진입] endTime: " + dto.getEndTime());
+
             // 중복 예약 검증
             int count = reservationMapper.countDuplicateReservation(dto);
             if (count > 0) {

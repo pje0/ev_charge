@@ -79,15 +79,19 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 	<select id="countDuplicateReservation"
             parameterType="com.boot.ev_charge.reservation.ReservationDto"
             resultType="int">
-
-        SELECT count(*)
+        
+        SELECT COUNT(*)
         FROM reservation r
         JOIN reservation_time rt
             ON r.id = rt.reservation_id
         WHERE r.status = 'RESERVED'
+          AND r.charger_id = #{chargerId}
         <![CDATA[
-            AND rt.start_time < #{endTime}
-            AND rt.end_time > #{startTime}
+          -- 파라미터가 정상적으로 들어왔을 때만 비교 연산 가동
+          AND #{startTime} IS NOT NULL 
+          AND #{endTime} IS NOT NULL
+          AND rt.start_time < #{endTime}
+          AND rt.end_time > #{startTime}
         ]]>
     </select>
 
@@ -251,19 +255,21 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         FROM reservation r
         JOIN reservation_time rt 
             ON r.id = rt.reservation_id
+        JOIN charger c
+            ON r.charger_id = c.id
         WHERE DATE(rt.start_time) = #{date}
-          AND r.reservation_type = 'TIME'
+          AND r.reservation_type IN ('TIME', 'TARGET')
           AND r.status = 'RESERVED'
           <choose>
               <when test="chargerId != null and chargerId != 0">
                   AND r.charger_id = #{chargerId}
               </when>
               <otherwise>
-                  AND r.station_id = #{stationId}
+                  AND r.charger_id = 0
               </otherwise>
           </choose>
     </select>
-
+    
     <select id="getStationList" resultType="com.boot.ev_charge.station.StationDto">
         select 
             id,
