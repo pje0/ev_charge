@@ -116,7 +116,7 @@ body {
 
 			<button
 				type="button"
-				onclick="location.href='/reservation/my'"
+				onclick="location.href='/mypage'"
 				class="bg-blue-600 text-white rounded-xl py-4 font-semibold hover:bg-blue-700 transition">
 
 				내 예약 확인

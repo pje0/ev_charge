@@ -84,7 +84,7 @@ public class ReservationController {
     }
     
     // 4. 내 예약 목록 조회 (마이페이지용)
-    @GetMapping("/my")
+    @GetMapping("/mypage")
     public String myReservation(@AuthenticationPrincipal UserDetails userDetails, Model model) {
         log.info("@# [GET] /user/mypage -> mypage() 호출");
         
@@ -100,7 +100,7 @@ public class ReservationController {
         
         model.addAttribute("reservationList", reservationList);
         
-        return "reservation/mypage";
+        return "/mypage";
     }
 
     // 5. 예약 단건 상세 조회
