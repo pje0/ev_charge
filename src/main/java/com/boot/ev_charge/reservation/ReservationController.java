@@ -81,12 +81,22 @@ public class ReservationController {
         return "reservation/reservation";
     }
 
-    // 2. 특정 충전소의 충전기 목록 조회 API
+    // 2. 특정 충전소의 충전기 목록 조회 API (v1.8 date 파라미터 통합)
     @GetMapping("/api/chargers")
     @ResponseBody
-    public List<ChargerDto> getChargers(@RequestParam("stationId") Long stationId) { 
-        log.info("@# [API] 충전기 목록 요청 stationId: {}", stationId);
-        return reservationService.getChargersByStationId(stationId);
+    public List<ChargerDto> getChargers(
+            @RequestParam("stationId") Long stationId,
+            @RequestParam(value = "date", required = false) String date) { 
+        
+        log.info("@# [API] 충전기 목록 요청 stationId: {}, date: {}", stationId, date);
+        
+        // 브라우저에서 날짜가 넘어오지 않은 경우 방어 코드로 오늘 날짜 기본 세팅
+        if (date == null || date.isEmpty()) {
+            date = LocalDate.now().toString();
+        }
+        
+        // 서비스 호출 시 stationId와 date를 함께 전달합니다.
+        return reservationService.getChargersByStationId(stationId, date);
     }
 
     // 3. 예약 생성 처리

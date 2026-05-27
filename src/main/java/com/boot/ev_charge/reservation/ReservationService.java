@@ -132,9 +132,17 @@ public class ReservationService {
         return reservationMapper.getStationList();
     }
 
-    // 11. 충전소별 충전기 목록 조회
-    public List<ChargerDto> getChargersByStationId(Long stationId) {
-        return reservationMapper.getChargersByStationId(stationId);
+    // =========================================================================
+    // 11. 충전소별 충전기 목록 조회 (v1.9 최종 가용 결속판)
+    // =========================================================================
+    public List<ChargerDto> getChargersByStationId(Long stationId, String date) {
+        // 파라미터가 2개 이상이므로 MyBatis에 안전하게 넘기기 위해 Map을 생성합니다.
+        java.util.Map<String, Object> params = new java.util.HashMap<>();
+        params.put("stationId", stationId);
+        params.put("date", date);
+        
+        // 🟢 [완전 해결] 옛날 메서드가 아니라, 새 쿼리를 뿜어주는 매퍼 메서드로 명확하게 리턴 대상을 치환합니다!
+        return reservationMapper.getChargerListWithSoldOutCheck(params);
     }
     
  // =========================================================================

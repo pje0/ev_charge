@@ -73,12 +73,6 @@
                 <div id="chargerListContainer" class="grid grid-cols-1 md:grid-cols-2 gap-3 overflow-y-auto pr-1 flex-1 h-[320px] content-start">
                     <div class="col-span-2 text-center py-24 text-gray-400 text-xs">충전소를 선택해주세요.</div>
                 </div>
-                
-                <div class="absolute bottom-4 right-4 bg-white pl-2">
-                    <button type="button" onclick="skipCharger()" class="text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 px-3 py-1.5 rounded border border-blue-200 transition">
-                        충전기 선택 건너뛰기 →
-                    </button>
-                </div>
             </div>
 
         </div>
@@ -99,6 +93,23 @@
             <div id="timeBox" class="bg-white rounded-lg border shadow-sm p-4">
                 <h3 class="font-bold mb-2.5 text-gray-700 text-xs">타임 슬롯 선택</h3>
                 <div class="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-1.5">
+                    <div class="ev-time-btn border rounded py-1 text-xs text-center cursor-pointer select-none transition" data-time="00:30" onclick="selectTime(this, '00:30')">03:30</div>
+                    <div class="ev-time-btn border rounded py-1 text-xs text-center cursor-pointer select-none transition" data-time="01:00" onclick="selectTime(this, '01:00')">04:00</div>
+                    <div class="ev-time-btn border rounded py-1 text-xs text-center cursor-pointer select-none transition" data-time="01:30" onclick="selectTime(this, '01:30')">04:30</div>
+                    <div class="ev-time-btn border rounded py-1 text-xs text-center cursor-pointer select-none transition" data-time="02:00" onclick="selectTime(this, '02:00')">05:00</div>
+                    <div class="ev-time-btn border rounded py-1 text-xs text-center cursor-pointer select-none transition" data-time="02:30" onclick="selectTime(this, '02:30')">05:30</div>
+                    <div class="ev-time-btn border rounded py-1 text-xs text-center cursor-pointer select-none transition" data-time="03:00" onclick="selectTime(this, '03:00')">03:00</div>
+                    <div class="ev-time-btn border rounded py-1 text-xs text-center cursor-pointer select-none transition" data-time="03:30" onclick="selectTime(this, '03:30')">03:30</div>
+                    <div class="ev-time-btn border rounded py-1 text-xs text-center cursor-pointer select-none transition" data-time="04:00" onclick="selectTime(this, '04:00')">04:00</div>
+                    <div class="ev-time-btn border rounded py-1 text-xs text-center cursor-pointer select-none transition" data-time="04:30" onclick="selectTime(this, '04:30')">04:30</div>
+                    <div class="ev-time-btn border rounded py-1 text-xs text-center cursor-pointer select-none transition" data-time="05:00" onclick="selectTime(this, '05:00')">05:00</div>
+                    <div class="ev-time-btn border rounded py-1 text-xs text-center cursor-pointer select-none transition" data-time="05:30" onclick="selectTime(this, '05:30')">05:30</div>
+                    <div class="ev-time-btn border rounded py-1 text-xs text-center cursor-pointer select-none transition" data-time="06:00" onclick="selectTime(this, '06:00')">06:00</div>
+                    <div class="ev-time-btn border rounded py-1 text-xs text-center cursor-pointer select-none transition" data-time="06:30" onclick="selectTime(this, '06:30')">06:30</div>
+                    <div class="ev-time-btn border rounded py-1 text-xs text-center cursor-pointer select-none transition" data-time="07:00" onclick="selectTime(this, '07:00')">07:00</div>
+                    <div class="ev-time-btn border rounded py-1 text-xs text-center cursor-pointer select-none transition" data-time="07:30" onclick="selectTime(this, '07:30')">07:30</div>
+                    <div class="ev-time-btn border rounded py-1 text-xs text-center cursor-pointer select-none transition" data-time="08:00" onclick="selectTime(this, '08:00')">08:00</div>
+                    <div class="ev-time-btn border rounded py-1 text-xs text-center cursor-pointer select-none transition" data-time="08:30" onclick="selectTime(this, '08:30')">08:30</div>
                     <div class="ev-time-btn border rounded py-1 text-xs text-center cursor-pointer select-none transition" data-time="09:00" onclick="selectTime(this, '09:00')">09:00</div>
                     <div class="ev-time-btn border rounded py-1 text-xs text-center cursor-pointer select-none transition" data-time="09:30" onclick="selectTime(this, '09:30')">09:30</div>
                     <div class="ev-time-btn border rounded py-1 text-xs text-center cursor-pointer select-none transition" data-time="10:00" onclick="selectTime(this, '10:00')">10:00</div>
@@ -129,6 +140,7 @@
                     <div class="ev-time-btn border rounded py-1 text-xs text-center cursor-pointer select-none transition" data-time="22:30" onclick="selectTime(this, '22:30')">22:30</div>
                     <div class="ev-time-btn border rounded py-1 text-xs text-center cursor-pointer select-none transition" data-time="23:00" onclick="selectTime(this, '23:00')">23:00</div>
                     <div class="ev-time-btn border rounded py-1 text-xs text-center cursor-pointer select-none transition" data-time="23:30" onclick="selectTime(this, '23:30')">23:30</div>
+                    <div class="ev-time-btn border rounded py-1 text-xs text-center cursor-pointer select-none transition" data-time="24:00" onclick="selectTime(this, '24:00')">24:00</div>
                 </div>
             </div>
 

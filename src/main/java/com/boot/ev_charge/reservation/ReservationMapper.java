@@ -28,4 +28,5 @@ public interface ReservationMapper {
         );
     List<StationDto> getStationList();   
     List<ChargerDto> getChargersByStationId(@Param("stationId") Long stationId);
+    List<ChargerDto> getChargerListWithSoldOutCheck(Map<String, Object> params);
 }

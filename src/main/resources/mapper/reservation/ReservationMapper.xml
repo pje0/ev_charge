@@ -300,5 +300,33 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         where station_id = #{stationId}
         order by id asc
     </select>
+    
+	<resultMap id="ChargerFullMap" type="com.boot.ev_charge.station.ChargerDto">
+        <id property="id" column="id"/>
+        <result property="stationId" column="station_id"/>
+        <result property="connectorType" column="connector_type"/>
+        <result property="powerKw" column="power_kw"/>
+        <result property="status" column="status"/>
+        <result property="reservedSlotCount" column="reserved_count"/>
+    </resultMap>
+
+    <select id="getChargerListWithSoldOutCheck" parameterType="map" resultMap="ChargerFullMap">
+        SELECT 
+            c.id,
+            c.station_id,
+            c.connector_type,
+            c.power_kw,
+            c.status,
+            (SELECT COUNT(*) 
+             FROM reservation r
+             JOIN reservation_time rt ON r.id = rt.reservation_id
+             WHERE r.charger_id = c.id 
+               AND r.status = 'RESERVED'
+               AND DATE(rt.start_time) = DATE(#{date})
+            ) AS reserved_count
+        FROM charger c
+        WHERE c.station_id = #{stationId}
+        ORDER BY c.id ASC
+    </select>
 
 </mapper>

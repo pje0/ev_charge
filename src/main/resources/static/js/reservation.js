@@ -1,5 +1,5 @@
 // =========================================================================
-// 🌐 EV 예약 시스템 클라이언트 코어 스크립트 (v1.0 무결성 디버깅판)
+// 🌐 EV 예약 시스템 클라이언트 코어 스크립트 (v3.1 금일 예약 불가 격벽판)
 // =========================================================================
 
 if (typeof selectedStationId === 'undefined') { var selectedStationId = null; }
@@ -12,6 +12,9 @@ if (typeof isFetchingReservedTimes === 'undefined') { var isFetchingReservedTime
 if (typeof selectedChargerKw === 'undefined') { var selectedChargerKw = 50.0; } 
 if (typeof isTargetAlertShowing === 'undefined') { var isTargetAlertShowing = false; }
 if (typeof globalAlertLock === 'undefined') { var globalAlertLock = false; }
+
+// 장벽 충돌 시 슬라이더를 되감기할 물리 안전 기준점 (0% 시작)
+let lastSafeTargetPercent = 0;
 
 // ==========================================
 // 1. 단계 제어 (Step View Control)
@@ -65,49 +68,59 @@ function clearAllReservationStyles() {
     console.log("🧹 [스타일 리셋] 모든 폼 변수 및 슬롯 원상복구 가동");
     startTime = null;
     endTime = null;
+    lastSafeTargetPercent = 0; 
     if (document.getElementById("startTime")) document.getElementById("startTime").value = "";
     if (document.getElementById("endTime")) document.getElementById("endTime").value = "";
     if (document.getElementById("summaryTime")) document.getElementById("summaryTime").innerText = "-";
     
     const slider = document.getElementById("targetPercent");
     if (slider) {
-        slider.value = 20;
-        updateSliderBackground(20);
+        slider.value = 0; 
+        updateSliderBackground(0);
     }
     const textDisplay = document.getElementById("targetPercentText");
-    if (textDisplay) textDisplay.innerText = "20%";
+    if (textDisplay) textDisplay.innerText = "0%"; 
 
     document.querySelectorAll(".ev-time-btn").forEach(btn => {
-        btn.classList.remove("active", "in-range", "disabled");
+        btn.classList.remove("active", "in-range", "disabled", "is-past-hour");
         btn.style.removeProperty("background-color");
         btn.style.removeProperty("color");
         btn.style.removeProperty("border-color");
         btn.style.removeProperty("pointer-events");
         btn.style.removeProperty("cursor");
+        btn.style.removeProperty("opacity");
     });
 }
 
-// ==========================================
-// 2. 충전기 목록 로드 (v1.0 경고 차단형)
-// ==========================================
+// =========================================================================
+// 2. 충전기 목록 로드 및 상태별 분기 (v3.2 날짜별 예약 가능 상태 보정)
+// =========================================================================
+// 1. [에러 해결] 변수를 함수보다 최상단에 선언
+let isBookingInProgress = false; 
+
 async function loadChargers(stationId, element) {
     if (!stationId) return;
     selectedStationId = Number(stationId);
-    console.log(`📡 [충전기 로드] stationId: ${stationId}`);
     
     document.querySelectorAll('.border-blue-500').forEach(el => el.classList.remove('border-blue-500', 'bg-blue-50'));
     element.classList.add('border-blue-500', 'bg-blue-50');
     
     clearAllReservationStyles();
     
+    const rightNow = new Date();
+    const todayStr = `${rightNow.getFullYear()}-${String(rightNow.getMonth() + 1).padStart(2, '0')}-${String(rightNow.getDate()).padStart(2, '0')}`;
+    const selectedDateStr = document.getElementById("reservationDate")?.value || todayStr;
+    
     try {
-        const res = await fetch(`/reservation/api/chargers?stationId=` + stationId);
+        const res = await fetch(`/reservation/api/chargers?stationId=${stationId}&date=${selectedDateStr}`);
         const chargers = await res.json();
         const container = document.getElementById("chargerListContainer");
         
         if (chargers.length > 0) {
+            // [에러 해결] map(c => { ... }) 내부에서 모든 HTML을 return 하도록 구조화
             container.innerHTML = chargers.map(c => {
                 const statusLower = c.status ? c.status.toLowerCase() : 'available';
+                
                 let connectorName = c.connectorType;
                 if (c.connectorType === 'DC_COMBO') connectorName = 'DC콤보 (7핀)';
                 else if (c.connectorType === 'CHAdemo') connectorName = '차데모 (10핀)';
@@ -120,59 +133,55 @@ async function loadChargers(stationId, element) {
                 const speedLabel = isRapid ? '급속' : '완속';
                 const speedClass = isRapid ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700';
 
-                if (statusLower === 'maintenance' || statusLower === 'out_of_service') {
-                    return `<div class="border border-gray-200 bg-gray-100 opacity-60 rounded-lg p-3 select-none pointer-events-none">
-                                <div class="flex justify-between items-center mb-1">
-                                    <h3 class="font-bold text-gray-900 text-sm">${connectorName}</h3>
-                                    <span class="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-medium">점검 중</span>
-                                </div>
-                                <div class="flex items-center gap-1.5 mt-1">
-                                    <span class="text-[10px] ${speedClass} px-1.5 py-0.5 rounded font-semibold">${speedLabel}</span>
-                                    <p class="text-gray-400 text-xs tracking-tight">${c.powerKw}kW 출력</p>
-                                </div>
-                            </div>`;
+                let pastSlotCount = 0;
+                if (selectedDateStr === todayStr) {
+                    const currentTotalMin = (rightNow.getHours() * 60) + rightNow.getMinutes();
+                    const startRangeMin = 9 * 60; 
+                    if (currentTotalMin > startRangeMin) pastSlotCount = Math.floor((currentTotalMin - startRangeMin) / 30);
                 }
 
-                if (statusLower === 'charging' || statusLower === 'occupied' || statusLower === 'in_use') {
-                    return `<div class="border border-amber-200 bg-amber-50/30 rounded-lg p-3 cursor-pointer hover:border-blue-500 hover:bg-blue-50/50 transition" onclick="selectCharger(this, '${c.id}', '${connectorName}', ${c.powerKw})">
-                                <div class="flex justify-between items-center mb-1">
-                                    <h3 class="font-bold text-amber-900 text-sm">${connectorName}</h3>
-                                    <span class="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-medium">사용 중 (예약 가능)</span>
-                                </div>
-                                <div class="flex items-center gap-1.5 mt-1">
-                                    <span class="text-[10px] ${speedClass} px-1.5 py-0.5 rounded font-semibold">${speedLabel}</span>
-                                    <p class="text-amber-700 text-xs tracking-tight">${c.powerKw}kW 출력</p>
-                                </div>
-                            </div>`;
-                }
+                const totalDisplaySlots = 30; 
+                const dbReservedSlots = Number(c.reservedSlotCount || 0);
+                const netAvailableSlots = (selectedDateStr === todayStr) ? (totalDisplaySlots - pastSlotCount - dbReservedSlots) : (totalDisplaySlots - dbReservedSlots);
+                
+                // [테스트 기준 복구] 실제 마감 기준 (<= 0)
+                const isNotBookable = (selectedDateStr === todayStr && netAvailableSlots <= 0) || statusLower === 'maintenance' || statusLower === 'out_of_service';
+                const isOccupied = (statusLower === 'charging' || statusLower === 'occupied' || statusLower === 'in_use');
 
-                return `<div class="border border-gray-200 rounded-lg p-3 cursor-pointer hover:border-blue-500 hover:bg-blue-50/50 transition bg-white" onclick="selectCharger(this, '${c.id}', '${connectorName}', ${c.powerKw})">
-                            <div class="flex justify-between items-center mb-1">
-                                <h3 class="font-bold text-gray-900 text-sm">${connectorName}</h3>
-                                <span class="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-medium">사용 가능</span>
-                            </div>
-                            <div class="flex items-center gap-1.5 mt-1">
-                                <span class="text-[10px] ${speedClass} px-1.5 py-0.5 rounded font-semibold">${speedLabel}</span>
-                                <p class="text-gray-400 text-xs tracking-tight">${c.powerKw}kW 출력</p>
-                            </div>
-                        </div>`;
+                // [에러 해결] 하나의 template literal 안에서 모든 조건을 처리
+                return `
+                    <div class="border ${isNotBookable ? 'border-slate-300 bg-slate-50' : (isOccupied ? 'border-amber-200 bg-amber-50/30' : 'border-gray-200 bg-white')} rounded-lg p-3 cursor-pointer hover:border-blue-500 transition" 
+                         onclick="selectCharger(this, '${c.id}', '${connectorName}', ${c.powerKw})">
+                        <div class="flex justify-between items-center mb-1">
+                            <h3 class="font-bold ${isNotBookable ? 'text-slate-700' : (isOccupied ? 'text-amber-900' : 'text-gray-900')} text-sm">${connectorName}</h3>
+                            <span class="text-[10px] ${isNotBookable ? 'bg-slate-500 text-white' : (isOccupied ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700')} px-1.5 py-0.5 rounded font-medium">
+                                ${isNotBookable ? '금일 예약 불가' : (isOccupied ? '사용 중 (예약 가능)' : '사용 가능')}
+                            </span>
+                        </div>
+                        <div class="flex items-center gap-1.5 mt-1">
+                            <span class="text-[10px] ${speedClass} px-1.5 py-0.5 rounded font-semibold">${speedLabel}</span>
+                            <p class="${isNotBookable ? 'text-slate-600' : (isOccupied ? 'text-amber-700' : 'text-gray-400')} text-xs">${c.powerKw}kW 출력</p>
+                        </div>
+                    </div>`;
             }).join('');
         } else {
             container.innerHTML = '<div class="col-span-2 text-center py-24 text-gray-400 text-xs">등록된 충전기가 없습니다.</div>';
         }
         
-        if (selectedChargerId !== null && selectedChargerId !== 0) {
-            await loadReservedTimes();
-        }
+        if (selectedChargerId !== null && selectedChargerId !== 0) await loadReservedTimes();
     } catch (error) {
         console.error("충전기 목록 로드 실패:", error);
     }
 }
 
+// 📐 가용 슬롯 연산 부분 바로 아래 추가
+
 // ==========================================
-// 3. 충전기 선택 및 건너뛰기 액션
+// 3. 충전기 선택 액션 (🟢 2중 예약 불가 방어막 결속)
 // ==========================================
 function selectCharger(element, chargerId, chargerName, powerKw) {
+    // 🛑 [삭제] 더 이상 텍스트 기반 검증이나 alert으로 막지 않습니다.
+    
     document.getElementById("chargerId").value = chargerId;
     selectedChargerId = Number(chargerId);
     selectedChargerKw = Number(powerKw || 50.0);
@@ -182,14 +191,6 @@ function selectCharger(element, chargerId, chargerName, powerKw) {
     clearAllReservationStyles();
     moveStep(2);
     loadReservedTimes();
-}
-
-function skipCharger() {
-    selectedChargerId = null;
-    document.getElementById("chargerId").value = "";
-    document.getElementById("summaryCharger").innerText = "충전기 미선택";
-    moveStep(2);
-    setTimeout(loadReservedTimes, 50);
 }
 
 // ==========================================
@@ -227,9 +228,17 @@ function selectReservationType(type) {
 // 5. 슬라이더 배경 색상 처리 함수
 // ==========================================
 function updateSliderBackground(value) {
+    // 함수 내부에서 슬라이더를 확실하게 다시 찾습니다.
     const slider = document.getElementById("targetPercent");
+    
+    // slider가 없으면 배경색을 바꿀 대상이 없으니 종료합니다.
     if (!slider) return;
-    const percentage = ((value - slider.min) / (slider.max - slider.min)) * 100;
+
+    const val = Number(value);
+    const min = Number(slider.min) || 0;
+    const max = Number(slider.max) || 100;
+    
+    const percentage = ((val - min) / (max - min)) * 100;
     slider.style.background = `linear-gradient(to right, #2563eb 0%, #2563eb ${percentage}%, #e5e7eb ${percentage}%, #e5e7eb 100%)`;
 }
 
@@ -237,6 +246,7 @@ function calculateRequiredMinutes(targetVal) {
     const chargerKw = selectedChargerKw; 
     const batteryCapacity = 70.0; 
     const currentPercent = 0.0; 
+	const slider = document.getElementById("targetPercent");
 
     if (targetVal <= currentPercent) return 0;
 
@@ -250,54 +260,87 @@ function calculateRequiredMinutes(targetVal) {
     return requiredMinutes;
 }
 
-function changeTargetPercent(value, isQuick = false) {
-    let targetVal = Number(value);
-    const currentPercent = 0.0;
-    const availableMin = (typeof maxContinuousMinutes !== 'undefined') ? maxContinuousMinutes : 120;
+// =========================================================================
+// 6. 목표 충전량 실시간 변동 연산 및 포커스 락 분쇄
+// =========================================================================
+//1. 오늘 날짜인지 확인하는 공통 함수
+function isTodaySelected() {
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    
+    // 예약 날짜 input에서 현재 값을 가져옵니다.
+    const reservationDateElement = document.getElementById("reservationDate");
+    const selectedDate = reservationDateElement ? reservationDateElement.value : "";
+    
+    return selectedDate === todayStr;
+}
 
+// [중요] 실제 계산 로직으로 수정하세요! 
+// 아까 콘솔에 찍히던 그 0분 값을 반환하는 로직을 찾아서 연결해야 합니다.
+function getActualMaxAvailableMinutes() {
+    // 만약 기존 함수 이름이 있다면 그걸 쓰세요. 없다면 아래처럼 작성하세요.
+    // 현재 화면에 표시된 타임 슬롯 중 'disabled'가 아닌 연속된 가장 긴 시간을 찾는 로직일 것입니다.
+    return parseInt(document.getElementById("maxAvailableMinutes")?.value || "0"); 
+}
+
+function changeTargetPercent(value, isUserAction = true) {
+    // 1. 넘겨받은 값을 변수로 확실히 선언
+    let targetVal = Number(value);
+    
+    // 2. 외부 로직용 변수들
+    const slider = document.getElementById("targetPercent");
+    const currentPercent = 0.0;
+
+    // 3. 오늘 날짜 방어 로직 (함수 외부 선언된 것을 활용)
+    if (isUserAction && isTodaySelected() && getActualMaxAvailableMinutes() < 30) {
+        alert("오늘 예약 가능한 시간대가 부족하여 설정을 변경할 수 없습니다.");
+        if (slider) {
+            slider.value = lastSafeTargetPercent;
+            updateSliderBackground(lastSafeTargetPercent);
+            document.getElementById("targetPercentText").innerText = lastSafeTargetPercent + "%";
+        }
+        return; 
+    }
+
+    // 4. 여기서부터 targetVal을 안전하게 사용
     if (targetVal <= currentPercent) {
-        const slider = document.getElementById("targetPercent");
         if (slider) {
             slider.value = currentPercent;
             updateSliderBackground(currentPercent);
             document.getElementById("targetPercentText").innerText = currentPercent + "%";
+            if (document.getElementById("summaryTarget")) document.getElementById("summaryTarget").innerText = currentPercent + "%";
         }
+        lastSafeTargetPercent = currentPercent;
+        syncTimeButtonsByTarget();
         return;
     }
 
-    let requiredMinutes = calculateRequiredMinutes(targetVal);
-
-    if (requiredMinutes > availableMin || availableMin <= 0) {
-        if (!globalAlertLock) {
-            globalAlertLock = true;
-            alert(`죄송합니다. 현재 남은 예약 가능 시간(${availableMin}분)이 부족하여 목표 충전량을 더 늘릴 수 없습니다.`);
-            setTimeout(() => { globalAlertLock = false; }, 800);
-        }
-
-        const chargerKw = selectedChargerKw;
-        const batteryCapacity = 70.0;
-        const maxKwh = Math.max(0, (availableMin - 15) * chargerKw / 60);
-        const maxAllowedIncrease = (maxKwh / batteryCapacity) * 100;
-        let maxPossiblePercent = Math.floor(currentPercent + maxAllowedIncrease);
-        maxPossiblePercent = Math.max(0, Math.min(100, maxPossiblePercent));
-
-        // 🟢 [5% 단위 강제 보정] 
-        // 87%, 97% 처럼 step(5) 단위를 무시하는 예외 값이 들어오면 핀과 배경이 어긋납니다.
-        // 계산된 최댓값을 가용 범위 안쪽의 5의 배수로 딱 떨어지게 마스킹합니다.
-        // 예: 97% -> 95% 고정 / 87% -> 85% 고정
-        const step = 5;
-        targetVal = Math.floor(maxPossiblePercent / step) * step;
-    }
-
-    const slider = document.getElementById("targetPercent");
-    if (slider) { slider.value = targetVal; }
     document.getElementById("targetPercentText").innerText = targetVal + "%";
     if (document.getElementById("summaryTarget")) {
         document.getElementById("summaryTarget").innerText = targetVal + "%";
     }
-    updateSliderBackground(targetVal);
 
-    syncTimeButtonsByTarget();
+    const isSequenceValid = syncTimeButtonsByTarget();
+    
+    if (!isSequenceValid) {
+        if (startTime) {
+            if (slider) {
+                slider.value = lastSafeTargetPercent;
+                updateSliderBackground(lastSafeTargetPercent);
+                document.getElementById("targetPercentText").innerText = lastSafeTargetPercent + "%";
+                if (document.getElementById("summaryTarget")) {
+                    document.getElementById("summaryTarget").innerText = lastSafeTargetPercent + "%";
+                }
+                slider.blur(); 
+            }
+            syncTimeButtonsByTarget();
+            return;
+        }
+    }
+
+    if (slider) { slider.value = targetVal; }
+    updateSliderBackground(targetVal);
+    lastSafeTargetPercent = targetVal; 
 }
 
 function quickTarget(value) {
@@ -308,9 +351,9 @@ function quickTarget(value) {
     }
 }
 
-// =========================================================================
+// ==========================================
 // 7. 타임 슬롯 클릭 제어
-// =========================================================================
+// ==========================================
 function selectTime(element, time) {
     if (element.classList.contains("disabled") || element.style.pointerEvents === "none") {
         return; 
@@ -384,16 +427,31 @@ function selectTime(element, time) {
         return; 
     }
 
+    document.querySelectorAll(".ev-time-btn").forEach(btn => {
+        if (!btn.classList.contains("disabled") && btn.style.pointerEvents !== "none") {
+            btn.classList.remove("active", "in-range");
+        }
+    });
+
     startTime = time; 
+    element.classList.add("active");
+    
+    const slider = document.getElementById("targetPercent");
+    if (slider) {
+        lastSafeTargetPercent = 5; 
+        slider.value = 5;
+        updateSliderBackground(5);
+        document.getElementById("targetPercentText").innerText = "5%";
+    }
     syncTimeButtonsByTarget();
 }
 
 // =========================================================================
-// 7-1. 목표 충전량 기준 자동 슬롯 선택 및 보호막 결속
+// 7-1. 목표 충전량 기준 자동 슬롯 선택 및 보호막 결속 (v2.5 비동기 마스킹판)
 // =========================================================================
-async function syncTimeButtonsByTarget() {
+function syncTimeButtonsByTarget() {
     const resType = document.getElementById("reservationType").value;
-    if (resType !== 'TARGET') return;
+    if (resType !== 'TARGET') return true;
 
     const targetPercentText = document.getElementById("targetPercentText").innerText;
     const targetValue = parseInt(targetPercentText) || 0;
@@ -405,18 +463,20 @@ async function syncTimeButtonsByTarget() {
         return a.dataset.time.localeCompare(b.dataset.time);
     });
     
-    // 🟢 [보정 락] 영구 회색 비활성화(disabled) 상태인 요소는 리셋 스타일 가드 대상에서 완전 제외
-    allButtons.forEach(btn => {
-        if (btn.classList.contains("disabled") || btn.style.pointerEvents === "none") {
-            return; 
-        }
-        btn.classList.remove("bg-blue-600", "text-white", "border-blue-600", "active", "in-range", "bg-blue-50", "text-blue-600");
-        btn.style.removeProperty("background-color");
-        btn.style.removeProperty("color");
-        btn.style.removeProperty("border-color");
-    });
+    const cleanStyles = () => {
+        allButtons.forEach(btn => {
+            if (btn.classList.contains("disabled") || btn.style.pointerEvents === "none") return; 
+            btn.classList.remove("bg-blue-600", "text-white", "border-blue-600", "active", "in-range", "bg-blue-50", "text-blue-600");
+            btn.style.removeProperty("background-color");
+            btn.style.removeProperty("color");
+            btn.style.removeProperty("border-color");
+        });
+    };
 
-    if (requiredSlots <= 0) return;
+    if (requiredSlots <= 0) {
+        cleanStyles();
+        return true;
+    }
 
     let validStartTime = startTime;
     if (!validStartTime || !allButtons.some(btn => btn.dataset.time === validStartTime && !btn.classList.contains("disabled"))) {
@@ -445,6 +505,25 @@ async function syncTimeButtonsByTarget() {
     }
 
     if (!isSequenceValid) {
+        if (document.querySelector(".ev-time-btn.active") || startTime) {
+            startTime = null; 
+            endTime = null;
+            
+            document.getElementById("startTime").value = "";
+            document.getElementById("endTime").value = "";
+            document.getElementById("summaryTime").innerText = "예약 가능 공간 부족";
+            cleanStyles();
+
+            if (!globalAlertLock) {
+                globalAlertLock = true;
+                setTimeout(() => {
+                    alert("죄송합니다. 선택하신 시간대 이후로 연속된 예약 가능 공간이 부족합니다.\n목표 충전량을 낮추거나 다른 시작 시간을 선택해 주세요.");
+                    globalAlertLock = false;
+                }, 50); 
+            }
+            return false; 
+        }
+
         targetStartIndex = -1;
         for (let i = 0; i < allButtons.length; i++) {
             let isValid = true;
@@ -465,11 +544,16 @@ async function syncTimeButtonsByTarget() {
     }
 
     if (targetStartIndex === -1 || (targetStartIndex + requiredSlots > allButtons.length)) {
+        startTime = null;
+        endTime = null;
         document.getElementById("startTime").value = "";
         document.getElementById("endTime").value = "";
         document.getElementById("summaryTime").innerText = "예약 가능 공간 부족";
-        return;
+        cleanStyles();
+        return false;
     }
+
+    cleanStyles();
 
     let firstSelectedTime = null;
     let lastSelectedTime = null;
@@ -507,6 +591,9 @@ async function syncTimeButtonsByTarget() {
     document.getElementById("startTime").value = date + " " + startTime + ":00";
     document.getElementById("endTime").value = date + " " + endTime + ":00";
     document.getElementById("summaryTime").innerText = `${startTime} ~ ${endTime} (${requiredMinutes}분 소요)`;
+    
+    console.log(`📊 [v2.5 실시간 연산] 시작: ${startTime} | 종료: ${endTime} | 총 슬롯: ${requiredSlots}칸 점유 완료`);
+    return true;
 }
 
 // =====================================================
@@ -521,7 +608,6 @@ function calculateMaxAvailableInterval() {
     let currentInterval = 0;
 
     allButtons.forEach(btn => {
-        // 🟢 회색 장벽 고유 마커 발견 시 구간 카운트 단절 후 이탈 보호
         if (btn.classList.contains("disabled") || btn.style.pointerEvents === "none") {
             currentInterval = 0;
             return; 
@@ -537,9 +623,9 @@ function calculateMaxAvailableInterval() {
     console.log("@# [실시간 연산 확인] 현재 기준 최대 연속 가용 시간:", maxContinuousMinutes + "분");
 }
 
-// =====================================================
-// 9. 실시간 예약/과거 시간대 비활성화 및 동기화 (v1.4 본인 예약 식별 제어판)
-// =====================================================
+// =========================================================================
+// 9. 실시간 예약/과거 시간대 비활성화 및 동기화 (과거 대역 고대비 패치 유지)
+// =========================================================================
 async function loadReservedTimes() {
     if (isFetchingReservedTimes) return;
     
@@ -553,16 +639,15 @@ async function loadReservedTimes() {
 
     isFetchingReservedTimes = true;
 
-    // 1. 초기 청소 (버튼 기본 상태 복구 및 본인 예약 식별 텍스트 청소)
+    // 1. 초기화 루프
     document.querySelectorAll(".ev-time-btn").forEach(btn => {
-        btn.classList.remove("disabled", "active", "in-range");
+        btn.classList.remove("disabled", "active", "in-range", "is-past-hour");
         btn.style.removeProperty("background-color");
         btn.style.removeProperty("color");
         btn.style.removeProperty("pointer-events");
         btn.style.removeProperty("cursor");
         btn.style.removeProperty("border-color");
         
-        // 데이터 속성에 백업해 둔 원본 시간 문자열(09:00 등)로 텍스트 원상복구
         if(btn.dataset.time) {
             btn.innerText = btn.dataset.time;
         }
@@ -570,36 +655,45 @@ async function loadReservedTimes() {
     
     const now = new Date();
     const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`; 
-
-    // 2. 과거 날짜 및 오늘 과거 슬롯 선제 잠금
     const selectedDateObj = new Date(date + "T00:00:00");
     const todayDateObj = new Date(todayStr + "T00:00:00");
 
-    if (selectedDateObj < todayDateObj) {
-        document.querySelectorAll(".ev-time-btn").forEach(btn => {
-            btn.classList.add("disabled"); 
+    // 2. 과거 시간 및 24:00 잠금 통합 루프
+    document.querySelectorAll(".ev-time-btn").forEach(btn => {
+        const t = btn.dataset.time;
+        const [h, m] = t.split(":").map(Number);
+        
+        // 과거 시간대 판별
+        let isPast = false;
+        if (selectedDateObj < todayDateObj) {
+            isPast = true;
+        } else if (date === todayStr) {
+            if (h < now.getHours() || (h === now.getHours() && m <= now.getMinutes())) {
+                isPast = true;
+            }
+        }
+
+        if (isPast) {
+            btn.classList.add("disabled", "is-past-hour");
+            btn.style.setProperty("background-color", "#374151", "important");
+            btn.style.setProperty("color", "#9ca3af", "important");
+            btn.style.setProperty("border-color", "#4b5563", "important");
+            btn.style.setProperty("pointer-events", "none", "important");
+            btn.style.setProperty("cursor", "not-allowed", "important");
+            return;
+        }
+
+        // 24:00 마감 처리
+        if (t === "24:00") {
+            btn.classList.add("disabled");
             btn.style.setProperty("background-color", "#e5e7eb", "important");
             btn.style.setProperty("color", "#9ca3af", "important");
             btn.style.setProperty("pointer-events", "none", "important");
             btn.style.setProperty("cursor", "not-allowed", "important");
-        });
-    } else if (date === todayStr) {
-        const currentHours = now.getHours();
-        const currentMinutes = now.getMinutes();
-
-        document.querySelectorAll(".ev-time-btn").forEach(btn => {
-            const t = btn.dataset.time; 
-            const [h, m] = t.split(":").map(Number);
-
-            if (h < currentHours || (h === currentHours && m <= currentMinutes)) {
-                btn.classList.add("disabled"); 
-                btn.style.setProperty("background-color", "#e5e7eb", "important");
-                btn.style.setProperty("color", "#9ca3af", "important");
-                btn.style.setProperty("pointer-events", "none", "important");
-                btn.style.setProperty("cursor", "not-allowed", "important");
-            }
-        });
-    }
+            btn.innerText = "마감";
+            return;
+        }
+    });
 
     try {
         const sendChargerId = Number(chargerId);
@@ -619,19 +713,11 @@ async function loadReservedTimes() {
             const reservedList = await response.json();
             console.log("📦 [서버가 리턴한 실시간 예약 데이터] : ", reservedList);
             
-            // 타임존 강제 동기화형 정밀 시/분 파서
             const parseToMinutes = (timeInput) => {
-                if (timeInput === null || timeInput === undefined) return null;
+                if (!timeInput) return null;
                 if (typeof timeInput === 'string' && (timeInput.includes('T') || timeInput.includes('Z'))) {
                     const d = new Date(timeInput);
                     return (d.getHours() * 60) + d.getMinutes();
-                }
-                if (typeof timeInput === 'number' || !isNaN(timeInput)) {
-                    const d = new Date(Number(timeInput));
-                    return (d.getHours() * 60) + d.getMinutes();
-                }
-                if (Array.isArray(timeInput) && timeInput.length >= 5) {
-                    return (parseInt(timeInput[3], 10) * 60) + parseInt(timeInput[4], 10);
                 }
                 if (typeof timeInput === 'string') {
                     let pureTime = timeInput.includes(' ') ? timeInput.split(' ')[1] : timeInput;
@@ -642,54 +728,39 @@ async function loadReservedTimes() {
                 return null;
             };
 
-            // 3. 서버 DB 예약 내역 중복 누적 잠금 및 본인 식별 가드 가동
-            reservedList.forEach((r, index) => {
+            reservedList.forEach((r) => {
                 const rawStartTime = r.startTime || r.start_time || r.START_TIME;
                 const rawEndTime = r.endTime || r.end_time || r.END_TIME;
-
                 if (!rawStartTime || !rawEndTime) return; 
 
-                let startMin = parseToMinutes(rawStartTime);
-                let endMin = parseToMinutes(rawEndTime);
-
-                if (startMin === null || endMin === null) return; 
-
-                startMin = startMin % 1440;
-                endMin = endMin % 1440;
+                let startMin = parseToMinutes(rawStartTime) % 1440;
+                let endMin = parseToMinutes(rawEndTime) % 1440;
                 if (endMin <= startMin) endMin += 1440;
 
-                // 🟢 [본인 예약 식별 코어]
-                // 현재 JSP 페이지 로그인 세션의 유저 ID 세팅값 검증 (기본값 1번 연동 보정)
-                // 만약 전역 변수나 세션 변수로 관리되는 유저 고유 ID가 따로 있다면 Number(자바스크립트_유저ID)로 매핑 가능합니다.
                 const currentSessionUserId = 1; 
                 const resUserId = r.userId || r.user_id || r.USER_ID;
-                
-                // 해당 예약의 소유주가 현재 로그인한 본인인지 여부 판별 boolean
                 const isMyReservation = (Number(resUserId) === Number(currentSessionUserId));
 
                 document.querySelectorAll(".ev-time-btn").forEach(btn => {
                     const tStr = btn.dataset.time; 
                     const btnMin = parseToMinutes(tStr);
-                    
                     if (btnMin === null) return;
 
                     if (Number(btnMin) >= Number(startMin) && Number(btnMin) < Number(endMin)) {
-                        // 🔒 타인/본인 관계 없이 예약된 슬롯은 공통적으로 회색 선택 불가 잠금
                         btn.classList.add("disabled"); 
-                        btn.style.setProperty("background-color", "#e5e7eb", "important"); 
-                        btn.style.setProperty("color", "#9ca3af", "important");           
-                        btn.style.setProperty("pointer-events", "none", "important");      
-                        btn.style.setProperty("cursor", "not-allowed", "important");
                         
-                        // 🟢 [텍스트 분기 출력 가드]
+                        if (!btn.classList.contains("is-past-hour")) {
+                            btn.style.setProperty("background-color", "#e5e7eb", "important");
+                            btn.style.setProperty("color", "#9ca3af", "important");           
+                            btn.style.setProperty("pointer-events", "none", "important");      
+                            btn.style.setProperty("cursor", "not-allowed", "important");
+                        }
+                        
                         if (isMyReservation) {
-                            // 본인이 예약한 방이면 차량 종류 데이터 매핑 노출
-                            const carLabel = r.carType || r.car_type || "내 예약";
-                            btn.innerText = carLabel; 
-                            btn.style.setProperty("color", "#2563eb", "important"); //본인 구별용 파란 글씨 포인트
+                            btn.innerText = r.carType || "내 예약";
+                            btn.style.setProperty("color", "#2563eb", "important");
                             btn.style.setProperty("font-weight", "700", "important");
                         } else {
-                            // 타인이 예약한 구역이면 상세 내용을 숨기고 "예약 불가" 혹은 원래 시간만 유지
                             btn.innerText = "마감";
                         }
                     }
@@ -697,10 +768,8 @@ async function loadReservedTimes() {
             });
 
             calculateMaxAvailableInterval();
-
             if (reservationType === "TARGET") {
-                const currentSliderVal = document.getElementById("targetPercent")?.value || 0;
-                changeTargetPercent(currentSliderVal, false);
+                changeTargetPercent(document.getElementById("targetPercent")?.value || 0, false);
             }
         }
     } catch (error) { 
@@ -777,23 +846,98 @@ function submitReservation() {
     document.getElementById("reservationForm").submit();
 }
 
-// ==========================================
-// 11. DOM 렌더링 직후 초기화 리스너
-// ==========================================
+// =========================================================================
+// 11. [최종 격벽 결속] DOM 렌더링 직후 초기화 및 실시간 동기화 리스너
+// =========================================================================
 window.addEventListener("DOMContentLoaded", () => {
     document.getElementById("reservationDate")?.addEventListener("change", loadReservedTimes);
     
     const slider = document.getElementById("targetPercent");
     if (slider) {
-        slider.value = 20; 
-        updateSliderBackground(slider.value);
+        slider.value = 0; 
+        updateSliderBackground(0);
+        
+        // 🛑 [수정] 이벤트 리스너를 if 블록 안에 깔끔하게 정리했습니다.
         slider.addEventListener("input", (e) => {
-            changeTargetPercent(e.target.value, false);
+            changeTargetPercent(e.target.value, true); 
         });
-    }
+    } // <-- 여기가 if (slider)를 닫는 괄호입니다.
     
     const textDisplay = document.getElementById("chargeValueText") || document.getElementById("targetPercentText");
     if (textDisplay) {
-        textDisplay.innerText = "20%";
+        textDisplay.innerText = "0%";
+    }
+}); // <-- 여기가 DOMContentLoaded를 닫는 괄호입니다.
+// ============================================================
+// 12. 예약 상태 전역 관리 (이탈 방지용)
+// ============================================================
+
+// [경고창] 브라우저 직접 닫기/새로고침/뒤로가기 시 이탈 방지
+window.addEventListener('beforeunload', function (e) {
+    if (isBookingInProgress) {
+        e.preventDefault();
+        e.returnValue = ''; // 표준 브라우저 경고창 트리거
     }
 });
+
+// [메뉴 이동] 예약 중 메뉴 클릭 시 confirm으로 이탈 제어
+function navigateWithConfirm(url) {
+    if (isBookingInProgress) {
+        if (confirm("예약 설정 중인 내용이 사라집니다. 정말 나가시겠습니까?")) {
+            isBookingInProgress = false; // 경고 해제
+            window.location.href = url;
+        }
+    } else {
+        window.location.href = url;
+    }
+}
+
+// [초기화] 예약 페이지 로드 시 상태 체크
+window.onload = function() {
+    // 예약 완료 후 뒤로가기 방지용 세션 체크
+    if (sessionStorage.getItem('reservationCompleted') === 'true') {
+        sessionStorage.removeItem('reservationCompleted');
+        window.location.replace('/home'); // replace로 히스토리 기록도 제거
+    }
+};
+
+// ============================================================
+// 13. 충전기 선택 시 (예약 시작)
+// ============================================================
+function selectCharger(element, chargerId, chargerName, powerKw) {
+    // [경고 활성화] 이제부터 페이지 이탈 시 경고창이 뜹니다.
+    isBookingInProgress = true; 
+
+    document.getElementById("chargerId").value = chargerId;
+    selectedChargerId = Number(chargerId);
+    moveStep(2);
+    loadReservedTimes();
+}
+
+// ============================================================
+// 14. 예약 확정 시 (예약 완료)
+// ============================================================
+// [핵심] 예약 확정 시 경고창 차단 후 이동 로직
+function handleReservationComplete() {
+    // 1. 이탈 방지 플래그를 즉시 끕니다.
+    isBookingInProgress = false; 
+    
+    // 2. 만약의 경우를 대비해 이벤트 리스너를 잠시 제거합니다.
+    window.removeEventListener('beforeunload', handleUnload); 
+    
+    // 3. 완료 처리
+    sessionStorage.setItem('reservationCompleted', 'true');
+    
+    // 4. 페이지 이동
+    window.history.replaceState(null, '', '/reservation/success');
+    window.location.href = '/reservation/success';
+}
+
+// 기존 beforeunload 이벤트 함수를 이름 있는 함수로 분리 (제거를 위해)
+function handleUnload(e) {
+    if (isBookingInProgress) {
+        e.preventDefault();
+        e.returnValue = '';
+    }
+}
+window.addEventListener('beforeunload', handleUnload);
