@@ -12,16 +12,18 @@
 <script src="/js/reservation.js" defer></script>
 
 <link rel="stylesheet" href="/css/common.css">
-<link rel="stylesheet" href="/css/reservation.css">
+<!-- <link rel="stylesheet" href="/css/reservation.css"> -->
 </head>
 <body class="bg-gray-50 text-sm"> <jsp:include page="/WEB-INF/views/layout/header.jsp" />
 
 <main class="max-w-6xl mx-auto pt-20 pb-8 px-4">
     
-    <div class="mb-8">
-        <h1 class="text-2xl font-bold text-gray-900 tracking-tight">충전 예약</h1>
-        <p class="text-gray-400 text-xs mt-1">원하는 충전소와 시간을 선택하여 예약하세요</p>
-    </div>
+	<div class="mb-8">
+	    <h1 class="text-3xl font-bold">충전 예약</h1>
+	    <p class="text-sm text-gray-500">원하는 충전소와 시간을 선택하여 예약하세요</p>
+	</div>
+	<div class="ev-step-container w-full mb-6">
+	    </div>
 
     <div class="mb-10">
         <div class="flex items-center justify-center text-xs gap-3 max-w-2xl mx-auto">
