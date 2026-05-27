@@ -81,7 +81,7 @@
 
 						<sec:authorize access="hasRole('ADMIN')">
 
-							<a href="/admin" class="ev-header-dropdown-item"> 관리자 페이지 </a>
+							<a href="/admin/adminpage" class="ev-header-dropdown-item"> 관리자 페이지 </a>
 
 						</sec:authorize>
 
