@@ -12,7 +12,10 @@ import org.springframework.transaction.annotation.Transactional;
 import com.boot.ev_charge.station.ChargerDto;
 import com.boot.ev_charge.station.StationDto;
 
+import lombok.extern.slf4j.Slf4j;
+
 @Service
+@Slf4j
 public class ReservationService {
 
     @Autowired
@@ -98,27 +101,25 @@ public class ReservationService {
     }
     
     // 9. 특정 충전기의 날짜별 예약된 시간 목록 조회 (Ajax 연동용)
-    // 🌟 가짜로 들어가 있던 return reservationMapper.getStationList(); 를 지우고 진짜 예약을 반환합니다!
-    public List<ReservationDto> getReservedTimes(Long chargerId, String date) {
-        // XML 쿼리 결과를 진짜로 받아옵니다.
-        List<Map<String, Object>> mapList = reservationMapper.getReservedTimes(chargerId, date);
-        List<ReservationDto> dtoList = new ArrayList<>();
+    public List<ReservationDto> getReservedTimes(Long chargerId, Long stationId, String date) {
         
-        if (mapList != null) {
-            for (Map<String, Object> map : mapList) {
-                ReservationDto resDto = new ReservationDto();
-                
-                // MyBatis가 대소문자 구별 없이 맵에 담은 변수명을 안전하게 문자열로 뽑아 Timestamp로 파싱
-                if (map.get("startTime") != null) {
-                    resDto.setStartTime(java.sql.Timestamp.valueOf(map.get("startTime").toString()));
-                }
-                if (map.get("endTime") != null) {
-                    resDto.setEndTime(java.sql.Timestamp.valueOf(map.get("endTime").toString()));
-                }
-                dtoList.add(resDto);
+        log.info("## [Service] getReservedTimes 가동 -> chargerId: {}, stationId: {}, date: {}", chargerId, stationId, date);
+        
+        try {
+            // MyBatis 매퍼 인터페이스로 3개의 인자(chargerId, stationId, date)를 안전하게 패스합니다.
+            List<ReservationDto> dtoList = reservationMapper.getReservedTimes(chargerId, stationId, date);
+            
+            if (dtoList == null) {
+                return new java.util.ArrayList<>();
             }
+            
+            log.info("## [Service] 조회된 예약 개수: {}개", dtoList.size());
+            return dtoList;
+            
+        } catch (Exception e) {
+            log.error("## [Service 오류] getReservedTimes 연산 실패: {}", e.getMessage(), e);
+            return new java.util.ArrayList<>();
         }
-        return dtoList;
     }
     
     // 10. 충전소 목록 조회
@@ -129,5 +130,34 @@ public class ReservationService {
     // 11. 충전소별 충전기 목록 조회
     public List<ChargerDto> getChargersByStationId(Long stationId) {
         return reservationMapper.getChargersByStationId(stationId);
+    }
+    
+ // 🌟 목표 충전량에 따른 예상 소요 시간 계산 메서드 (서비스 내부 활용)
+    public int calculateRequiredMinutes(Integer targetPercent, double chargerKw) {
+        if (targetPercent == null || targetPercent <= 0) return 0;
+        
+        double batteryCapacity = 70.0; // 기본 차량 배터리 용량 70kWh 가정
+        double currentPercent = 20.0;  // 현재 잔량 20% 가정
+        
+        if (targetPercent <= currentPercent) return 0;
+        
+        // 필요한 충전량 (kWh)
+        double requiredKwh = batteryCapacity * ((targetPercent - currentPercent) / 100.0);
+        
+        // 기본 소요 시간 (시간 단위 -> 분 단위 변환)
+        double durationHours = requiredKwh / chargerKw;
+        int requiredMinutes = (int) Math.ceil(durationHours * 60);
+        
+        // 🌟 [가중치 보정] 80%를 초과하는 급속 구간은 속도가 저하되므로 시간 1.5배 가중
+        if (targetPercent > 80 && chargerKw >= 50) {
+            double overEightyKwh = batteryCapacity * ((targetPercent - 80) / 100.0);
+            double extraHours = (overEightyKwh / chargerKw) * 0.5; // 50% 지연 가중
+            requiredMinutes += (int) Math.ceil(extraHours * 60);
+        }
+        
+        // 🌟 [안전 버퍼] 노쇼 및 오버타임 방지용 버퍼 15분 추가
+        requiredMinutes += 15;
+        
+        return requiredMinutes;
     }
 }

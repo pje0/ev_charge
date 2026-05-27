@@ -21,7 +21,11 @@ public interface ReservationMapper {
     int cancelReservation(Long reservationId);
     int expireReservation();
     List<ChargerDto> getChargerList();
-    List<Map<String, Object>> getReservedTimes(@Param("chargerId") Long chargerId, @Param("date") String date);
+    List<ReservationDto> getReservedTimes(
+            @Param("chargerId") Long chargerId, 
+            @Param("stationId") Long stationId, 
+            @Param("date") String date
+        );
     List<StationDto> getStationList();   
     List<ChargerDto> getChargersByStationId(@Param("stationId") Long stationId);
 }
