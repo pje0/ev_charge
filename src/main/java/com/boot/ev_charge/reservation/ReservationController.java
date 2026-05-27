@@ -158,30 +158,31 @@ public class ReservationController {
     // 10. 충전기별 비활성화된 시간 Ajax 조회 (🌟 건너뛰기 공백 파라미터 제어 추가)
     @GetMapping("/reserved-times")
     @ResponseBody
-    public List<ReservationDto> getReservedTimes(@RequestParam(value = "chargerId", required = false) Long chargerId,
-                                                 @RequestParam("date") String date) {
+    public List<ReservationDto> getReservedTimes(
+            @RequestParam(value = "chargerId", required = false) Long chargerId,
+            @RequestParam(value = "stationId", required = false) Long stationId, // 🌟 충전소 ID 수신 파라미터 추가
+            @RequestParam("date") String date,
+            @RequestParam(value = "targetPercent", required = false) Integer targetPercent) {
 
-        log.info("@# @# [GET] /reservation/reserved-times 호출 -> 원본 chargerId: {}, date: {}", chargerId, date);
+        if (chargerId != null && chargerId == 0) chargerId = null;
+        if (stationId != null && stationId == 0) stationId = null;
 
-        // 🌟 핵심: chargerId가 0이거나 미선택 상태로 들어오면 확실하게 null로 묶어줍니다.
-        if (chargerId != null && chargerId == 0) {
-            chargerId = null;
+        log.info("@# [GET] /reservation/reserved-times 통합 메서드 가동 -> chargerId: {}, date: {}, targetPercent: {}", 
+                chargerId, date, targetPercent);
+        
+        double chargerKw = 50.0; 
+        int requiredMinutes = 0;
+        if (targetPercent != null && targetPercent > 0) {
+            requiredMinutes = reservationService.calculateRequiredMinutes(targetPercent, chargerKw);
+            log.info("@# TARGET 연산 작동 -> 예상 소요 시간: {}분", requiredMinutes);
         }
 
         try {
-            List<ReservationDto> reservedTimes = reservationService.getReservedTimes(chargerId, date);
-            log.info("@# 최종 조회된 예약 시간 개수: {}건", reservedTimes != null ? reservedTimes.size() : 0);
-            return reservedTimes;
-            
+            List<ReservationDto> reservedTimes = reservationService.getReservedTimes(chargerId, stationId, date);
+            return reservationService.getReservedTimes(chargerId, stationId, date);
         } catch (Exception e) {
             log.error("@# [오류 발생] 예약 시간 조회 중 에러 발생: {}", e.getMessage(), e);
             return java.util.Collections.emptyList(); 
         }
-    }
-    
-    @InitBinder
-    public void initBinder(WebDataBinder binder) {
-        // 화면에서 chargerId가 비어있을 때 "" 문자열을 Long null로 안전하게 변환해 줍니다.
-        binder.registerCustomEditor(Long.class, new CustomNumberEditor(Long.class, true));
     }
 }

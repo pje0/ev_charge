@@ -244,16 +244,24 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 
     </select>
     
-	<select id="getReservedTimes" resultType="map">
+	<select id="getReservedTimes" resultType="com.boot.ev_charge.reservation.ReservationDto">
         SELECT 
             DATE_FORMAT(rt.start_time, '%Y-%m-%d %H:%i:%s') AS startTime,
             DATE_FORMAT(rt.end_time, '%Y-%m-%d %H:%i:%s') AS endTime
         FROM reservation r
-        JOIN reservation_time rt
+        JOIN reservation_time rt 
             ON r.id = rt.reservation_id
         WHERE DATE(rt.start_time) = #{date}
           AND r.reservation_type = 'TIME'
           AND r.status = 'RESERVED'
+          <choose>
+              <when test="chargerId != null and chargerId != 0">
+                  AND r.charger_id = #{chargerId}
+              </when>
+              <otherwise>
+                  AND r.station_id = #{stationId}
+              </otherwise>
+          </choose>
     </select>
 
     <select id="getStationList" resultType="com.boot.ev_charge.station.StationDto">
