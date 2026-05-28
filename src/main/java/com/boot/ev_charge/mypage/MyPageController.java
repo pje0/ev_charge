@@ -95,7 +95,7 @@ public class MyPageController {
 	     // DB에서 해당 예약 상세 정보 조회 후 model에 담기
 	     MyPageDto reservation = myPageService.getReservationById(id);
 	     model.addAttribute("reservation", reservation);
-	     return "user/reservation-edit";
+	     return "reservation/reservationEdit";
 	 }
 	
 	 // 2. 예약 수정 처리

@@ -157,4 +157,33 @@ public class ReservationService {
     public boolean deleteAdminReservation(Long reservationId) {
         return reservationMapper.deleteReservationById(reservationId) > 0;
     }
+    
+ // =====================================================
+    // 🟢 예약 수정 비즈니스 로직 추가
+    // =====================================================
+    @Transactional
+    public void updateReservation(ReservationDto dto) {
+        log.info("## [Service] 예약 수정 로직 가동 -> Reservation ID: {}", dto.getId());
+
+        // 1. (선택 사항) TIME 타입일 경우 시간 유효성 및 중복 검사 로직 재수행 가능 
+        // (createReservation에 있던 검증 로직을 별도 메서드로 빼서 재사용하면 더 좋습니다)
+
+        // 2. 예약 마스터 테이블 타입 업데이트
+        reservationMapper.updateReservationMaster(dto);
+
+        // 3. 기존 하위 상세 데이터 완전히 삭제 (초기화)
+        reservationMapper.deleteReservationTimeByResId(dto.getId());
+        reservationMapper.deleteReservationTargetByResId(dto.getId());
+
+        // 4. 새로운 예약 데이터 인서트
+        if ("TIME".equals(dto.getReservationType())) {
+            reservationMapper.insertReservationTime(dto);
+        } else if ("TARGET".equals(dto.getReservationType())) {
+            reservationMapper.insertReservationTarget(dto);
+            // TARGET 예약도 타임 슬롯을 점유해야 하므로 Time 테이블에 함께 기록
+            reservationMapper.insertReservationTime(dto);
+        }
+        
+        log.info("## [Service] 예약 수정 완료 -> Reservation ID: {}", dto.getId());
+    }
 }

@@ -217,7 +217,7 @@ async function loadChargers(stationId, element) {
 
 /**
  * =========================================================================
- * [기능 정의] 1단계 로딩 시점 개별 충전기 실시간 가용 시간 선행 검증 (기존 로직 유지)
+ * [기능 정의] 1단계 로딩 시점 개별 충전기 실시간 가용 시간 선행 검증
  * =========================================================================
  */
 async function checkChargerAvailabilityOnLoad(chargerId, targetDateStr) {
@@ -275,7 +275,8 @@ async function checkChargerAvailabilityOnLoad(chargerId, targetDateStr) {
                             endMin = endMin % 1440;
                             if (endMin <= startMin) endMin += 1440;
                         }
-                        if (endMin === 1410) endMin = 1440;
+                        
+                        // 🚨 만악의 근원 (if (endMin === 1410) endMin = 1440;) 완전 삭제 🚨
                         
                         if (endMin === 1440) {
                             return (currentLoopMin >= startMin && currentLoopMin <= endMin);
@@ -721,7 +722,7 @@ function calculateMaxAvailableInterval() {
  * =========================================================================
  */
 async function loadReservedTimes() {
-    console.log("⏳ [loadReservedTimes CSS 분리본] 마스킹 동기화 루틴 시작");
+    console.log("⏳ [loadReservedTimes] 2단계 타임 버튼 배열 마스킹 동기화 루틴 시작");
 
     if (isFetchingReservedTimes) {
         console.warn("⚠️ [loadReservedTimes] 연산 세션 락인이 설정되어 비동기 요청을 파기합니다.");
@@ -738,7 +739,7 @@ async function loadReservedTimes() {
 
     isFetchingReservedTimes = true;
 
-    // 타임 버튼 리셋 클렌징 (인라인 스타일 대신 순수 클래스 제어)
+    // 타임 버튼 리셋 클렌징
     document.querySelectorAll(".ev-time-btn").forEach(btn => {
         btn.classList.remove("disabled", "active", "in-range", "is-past-hour", "is-reserved-locked", "my-reservation");
         if(btn.dataset.time) {
@@ -777,12 +778,10 @@ async function loadReservedTimes() {
         
         const url = `/reservation/reserved-times?chargerId=${sendChargerId}&date=${date}&stationId=${sendStationId}`;
         
-        console.log("📡 [loadReservedTimes] 타임 동기화 API 요청 전송 URL : " + url);
         const response = await fetch(url);
         
         if (response.ok) {
             const reservedList = await response.json();
-            console.log("📦 [loadReservedTimes] 서버 최종 수신 완료된 타임 점유 리스트 데이터: ", reservedList);
             
             const parseToMinutes = (timeInput) => {
                 if (!timeInput) return null;
@@ -819,7 +818,8 @@ async function loadReservedTimes() {
                     endMin = endMin % 1440;
                     if (endMin <= startMin) endMin += 1440;
                 }
-                if (endMin === 1410) endMin = 1440;
+                
+                // 🚨 만악의 근원 완전 삭제 🚨
 
                 const currentSessionUserId = 1; 
                 const resUserId = r.userId || r.user_id || r.USER_ID;
@@ -857,7 +857,6 @@ async function loadReservedTimes() {
             console.log("📊 [loadReservedTimes] 최대 연속 가용 공간 재측정 헬퍼 기동");
             calculateMaxAvailableInterval();
             
-            // 🟢 [완벽 이식 인터락] 2단계 연산 직후 UI 스위칭
             if (date === todayStr) {
                 if (maxContinuousMinutes <= 30) {
                     applyChargerStatusUI(selectedChargerId, true);

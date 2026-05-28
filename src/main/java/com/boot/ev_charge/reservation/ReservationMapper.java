@@ -37,4 +37,9 @@ public interface ReservationMapper {
 
     // [관리자 전용] 리스트 즉시 삭제를 위한 메서드
     int deleteReservationById(@Param("reservationId") Long reservationId);
+    
+    // 예약 수정
+    int deleteReservationTimeByResId(Long reservationId);
+    int deleteReservationTargetByResId(Long reservationId);
+    int updateReservationMaster(ReservationDto dto);
 }

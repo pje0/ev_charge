@@ -7,11 +7,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-<<<<<<< HEAD
     <title>마이페이지 - EV 충전소</title>
-=======
-    <title>마이페이지</title>
->>>>>>> refs/remotes/origin/feature/hm_hong
     <script src="https://tailwindcss.com"></script>
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/common.css">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/mypage.css">
