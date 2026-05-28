@@ -14,7 +14,7 @@ if (typeof isTargetAlertShowing === 'undefined') { var isTargetAlertShowing = fa
 if (typeof globalAlertLock === 'undefined') { var globalAlertLock = false; }
 
 let lastSafeTargetPercent = 0;
-let isBookingInProgress = false; 
+let isBookingInProgress = false;
 
 // ==========================================
 // 1. 단계 제어 (Step View Control)
@@ -91,28 +91,51 @@ function clearAllReservationStyles() {
     });
 }
 
-// =========================================================================
-// 2. 충전기 목록 로드 및 상태별 분기
-// =========================================================================
+/**
+ * =========================================================================
+ * [기능 정의] 충전기 목록 로드 및 기본 UI 렌더링 (v5.1)
+ * =========================================================================
+ * @param {string} stationId - 선택된 충전소 ID
+ * @param {HTMLElement} element - 클릭된 충전소 요소
+ */
 async function loadChargers(stationId, element) {
-    if (!stationId) return;
+    // 🔍 콘솔 로그: 충전기 목록 조회 시작 알림
+    console.log(`🔌 [loadChargers v5.1] 충전기 목록 조회 프로세스 가동 -> stationId: ${stationId}`);
+
+    if (!stationId) {
+        console.warn("⚠️ [loadChargers v5.1] stationId 파라미터 유효성 검사 실패로 조회를 파기합니다.");
+        return;
+    }
     selectedStationId = Number(stationId);
     
-    document.querySelectorAll('.p-3').forEach(el => el.classList.remove('border-blue-500', 'bg-blue-50/50'));
-    element.classList.add('border-blue-500', 'bg-blue-50/50');
+    // UI 클래스 리셋 및 하이라이트 토글
+    document.querySelectorAll('.p-3').forEach(el => {
+        el.classList.remove('border-blue-500', 'bg-blue-50/50');
+    });
+    if (element) {
+        element.classList.add('border-blue-500', 'bg-blue-50/50');
+    }
     
+    // 폼 입력 요소 변수 값 리셋 원상복구 가동
     clearAllReservationStyles();
     
+    // 현재 날짜 정보 스트링 파싱
     const rightNow = new Date();
     const todayStr = `${rightNow.getFullYear()}-${String(rightNow.getMonth() + 1).padStart(2, '0')}-${String(rightNow.getDate()).padStart(2, '0')}`;
     const selectedDateStr = document.getElementById("reservationDate")?.value || todayStr;
     
+    console.log(`📅 [loadChargers v5.1] 시연 타임라인 설정 체크 -> 오늘: ${todayStr} | 선택된 날짜: ${selectedDateStr}`);
+    
     try {
+        // 백엔드 충전기 상태값 호출 Fetch 통신
         const res = await fetch(`/reservation/api/chargers?stationId=${stationId}&date=${selectedDateStr}`);
         const chargers = await res.json();
         const container = document.getElementById("chargerListContainer");
         
+        console.log("📦 [loadChargers v5.1] 서버 수신 충전기 원본 배열 데이터 리포트: ", chargers);
+        
         if (chargers.length > 0) {
+            // 동기적으로 순수 마크업 카드만 빠르게 드로잉
             container.innerHTML = chargers.map(c => {
                 const statusLower = c.status ? c.status.toLowerCase() : 'available';
                 
@@ -128,42 +151,131 @@ async function loadChargers(stationId, element) {
                 const speedLabel = isRapid ? '급속' : '완속';
                 const speedClass = isRapid ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700';
 
-                let pastSlotCount = 0;
-                if (selectedDateStr === todayStr) {
-                    const currentTotalMin = (rightNow.getHours() * 60) + rightNow.getMinutes();
-                    const startRangeMin = 9 * 60; 
-                    if (currentTotalMin > startRangeMin) pastSlotCount = Math.floor((currentTotalMin - startRangeMin) / 30);
-                }
-
-                const totalDisplaySlots = 30; 
-                const dbReservedSlots = Number(c.reservedSlotCount || 0);
-                const netAvailableSlots = (selectedDateStr === todayStr) ? (totalDisplaySlots - pastSlotCount - dbReservedSlots) : (totalDisplaySlots - dbReservedSlots);
-                
-                const isNotBookable = (selectedDateStr === todayStr && netAvailableSlots <= 0) || statusLower === 'maintenance' || statusLower === 'out_of_service';
+                // 고장 및 유지보수 유무 확인
+                const isBroken = (statusLower === 'maintenance' || statusLower === 'out_of_service');
                 const isOccupied = (statusLower === 'charging' || statusLower === 'occupied' || statusLower === 'in_use');
 
                 return `
-                    <div class="border ${isNotBookable ? 'border-slate-300 bg-slate-50' : (isOccupied ? 'border-amber-200 bg-amber-50/30' : 'border-gray-200 bg-white')} rounded-lg p-3 cursor-pointer hover:border-blue-500 transition" 
+                    <div class="border ${isBroken ? 'border-slate-300 bg-slate-50' : (isOccupied ? 'border-amber-200 bg-amber-50/30' : 'border-gray-200 bg-white')} rounded-lg p-3 cursor-pointer hover:border-blue-500 transition" 
+                         id="charger-card-${c.id}" 
+                         data-status="${statusLower}"
+                         data-speed-class="${speedClass}"
+                         data-speed-label="${speedLabel}"
+                         data-power="${c.powerKw}"
+                         data-name="${connectorName}"
                          onclick="selectCharger(this, '${c.id}', '${connectorName}', ${c.powerKw})">
                         <div class="flex justify-between items-center mb-1">
-                            <h3 class="font-bold ${isNotBookable ? 'text-slate-700' : (isOccupied ? 'text-amber-900' : 'text-gray-900')} text-sm">${connectorName}</h3>
-                            <span class="text-[10px] ${isNotBookable ? 'bg-slate-500 text-white' : (isOccupied ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700')} px-1.5 py-0.5 rounded font-medium">
-                                ${isNotBookable ? '금일 예약 불가' : (isOccupied ? '사용 중 (예약 가능)' : '사용 가능')}
+                            <h3 class="font-bold ${isBroken ? 'text-slate-700' : (isOccupied ? 'text-amber-900' : 'text-gray-900')} text-sm card-title-text">${connectorName}</h3>
+                            <span class="text-[10px] ${isBroken ? 'bg-slate-500 text-white' : (isOccupied ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700')} px-1.5 py-0.5 rounded font-medium card-status-badge">
+                                ${isBroken ? '금일 예약 불가' : (isOccupied ? '사용 중 (예약 가능)' : '사용 가능')}
                             </span>
                         </div>
                         <div class="flex items-center gap-1.5 mt-1">
                             <span class="text-[10px] ${speedClass} px-1.5 py-0.5 rounded font-semibold">${speedLabel}</span>
-                            <p class="${isNotBookable ? 'text-slate-600' : (isOccupied ? 'text-amber-700' : 'text-gray-400')} text-xs">${c.powerKw}kW 출력</p>
+                            <p class="${isBroken ? 'text-slate-600' : (isOccupied ? 'text-amber-700' : 'text-gray-400')} text-xs">${c.powerKw}kW 출력</p>
                         </div>
                     </div>`;
             }).join('');
+            
+            console.log("🏁 [loadChargers v5.1] 기본 마크업 드로잉 종료. 각 충전기별 예약 슬롯 전수 검증을 시작합니다.");
+            
+            // 🟢 [결함 수정 완결] 에러를 내던 엉뚱한 매개변수를 제거하고 깔끔하게 아이디만 전송하도록 루프 보정
+            if (selectedDateStr === todayStr) {
+                chargers.forEach(async (c) => {
+                    await checkChargerAvailabilityOnLoad(c.id);
+                });
+            }
+            
         } else {
             container.innerHTML = '<div class="col-span-2 text-center py-24 text-gray-400 text-xs">등록된 충전기가 없습니다.</div>';
         }
-        
-        if (selectedChargerId !== null && selectedChargerId !== 0) await loadReservedTimes();
     } catch (error) {
-        console.error("충전기 목록 로드 실패:", error);
+        console.error("❌ [loadChargers v5.1] 통신 예외 발생:", error);
+    }
+}
+
+/**
+ * =========================================================================
+ * [기능 정의] 1단계 로딩 시점 개별 충전기 실시간 가용 시간 선행 검증 (v5.1)
+ * =========================================================================
+ */
+async function checkChargerAvailabilityOnLoad(chargerId) {
+    const rightNow = new Date();
+    const todayStr = `${rightNow.getFullYear()}-${String(rightNow.getMonth() + 1).padStart(2, '0')}-${String(rightNow.getDate()).padStart(2, '0')}`;
+    const url = `/reservation/reserved-times?chargerId=${chargerId}&date=${todayStr}&stationId=${selectedStationId}`;
+    
+    try {
+        const response = await fetch(url);
+        if (response.ok) {
+            const reservedList = await response.json();
+            
+            // 시/분 파싱 헬퍼 함수
+            const parseTimeToMin = (inputStr) => {
+                if (!inputStr) return -1;
+                let pureTime = inputStr.includes(' ') ? inputStr.split(' ')[1] : inputStr;
+                const match = pureTime.match(/^(\d{2}):(\d{2})/);
+                return match ? (parseInt(match[1], 10) * 60) + parseInt(match[2], 10) : -1;
+            };
+
+            let testMaxInterval = 0;
+            let currentInterval = 0;
+
+            // 09:00부터 24:00까지 총 30개 슬롯 가상 체크
+            for (let h = 9; h < 24; h++) {
+                const mArr = ["00", "30"];
+                for (let mIdx = 0; mIdx < 2; mIdx++) {
+                    const currentLoopMin = (h * 60) + Number(mArr[mIdx]);
+                    
+                    // 과거 시간 체크
+                    let isPastSlot = false;
+                    const nowTotalMin = (rightNow.getHours() * 60) + rightNow.getMinutes();
+                    if (currentLoopMin <= nowTotalMin) isPastSlot = true;
+                    
+                    // 서버 예약 선점 대역 체크
+                    let isReservedSlot = reservedList.some(rObj => {
+                        const rStartStr = rObj.startTime || rObj.start_time || rObj.START_TIME;
+                        const rEndStr = rObj.endTime || rObj.end_time || rObj.END_TIME;
+                        if(!rStartStr || !rEndStr) return false;
+                        
+                        let startMin = parseTimeToMin(rStartStr) % 1440;
+                        let endMin = parseTimeToMin(rEndStr) % 1440;
+                        if (endMin <= startMin) endMin += 1440;
+                        if (endMin === 1410) endMin = 1440;
+                        
+                        return (currentLoopMin >= startMin && currentLoopMin < endMin);
+                    });
+
+                    if (isPastSlot || isReservedSlot) {
+                        currentInterval = 0;
+                    } else {
+                        currentInterval += 30;
+                        if (currentInterval > testMaxInterval) testMaxInterval = currentInterval;
+                    }
+                }
+            }
+
+            console.log(`🔎 [선행 검증 로그 v5.1] 충전기 ID: ${chargerId} | 최대 연속 가용 여유공간: ${testMaxInterval}분`);
+
+            // 🛑 연속 공간이 단 1칸(30분) 이하로 부서진 타겟들만 무조건 회색 '금일 예약 불가' 레이아웃으로 변경
+            if (testMaxInterval <= 30) {
+                const targetCard = document.getElementById(`charger-card-${chargerId}`);
+                if (targetCard) {
+                    console.log(`🚨 [UI 변환 v5.1] ID: ${chargerId} 카드를 '금일 예약 불가' 회색 레이아웃으로 변경합니다.`);
+                    targetCard.className = "border border-slate-300 bg-slate-50 rounded-lg p-3 cursor-pointer hover:border-blue-500 transition";
+                    
+                    const titleText = targetCard.querySelector(".card-title-text");
+                    if (titleText) titleText.className = "font-bold text-slate-700 text-sm card-title-text";
+                    
+                    const badge = targetCard.querySelector(".card-status-badge");
+                    if (badge) {
+                        badge.className = "text-[10px] bg-slate-500 text-white px-1.5 py-0.5 rounded font-medium card-status-badge";
+                        badge.innerText = "금일 예약 불가";
+                    }
+                }
+            }
+        }
+    } catch (error) {
+        console.error("❌ [checkChargerAvailabilityOnLoad v5.1] 선행 연산 주기 에러:", error);
     }
 }
 
@@ -571,29 +683,37 @@ function calculateMaxAvailableInterval() {
     console.log("@# [실시간 연산 확인] 현재 기준 최대 연속 가용 시간:", maxContinuousMinutes + "분");
 }
 
-// =========================================================================
-// 9. 실시간 예약/과거 시간대 비활성화 및 동기화 (마감격벽 완전체)
-// =========================================================================
+/**
+ * =========================================================================
+ * [기능 정의] 실시간 예약 점유 시간 마스킹 스타일링 및 과거 대역 물리적 차단 락 가동 (v5.3)
+ * =========================================================================
+ */
 async function loadReservedTimes() {
-    if (isFetchingReservedTimes) return;
+    console.log("⏳ [loadReservedTimes v5.3] 2단계 타임 버튼 배열 마스킹 동기화 루틴 시작");
+
+    if (isFetchingReservedTimes) {
+        console.warn("⚠️ [loadReservedTimes v5.3] 연산 세션 락인이 설정되어 비동기 요청을 파기합니다.");
+        return;
+    }
     
     const chargerId = document.getElementById("chargerId")?.value || selectedChargerId; 
     const date = document.getElementById("reservationDate")?.value;
     
     if (!chargerId || Number(chargerId) === 0 || !date) {
-        console.warn("⚠️ [조회 중단] chargerId 또는 날짜가 유효하지 않습니다. id:", chargerId);
+        console.warn("⚠️ [loadReservedTimes v5.3] 필수 파라미터 누락으로 마스킹을 스킵합니다.");
         return;
     }
 
     isFetchingReservedTimes = true;
 
+    // 타임 버튼 리셋 클렌징 (예약 잠금 추적용 특수 토글 클래스인 is-reserved-locked도 함께 리셋)
     document.querySelectorAll(".ev-time-btn").forEach(btn => {
-        btn.classList.remove("disabled", "active", "in-range", "is-past-hour");
+        btn.classList.remove("disabled", "active", "in-range", "is-past-hour", "is-reserved-locked");
         btn.style.removeProperty("background-color");
         btn.style.removeProperty("color");
+        btn.style.removeProperty("border-color");
         btn.style.removeProperty("pointer-events");
         btn.style.removeProperty("cursor");
-        btn.style.removeProperty("border-color");
         btn.style.removeProperty("font-weight");
         
         if(btn.dataset.time) {
@@ -606,6 +726,8 @@ async function loadReservedTimes() {
     const selectedDateObj = new Date(date + "T00:00:00");
     const todayDateObj = new Date(todayStr + "T00:00:00");
 
+    // 과거 대역 락 복구 잠금 가동
+    console.log("🔒 [loadReservedTimes v5.3] 오늘 기준 경과된 과거 시간 레이어 고대비 잠금 격벽 작동");
     document.querySelectorAll(".ev-time-btn").forEach(btn => {
         const t = btn.dataset.time;
         const [h, m] = t.split(":").map(Number);
@@ -641,12 +763,12 @@ async function loadReservedTimes() {
         const sendStationId = selectedStationId ? selectedStationId : 0;
         const url = `/reservation/reserved-times?chargerId=${sendChargerId}&date=${date}&stationId=${sendStationId}${targetParam}`;
         
-        console.log("📡 [서버 요청 API URL] : " + url);
+        console.log("📡 [loadReservedTimes v5.3] 타임 동기화 API 요청 전송 URL : " + url);
         const response = await fetch(url);
         
         if (response.ok) {
             const reservedList = await response.json();
-            console.log("📦 [서버가 리턴한 실시간 예약 데이터] : ", reservedList);
+            console.log("📦 [loadReservedTimes v5.3] 서버 최종 수신 완료된 타임 점유 리스트 데이터: ", reservedList);
             
             const parseToMinutes = (timeInput) => {
                 if (!timeInput) return null;
@@ -671,10 +793,7 @@ async function loadReservedTimes() {
                 const rawStartTime = r.startTime || r.start_time || r.START_TIME;
                 const rawEndTime = r.endTime || r.end_time || r.END_TIME;
                 
-                if (!rawStartTime || !rawEndTime) {
-                    console.warn("⚠️ 유효하지 않은 예약 타임 데이터 감지로 스킵:", r);
-                    return; 
-                }
+                if (!rawStartTime || !rawEndTime) return; 
 
                 let startMin = parseToMinutes(rawStartTime);
                 let endMin = parseToMinutes(rawEndTime);
@@ -686,10 +805,7 @@ async function loadReservedTimes() {
                     endMin = endMin % 1440;
                     if (endMin <= startMin) endMin += 1440;
                 }
-
-                if (endMin === 1410) {
-                    endMin = 1440;
-                }
+                if (endMin === 1410) endMin = 1440;
 
                 const currentSessionUserId = 1; 
                 const resUserId = r.userId || r.user_id || r.USER_ID;
@@ -710,6 +826,11 @@ async function loadReservedTimes() {
                     if (isMatch) {
                         btn.classList.add("disabled"); 
                         
+                        // 미래 날짜 스위칭 시 복원되지 않도록 차단 마킹 영속 클래스 부여
+                        if (tStr === "24:00") {
+                            btn.classList.add("is-reserved-locked");
+                        }
+                        
                         if (!btn.classList.contains("is-past-hour")) {
                             btn.style.setProperty("background-color", "#e5e7eb", "important");
                             btn.style.setProperty("color", "#9ca3af", "important");           
@@ -728,15 +849,116 @@ async function loadReservedTimes() {
                 });
             });
 
+            console.log("📊 [loadReservedTimes v5.3] 최대 연속 가용 공간 재측정(calculateMaxAvailableInterval) 헬퍼 기동");
             calculateMaxAvailableInterval();
+            
+            // 🟢 인터락 최하단 배치: 마스킹이 끝난 후 날짜별 자정 상태 핀셋 제어 가동
+            syncMidnightSlot();
+
             if (reservationType === "TARGET") {
                 changeTargetPercent(document.getElementById("targetPercent")?.value || 0, false);
             }
         }
     } catch (error) { 
-        console.error("예약 시간 조회 실패:", error); 
+        console.error("❌ [loadReservedTimes v5.3] 마스킹 동기화 주기 중 치명적 예외 발생:", error); 
     } finally {
         isFetchingReservedTimes = false;
+        console.log("🏁 [loadReservedTimes v5.3] 타임 라인 제어 렌더링 주기 완결");
+    }
+}
+
+/**
+ * =========================================================================
+ * [기능 정의] 날짜별 24:00 슬롯 버튼 실시간 동기화 제어 및 오늘 미래시간 활성화 (v5.4)
+ * =========================================================================
+ */
+function syncMidnightSlot() {
+    // 폼에 지정된 예약 날짜 수집
+    const dateInput = document.getElementById("reservationDate")?.value;
+    if (!dateInput) {
+        console.warn("⚠️ [syncMidnightSlot v5.4] 날짜 데이터가 입력되지 않아 자정 슬롯 연산을 스킵합니다.");
+        return;
+    }
+
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    
+    // 타겟 날짜와 오늘 날짜의 시간 차이 연산 진행
+    const selectedDateObj = new Date(dateInput + "T00:00:00");
+    const todayDateObj = new Date(todayStr + "T00:00:00");
+    
+    // 24:00 타임 타겟 버튼 탐색
+    const midnightBtn = document.querySelector(".ev-time-btn[data-time='24:00']");
+    
+    if (midnightBtn) {
+        // 해당 버튼이 서버 예약에 의해 마킹된 상태인지 체크
+        const isReserved = midnightBtn.classList.contains("is-reserved-locked");
+
+        if (selectedDateObj < todayDateObj) {
+            // 1. 어제나 그 이전 날짜일 경우 무조건 '지나간 시간대' 진한 회색 처리 고정
+            console.log(`🔒 [syncMidnightSlot v5.4] 과거 날짜(${dateInput}) 확인 -> 24:00 버튼 진한 회색 과거 격벽 차단`);
+            midnightBtn.classList.add("disabled", "is-past-hour");
+            midnightBtn.style.setProperty("background-color", "#374151", "important");
+            midnightBtn.style.setProperty("color", "#9ca3af", "important");
+            midnightBtn.style.setProperty("border-color", "#4b5563", "important");
+            midnightBtn.style.setProperty("pointer-events", "none", "important");
+            midnightBtn.style.setProperty("cursor", "not-allowed", "important");
+            midnightBtn.innerText = "24:00";
+        } 
+        else if (dateInput === todayStr) {
+            // 2. 오늘 날짜일 때의 세부 시간 판단 루틴
+            const nowTotalMin = (now.getHours() * 60) + now.getMinutes();
+            const midnightTotalMin = 24 * 60; // 1440분
+            
+            if (isReserved) {
+                // 오늘인데 이미 예약이 차 있다면 마감 유지
+                console.log(`🔒 [syncMidnightSlot v5.4] 오늘 날짜 - 이미 예약 선점됨 -> 마감 고정`);
+                midnightBtn.classList.remove("is-past-hour");
+                midnightBtn.classList.add("disabled");
+                midnightBtn.style.setProperty("background-color", "#e5e7eb", "important");
+                midnightBtn.style.setProperty("color", "#9ca3af", "important");
+                midnightBtn.style.setProperty("pointer-events", "none", "important");
+                midnightBtn.style.setProperty("cursor", "not-allowed", "important");
+                midnightBtn.innerText = "마감";
+            } 
+            else if (nowTotalMin >= midnightTotalMin) {
+                // 실시간 시각이 자정을 넘어선 경우 강제 마감 차단
+                console.log(`🔒 [syncMidnightSlot v5.4] 오늘 날짜 - 현재 시간이 자정을 경과함 -> 마감 차단`);
+                midnightBtn.classList.remove("is-past-hour");
+                midnightBtn.classList.add("disabled");
+                midnightBtn.style.setProperty("background-color", "#e5e7eb", "important");
+                midnightBtn.style.setProperty("color", "#9ca3af", "important");
+                midnightBtn.style.setProperty("pointer-events", "none", "important");
+                midnightBtn.style.setProperty("cursor", "not-allowed", "important");
+                midnightBtn.innerText = "마감";
+            } 
+            else {
+                // 🟢 [버그 수정 완료] 오늘이지만 아직 자정이 오지 않았고 예약도 없다면 하얗게 활성화
+                console.log(`🔓 [syncMidnightSlot v5.4] 오늘 날짜 - 아직 자정 전이며 예약 없음 -> 버튼 활성화 오픈`);
+                midnightBtn.classList.remove("disabled", "is-past-hour");
+                midnightBtn.style.removeProperty("background-color");
+                midnightBtn.style.removeProperty("color");
+                midnightBtn.style.removeProperty("border-color");
+                midnightBtn.style.removeProperty("pointer-events");
+                midnightBtn.style.removeProperty("cursor");
+                midnightBtn.innerText = "24:00";
+            }
+        } 
+        else {
+            // 3. 미래 날짜일 때
+            if (!isReserved) {
+                console.log(`🔓 [syncMidnightSlot v5.4] 미래 날짜(${dateInput}) 확인 -> 24:00 버튼 일반 활성화 복구`);
+                midnightBtn.classList.remove("disabled", "is-past-hour");
+                midnightBtn.style.removeProperty("background-color");
+                midnightBtn.style.removeProperty("color");
+                midnightBtn.style.removeProperty("border-color");
+                midnightBtn.style.removeProperty("pointer-events");
+                midnightBtn.style.removeProperty("cursor");
+                midnightBtn.innerText = "24:00";
+            }
+        }
+    } else {
+        console.warn("⚠️ [syncMidnightSlot v5.4] 화면상에서 24:00 시간 지정 버튼 요소를 찾을 수 없습니다.");
     }
 }
 
@@ -806,10 +1028,14 @@ function submitReservation() {
 }
 
 // ==========================================
-// 11. DOM 이벤트 리스너 바인딩
+// 11. DOM 이벤트 리스너 바인딩 (v5.2)
 // ==========================================
 window.addEventListener("DOMContentLoaded", () => {
-    document.getElementById("reservationDate")?.addEventListener("change", loadReservedTimes);
+    // 날짜 변경 이벤트 발생 시 타임 슬롯을 새로 호출하고 자정 락 상태도 동기화
+    document.getElementById("reservationDate")?.addEventListener("change", () => {
+        loadReservedTimes();
+        syncMidnightSlot(); 
+    });
     
     const slider = document.getElementById("targetPercent");
     if (slider) {
