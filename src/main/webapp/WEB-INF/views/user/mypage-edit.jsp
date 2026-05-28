@@ -4,7 +4,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>정보 수정 - EV 충전소</title>
+    <title>회원정보수정</title>
     <script src="https://cdn.tailwindcss.com"></script>
 	<link rel="stylesheet" href="${pageContext.request.contextPath}/css/common.css">
 </head>

@@ -1,4 +1,4 @@
-package com.boot;
+package com.boot.ev_charge;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
