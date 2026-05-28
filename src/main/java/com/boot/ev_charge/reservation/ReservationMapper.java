@@ -1,12 +1,12 @@
 package com.boot.ev_charge.reservation;
 
 import java.util.List;
-import java.util.Map;
+
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
-import com.boot.ev_charge.station.StationDto;
 import com.boot.ev_charge.station.ChargerDto;
+import com.boot.ev_charge.station.StationDto;
 
 @Mapper
 public interface ReservationMapper {
@@ -28,5 +28,13 @@ public interface ReservationMapper {
         );
     List<StationDto> getStationList();   
     List<ChargerDto> getChargersByStationId(@Param("stationId") Long stationId);
-    List<ChargerDto> getChargerListWithSoldOutCheck(Map<String, Object> params);
+    // [관리자 전용] 검색 조건부 전체 예약 데이터 가져오기
+    List<ReservationDto> getAdminReservationList(
+            @Param("searchStatus") String searchStatus,
+            @Param("searchType") String searchType,
+            @Param("searchKeyword") String searchKeyword
+    );
+
+    // [관리자 전용] 리스트 즉시 삭제를 위한 메서드
+    int deleteReservationById(@Param("reservationId") Long reservationId);
 }

@@ -37,4 +37,10 @@ public class ReservationDto {
     
     // 예약 생성 시간 관리
     private Timestamp createdAt; // 예약 생성 일시
+    
+    // [관리자 화면 매핑용 추가 필드]
+    private String userName;      // 예약자 실명 (user 테이블 조인 결과)
+    private String loginId;       // 예약자 로그인 ID (user 테이블 조인 결과)
+    private String stationName;   // 충전소 이름 (station 테이블 조인 결과)
+    private String connectorType; // 충전기 커넥터 타입 (charger 테이블 조인 결과)
 }

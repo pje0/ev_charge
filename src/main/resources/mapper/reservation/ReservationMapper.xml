@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper
-PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
 <mapper namespace="com.boot.ev_charge.reservation.ReservationMapper">
 
@@ -56,7 +56,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     <!-- ===================================================== -->
     <!-- 목표 충전량 예약 생성 -->
     <!-- ===================================================== -->
-	<insert id="insertReservationTarget"
+    <insert id="insertReservationTarget"
             parameterType="com.boot.ev_charge.reservation.ReservationDto">
 
         insert into reservation_target (
@@ -69,7 +69,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             #{targetKwh},
             #{maxMinutes}
         )
-        
+
     </insert>
 
 
@@ -79,20 +79,17 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 	<select id="countDuplicateReservation"
             parameterType="com.boot.ev_charge.reservation.ReservationDto"
             resultType="int">
-        
-        SELECT COUNT(*)
+
+        SELECT count(*)
         FROM reservation r
         JOIN reservation_time rt
             ON r.id = rt.reservation_id
-        WHERE r.status = 'RESERVED'
-          AND r.charger_id = #{chargerId}
-          AND #{startTime} IS NOT NULL 
-          AND #{endTime} IS NOT NULL
-          <![CDATA[
-          -- 기존 예약의 시간대와 새로 신청한 시간대가 1분이라도 겹치는지 검사
-          AND rt.start_time < #{endTime}
-          AND rt.end_time > #{startTime}
-          ]]>
+        WHERE r.status IN ('RESERVED', 'CHARGING')
+        AND r.charger_id = #{chargerId} 
+        <![CDATA[
+            AND rt.start_time < #{endTime}
+            AND rt.end_time > #{startTime}
+        ]]>
     </select>
 
     <!-- ===================================================== -->
@@ -250,29 +247,23 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     
 	<select id="getReservedTimes" resultType="com.boot.ev_charge.reservation.ReservationDto">
         SELECT 
-            r.id AS id,
-            r.charger_id AS chargerId,
             DATE_FORMAT(rt.start_time, '%Y-%m-%d %H:%i:%s') AS startTime,
             DATE_FORMAT(rt.end_time, '%Y-%m-%d %H:%i:%s') AS endTime
         FROM reservation r
         JOIN reservation_time rt 
             ON r.id = rt.reservation_id
-        JOIN charger c
-            ON r.charger_id = c.id
-        WHERE 
-          rt.start_time LIKE CONCAT(#{date}, '%')
-          AND r.reservation_type IN ('TIME', 'TARGET')
-          AND r.status = 'RESERVED'
+        WHERE DATE(rt.start_time) = #{date}
+          AND r.status IN ('RESERVED', 'CHARGING')
           <choose>
               <when test="chargerId != null and chargerId != 0">
                   AND r.charger_id = #{chargerId}
               </when>
               <otherwise>
-                  AND r.charger_id = 0
+                  AND r.station_id = #{stationId}
               </otherwise>
           </choose>
-	</select>
-    
+    </select>
+
     <select id="getStationList" resultType="com.boot.ev_charge.station.StationDto">
         select 
             id,
@@ -301,32 +292,65 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         order by id asc
     </select>
     
-	<resultMap id="ChargerFullMap" type="com.boot.ev_charge.station.ChargerDto">
-        <id property="id" column="id"/>
-        <result property="stationId" column="station_id"/>
-        <result property="connectorType" column="connector_type"/>
-        <result property="powerKw" column="power_kw"/>
-        <result property="status" column="status"/>
-        <result property="reservedSlotCount" column="reserved_count"/>
-    </resultMap>
-
-    <select id="getChargerListWithSoldOutCheck" parameterType="map" resultMap="ChargerFullMap">
-        SELECT 
-            c.id,
-            c.station_id,
-            c.connector_type,
-            c.power_kw,
-            c.status,
-            (SELECT COUNT(*) 
-             FROM reservation r
-             JOIN reservation_time rt ON r.id = rt.reservation_id
-             WHERE r.charger_id = c.id 
-               AND r.status = 'RESERVED'
-               AND DATE(rt.start_time) = DATE(#{date})
-            ) AS reserved_count
-        FROM charger c
-        WHERE c.station_id = #{stationId}
-        ORDER BY c.id ASC
+	<!-- ===================================================== -->
+    <!-- [관리자 전용] 전체 회원 예약 내역 조회 (검색 필터 포함) -->
+    <!-- ===================================================== -->
+    <select id="getAdminReservationList"
+            parameterType="map"
+            resultType="com.boot.ev_charge.reservation.ReservationDto">
+        SELECT
+            r.id,
+            r.user_id AS userId,
+            u.name AS userName,
+            u.login_id AS loginId,
+            r.charger_id AS chargerId,
+            c.connector_type AS connectorType,
+            s.name AS stationName,
+            r.reservation_type AS reservationType,
+            r.status,
+            r.car_type AS carType,
+            r.reserved_at AS reservedAt,
+            rt.start_time AS startTime,
+            rt.end_time AS endTime,
+            tgt.target_kwh AS targetKwh,
+            tgt.max_minutes AS maxMinutes
+        FROM reservation r
+        JOIN user u ON r.user_id = u.id
+        LEFT JOIN charger c ON r.charger_id = c.id
+        LEFT JOIN station s ON c.station_id = s.id
+        LEFT JOIN reservation_time rt ON r.id = rt.reservation_id
+        LEFT JOIN reservation_target tgt ON r.id = tgt.reservation_id
+        <where>
+            <if test="searchStatus != null and searchStatus != ''">
+                AND r.status = #{searchStatus}
+            </if>
+            <if test="searchKeyword != null and searchKeyword != ''">
+                <choose>
+                    <when test="searchType == 'name'">
+                        AND u.name LIKE CONCAT('%', #{searchKeyword}, '%')
+                    </when>
+                    <when test="searchType == 'loginId'">
+                        AND u.login_id LIKE CONCAT('%', #{searchKeyword}, '%')
+                    </when>
+                    <when test="searchType == 'station'">
+                        AND s.name LIKE CONCAT('%', #{searchKeyword}, '%')
+                    </when>
+                    <otherwise>
+                        AND (u.name LIKE CONCAT('%', #{searchKeyword}, '%') 
+                             OR u.login_id LIKE CONCAT('%', #{searchKeyword}, '%')
+                             OR s.name LIKE CONCAT('%', #{searchKeyword}, '%'))
+                    </otherwise>
+                </choose>
+            </if>
+        </where>
+        ORDER BY r.id DESC
     </select>
+
+    <!-- ===================================================== -->
+    <!-- [관리자 전용] 예약 데이터 완전 삭제 (DB에서 즉시 제거) -->
+    <!-- ===================================================== -->
+    <delete id="deleteReservationById" parameterType="long">
+        DELETE FROM reservation WHERE id = #{reservationId}
+    </delete>
 
 </mapper>
