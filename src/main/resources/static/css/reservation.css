@@ -1,415 +1,76 @@
 @charset "UTF-8";
 
-/*전체 박스 모델 제어*/
-.ev-reservation-container * {
-    box-sizing: border-box;
+.ev-step-on {
+	color: #2563eb;
+	font-weight: 700;
 }
 
-/* 메인 프레임 워크 래퍼 */
-.ev-reservation-container {
-    max-width: 1152px;
-    margin: 0 auto;
-    padding: 7.5rem 1rem 2rem 1rem;
-    width: 100%;
+.ev-step-on .ev-step-num {
+	background-color: #2563eb;
+	color: white;
 }
 
-/* 상단 정보 라인 헤더 */
-.ev-reservation-header {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    margin-bottom: 2rem;
-    border-bottom: 1px solid #e5e7eb;
-    padding-bottom: 1.25rem;
+.ev-time-btn.active {
+	background-color: #2563eb;
+	color: white;
+	border-color: #2563eb;
 }
 
-@media (min-width: 768px) {
-    .ev-reservation-header {
-        flex-direction: row;
-        justify-content: space-between;
-        align-items: flex-end;
-    }
+.ev-time-btn.in-range {
+	background-color: #dbeafe;
+	color: #1d4ed8;
+	border-color: #93c5fd;
 }
 
-.ev-title-main {
-    font-size: 1.875rem;
-    font-weight: 700;
-    color: #111827;
-    letter-spacing: -0.05em;
-    margin: 0;
-}
-
-.ev-title-sub {
-    margin: 0.5rem 0 0 0;
-    font-size: 0.875rem;
-    color: #6b7280;
-}
-
-/* 순수 동그라미 및 텍스트 조합형 스텝 바 */
-.ev-step-bar {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-}
-
-.ev-step-item {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.ev-step-circle {
-    width: 1.25rem;
-    height: 1.25rem;
-    border-radius: 9999px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.75rem;
-    font-weight: 500;
-    background-color: #f3f4f6;
-    color: #9ca3af;
-}
-
-.ev-step-text {
-    font-size: 0.75rem;
-    font-weight: 500;
-    color: #9ca3af;
-    white-space: nowrap;
-}
-
-.ev-step-on .ev-step-circle {
-    background-color: #2563eb !important;
-    color: #ffffff !important;
-}
-.ev-step-on .ev-step-text {
-    color: #111827 !important;
-    font-weight: 500 !important;
-}
-
-.ev-step-divider {
-    width: 2.5rem;
-    height: 1px;
-    background-color: #e5e7eb;
-}
-
-/* 🟢 [수정 핵심] 1단계: 좌측 충전소(4), 우측 충전기(8) 가로 배치 강제 결속 */
-.ev-grid-container {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    width: 100%;
-}
-
-@media (min-width: 1024px) {
-    .ev-grid-container {
-        flex-direction: row;
-    }
-    .ev-col-left {
-        width: 33.3333%; /* 4/12 비율 보장 */
-        flex-shrink: 0;
-    }
-    .ev-col-right {
-        width: 66.6666%; /* 8/12 비율 보장 */
-        flex-shrink: 0;
-    }
-}
-
-/* 본문 영역 흰색 메인 카드 박스 공통 규격 */
-.ev-card-box {
-    background-color: #ffffff;
-    padding: 1rem;
-    border-radius: 0.5rem;
-    border: 1px solid #e5e7eb;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    height: 420px;
-    display: flex;
-    flex-direction: column;
-}
-
-.ev-card-title {
-    font-size: 1rem;
-    font-weight: 700;
-    margin: 0 0 0.75rem 0;
-    color: #1f2937;
-    border-bottom: 1px solid #e5e7eb;
-    padding-bottom: 0.5rem;
-    flex: none;
-}
-
-.ev-scroll-list {
-    flex: 1;
-    overflow-y: auto;
-    padding-right: 0.25rem;
-}
-
-/* 충전소 아이템 */
-.ev-station-item {
-    padding: 0.75rem;
-    border: 1px solid #e5e7eb;
-    border-radius: 0.375rem;
-    cursor: pointer;
-    transition: all 0.15s;
-    margin-bottom: 0.5rem;
-}
-.ev-station-item:hover {
-    border-color: #2563eb;
-    background-color: #f0f6ff;
-}
-
-.ev-station-name {
-    font-weight: 700;
-    color: #111827;
-    font-size: 0.875rem;
-    margin: 0;
-}
-.ev-station-addr {
-    font-size: 0.75rem;
-    color: #9ca3af;
-    margin: 0.125rem 0 0 0;
-}
-
-/* 🟢 [수정 핵심] 우측 충전기 선택용 2열 가로 정렬 그리드 복구 */
-.ev-charger-grid {
-    display: grid;
-    grid-template-cols: 1fr;
-    gap: 0.75rem;
-    align-content: start;
-    flex: 1;
-    overflow-y: auto;
-    padding-right: 0.25rem;
-}
-@media (min-width: 640px) {
-    .ev-charger-grid {
-        grid-template-cols: repeat(2, 1fr); /* 무조건 가로 2열 배치 */
-    }
-}
-
-/* 동적 로드 충전기 개별 내부 컴포넌트 디자인 (예약02.png와 싱크 100%) */
-.ev-c-card {
-    border: 1px solid #e5e7eb;
-    background-color: #ffffff;
-    border-radius: 0.5rem;
-    padding: 0.75rem;
-    cursor: pointer;
-    transition: all 0.15s;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    height: auto;
-}
-.ev-c-card:hover {
-    border-color: #2563eb;
-}
-
-/* 예약 정보 상태별 테두리 및 색상 처리 */
-.ev-c-disabled { border-color: #cbd5e1 !important; background-color: #f8fafc !important; }
-.ev-c-occupied { border-color: #fde68a !important; background-color: rgba(254, 243, 199, 0.3) !important; }
-
-.ev-c-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.5rem;
-}
-.ev-c-name {
-    font-weight: 700;
-    font-size: 0.875rem;
-    margin: 0;
-    color: #111827;
-}
-.ev-c-disabled .ev-c-name { color: #64748b; }
-.ev-c-occupied .ev-c-name { color: #92400e; }
-
-.ev-c-badge {
-    font-size: 10px;
-    padding: 0.125rem 0.375rem;
-    border-radius: 0.25rem;
-    font-weight: 500;
-}
-.ev-b-avail { background-color: #dcfce7; color: #15803d; }
-.ev-b-disabled { background-color: #64748b; color: #ffffff; }
-.ev-b-occupied { background-color: #fef3c7; color: #b45309; }
-
-.ev-c-info {
-    display: flex;
-    align-items: center;
-    gap: 0.375rem;
-}
-.ev-c-speed {
-    font-size: 10px;
-    padding: 0.125rem 0.375rem;
-    border-radius: 0.25rem;
-    font-weight: 600;
-}
-.ev-b-rapid { background-color: #dbeafe; color: #1d4ed8; }
-.ev-b-slow { background-color: #f3e8ff; color: #6b21a8; }
-
-.ev-c-power {
-    font-size: 0.75rem;
-    color: #9ca3af;
-}
-.ev-c-disabled .ev-c-power { color: #94a3b8; }
-.ev-c-occupied .ev-c-power { color: #b45309; }
-
-.ev-empty-msg {
-    grid-column: span 2;
-    text-align: center;
-    padding: 6rem 0;
-    color: #9ca3af;
-    font-size: 0.75rem;
-}
-
-/* 2-3단계 및 하단 공통 스타일 규격 */
-.ev-max-width-md { max-width: 48rem; margin: 0 auto; }
-.ev-max-width-sm { max-width: 36rem; margin: 0 auto; }
-
-.ev-form-group {
-    background-color: #ffffff;
-    border-radius: 0.5rem;
-    border: 1px solid #e5e7eb;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-    padding: 1rem;
-    margin-bottom: 0.75rem;
-}
-
-.ev-form-label {
-    display: block;
-    font-weight: 700;
-    margin-bottom: 0.5rem;
-    color: #374151;
-    font-size: 0.75rem;
-}
-
-.ev-input-date {
-    border: 1px solid #d1d5db;
-    border-radius: 0.375rem;
-    padding: 0.5rem 0.75rem;
-    font-size: 0.875rem;
-    width: 100%;
-    outline: none;
-    transition: border-color 0.15s;
-}
-.ev-input-date:focus { border-color: #2563eb; }
-
-.ev-btn-toggle-grid {
-    display: grid;
-    grid-template-cols: repeat(2, 1fr);
-    gap: 0.5rem;
-    margin-bottom: 0.75rem;
-}
-.ev-res-type-btn {
-    background-color: #ffffff;
-    border: 1px solid #d1d5db;
-    border-radius: 0.5rem;
-    padding: 0.625rem 0;
-    font-size: 0.875rem;
-    font-weight: 700;
-    color: #4b5563;
-    cursor: pointer;
-    transition: all 0.15s;
-}
 .ev-res-type-btn.active {
-    border-color: #2563eb;
-    background-color: #2563eb;
-    color: #ffffff;
+	background-color: #2563eb;
+	color: white;
 }
 
-.ev-time-slots-grid {
-    display: grid;
-    grid-template-cols: repeat(4, 1fr);
-    gap: 0.5rem;
+.ev-time-btn.disabled {
+	background-color: #e5e7eb;
+	color: #9ca3af;
+	border-color: #d1d5db;
+	cursor: not-allowed;
+	pointer-events: none;
+	opacity: 0.7;
 }
-@media (min-width: 480px) { .ev-time-slots-grid { grid-template-cols: repeat(6, 1fr); } }
-@media (min-width: 768px) { .ev-time-slots-grid { grid-template-cols: repeat(8, 1fr); } }
 
-.ev-time-btn {
-    border: 1px solid #e5e7eb;
-    background-color: #ffffff;
-    color: #1f2937;
-    border-radius: 0.375rem;
-    padding: 0.5rem 0;
-    font-size: 0.75rem;
-    text-align: center;
+.ev-time-btn.disabled:hover {
+	background-color: #e5e7eb;
+}
+
+.ev-time-btn.disabled.active {
+	background-color: #e5e7eb !important;
+	color: #9ca3af !important;
+} 
+
+/* =========================================================================
+   🟢 [최종 무기] 슬라이더바 동그란 핀 너머 파란색 번짐 차단 전용 디자인 셋업
+   ========================================================================= */
+input[type="range"]::-webkit-slider-runnable-track {
+    background: transparent !important; /* 브라우저 기본 트랙 배경 강제 제거 */
+    border-radius: 8px;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    appearance: none;
+    -webkit-appearance: none;
+    background: #2563eb !important; /* 둥근 핀 자체의 색상을 명시적으로 고정 */
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+    width: 16px;
+    height: 16px;
+    margin-top: -5px; /* 트랙 중심 정렬 */
     cursor: pointer;
-    user-select: none;
-    transition: all 0.15s ease-in-out;
-}
-.ev-time-btn:hover { border-color: #2563eb; background-color: #f0f6ff; }
-.ev-time-btn.active { background-color: #2563eb !important; color: #ffffff !important; border-color: #2563eb !important; }
-.ev-time-btn.in-range { background-color: #dbeafe !important; color: #1d4ed8 !important; border-color: #bfdbfe !important; }
-
-.ev-range-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.375rem; }
-.ev-range-label { font-size: 0.75rem; color: #9ca3af; }
-.ev-range-val { font-weight: 700; color: #2563eb; font-size: 1rem; }
-
-.ev-slider-bar { width: 100%; height: 6px; background-color: #e5e7eb; border-radius: 9999px; outline: none; cursor: pointer; display: block; }
-
-.ev-quick-grid { display: grid; grid-template-cols: repeat(5, 1fr); gap: 0.5rem; margin-top: 0.75rem; }
-.ev-quick-btn { background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 0.375rem; padding: 0.5rem 0; font-size: 0.75rem; font-weight: 500; color: #4b5563; cursor: pointer; transition: all 0.15s; }
-.ev-quick-btn:hover { background-color: #eff6ff; color: #2563eb; border-color: #2563eb; }
-
-.ev-action-footer { margin-top: 1rem; display: flex; justify-content: space-between; }
-.ev-btn-prev { border: 1px solid #d1d5db; background-color: #ffffff; color: #374151; padding: 0.5rem 1rem; border-radius: 0.5rem; font-weight: 700; font-size: 0.75rem; cursor: pointer; transition: background-color 0.15s; }
-.ev-btn-prev:hover { background-color: #f3f4f6; }
-
-.ev-btn-next { background-color: #2563eb; color: #ffffff; padding: 0.5rem 1rem; border-radius: 0.5rem; font-weight: 700; font-size: 0.75rem; border: none; cursor: pointer; transition: background-color 0.15s; }
-.ev-btn-next:hover { background-color: #1d4ed8; }
-
-.ev-table-card { background-color: #ffffff; border-radius: 0.5rem; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.05); overflow: hidden; }
-.ev-summary-table { width: 100%; font-size: 0.75rem; border-collapse: collapse; }
-.ev-summary-table tr { border-bottom: 1px solid #f3f4f6; }
-.ev-summary-table tr:last-child { border-bottom: none; }
-.ev-summary-table td.label-col { padding: 0.75rem; font-weight: 700; background-color: #f9fafb; color: #4b5563; width: 8rem; text-align: center; }
-.ev-summary-table td.value-col { padding: 0.75rem; color: #111827; font-weight: 500; }
-.ev-text-blue { color: #2563eb !important; font-weight: 700; }
-.ev-text-indigo { color: #4f46e5 !important; font-weight: 700; }
-
-/* ==========================================================================
-   클라이언트 사이드 페이징 전용 내비게이션 UI (Pure CSS)
-   ========================================================================== */
-.ev-pagination-wrapper {
-    position: absolute;
-    bottom: 1rem;
-    left: 0;
-    right: 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 0.375rem;
-    width: 100%;
-    height: 2rem;
-    background-color: transparent;
-    pointer-events: auto;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    position: relative;
+    z-index: 10;
 }
 
-.ev-page-num-btn {
-    background-color: #ffffff;
-    border: 1px solid #d1d5db;
-    color: #4b5563;
-    font-size: 0.75rem;
-    font-weight: 600;
-    padding: 0.25rem 0.625rem;
-    border-radius: 0.375rem;
-    cursor: pointer;
-    transition: all 0.15s ease-in-out;
-}
-
-.ev-page-num-btn:hover {
-    border-color: #2563eb;
-    color: #2563eb;
-    background-color: #f0f6ff;
-}
-
-/* 현재 활성화된 페이지 번호 디자인 */
-.ev-page-num-btn.active {
-    background-color: #2563eb !important;
-    border-color: #2563eb !important;
-    color: #ffffff !important;
-    box-shadow: 0 1px 2px rgba(37, 99, 235, 0.2);
-}
-
-/* 충전기 선택 컨테이너 내 여백 보정 (하단 버튼이 안 가려지도록) */
-#chargerListContainer {
-    height: 290px !important; /* 원래 320px에서 하단 버튼 공간 확보를 위해 소폭 압축 */
+/* range 인풋 자체의 박스 사이징 규격을 통일하여 그라데이션 오차를 원천 봉쇄합니다 */
+input[type="range"] {
+    box-sizing: border-box !important;
+    padding: 0 !important;
+    margin: 0 !important;
 }

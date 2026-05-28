@@ -12,7 +12,7 @@
 <script src="/js/reservation.js" defer></script>
 
 <link rel="stylesheet" href="/css/common.css">
-<!-- <link rel="stylesheet" href="/css/reservation.css"> -->
+<link rel="stylesheet" href="/css/reservation.css">
 </head>
 <body class="bg-gray-50 text-sm"> <jsp:include page="/WEB-INF/views/layout/header.jsp" />
 
