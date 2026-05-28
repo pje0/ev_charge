@@ -19,6 +19,7 @@ public class MyPageDto {
     private String phone;            // 🌟 추가: 010-1234-1234
     private LocalDateTime createdAt; // 🌟 가입일 (2026-05-20)
     private String currentPassword;
+    private String role;
 
     // 2. 충전 통계 (UI 중간 영역용)
     private int totalChargeCount;    // 총 충전 횟수 (0회)

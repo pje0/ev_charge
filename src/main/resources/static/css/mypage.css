@@ -1,0 +1,148 @@
+/* ============================================================
+   EV 충전소 - 마이페이지 전용 스타일 (팀원 시안 맞춤 2단 분할)
+   prefix: ev-mp-
+   ============================================================ */
+
+/* ── 메인 영역 및 레이아웃 ── */
+.ev-mp-main {
+  padding-top: 6rem;    /* 상단 패딩 pt-24 매칭 */
+  padding-bottom: 4rem; /* 하단 패딩 pb-16 매칭 */
+  min-height: 100vh;
+}
+
+.ev-mp-container {
+  width: 100%;
+  max-width: 1280px;    /* 팀원 대시보드 규격 최대 크기 반영 */
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+/* 🌟 핵심: 프로필과 예약을 가로로 쪼개는 2단 그리드 */
+.ev-mp-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (min-width: 1024px) {
+  .ev-mp-layout {
+    grid-template-columns: 320px 1fr; /* 왼쪽 프로필은 딱 고정, 우측은 넓게 확장 */
+  }
+}
+
+/* ── 좌측 프로필 박스 컴포넌트 ── */
+.ev-mp-profile-box {
+  background: white;
+  border-radius: 1rem;
+  border: 1px solid var(--ev-border);
+  padding: 2rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+}
+
+.ev-mp-avatar-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.ev-mp-avatar-circle {
+  width: 4.5rem; height: 4.5rem;
+  background: var(--ev-primary);
+  color: white;
+  font-weight: 700;
+  font-size: 1.5rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.ev-mp-user-name {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--ev-foreground);
+}
+
+.ev-mp-user-email {
+  color: var(--ev-muted-foreground);
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
+
+/* ── 유저 정보 및 통계 항목 라인 ── */
+.ev-mp-info-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  color: var(--ev-foreground);
+}
+
+.ev-mp-info-label {
+  color: var(--ev-muted-foreground);
+}
+
+/* ── 우측 콘텐츠 영역 ── */
+.ev-mp-content-area {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* ── 필터 탭 바 (둥근 버튼 형태) ── */
+.ev-mp-tab-bar {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.ev-mp-tab-link {
+  padding: 0.375rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: 9999px;
+  text-decoration: none;
+  transition: all 0.15s;
+}
+
+.ev-mp-tab-active {
+  background: var(--ev-primary);
+  color: white;
+}
+
+.ev-mp-tab-inactive {
+  background: var(--ev-muted);
+  color: var(--ev-muted-foreground);
+}
+.ev-mp-tab-inactive:hover {
+  background: var(--ev-border);
+}
+
+/* ── 우측 예약 카드리스트 및 내역 박스 ── */
+.ev-mp-history-card {
+  background: white;
+  border-radius: 1rem;
+  border: 1px solid var(--ev-border);
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+}
+
+.ev-mp-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  margin-bottom: 1rem;
+}
+
+/* 🌟 빈 상태(예약 없을 때) 전용 중앙 정렬 스타일 */
+.ev-mp-empty-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 5rem 2rem;
+  color: var(--ev-muted-foreground);
+  font-size: 14px;
+}

@@ -1,10 +1,11 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
 <mapper namespace="com.boot.ev_charge.mypage.MyPageMapper">
 
     <select id="getUserById" parameterType="int" resultType="com.boot.ev_charge.mypage.MyPageDto">
-        SELECT id AS userId, login_id AS username, name, email, phone, created_at AS createdAt, password 
+        SELECT id AS userId, login_id AS username, name, email, phone, created_at AS createdAt, password, role  
         FROM user WHERE id = #{userId}
     </select>
 
