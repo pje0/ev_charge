@@ -3,7 +3,7 @@ package com.boot.ev_charge.mypage;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.crypto.password.PasswordEncoder; // 🌟 추가: 시큐리티 인코더 임포트
+import org.springframework.security.crypto.password.PasswordEncoder; //시큐리티 인코더 임포트
 import org.springframework.stereotype.Service;
 
 @Service
@@ -13,7 +13,7 @@ public class MyPageService {
 	private MyPageMapper myPageMapper;
 	
 	@Autowired
-	private PasswordEncoder passwordEncoder; // 🌟 추가: 시큐리티 비밀번호 암호화 빈 주입
+	private PasswordEncoder passwordEncoder; //시큐리티 비밀번호 암호화 빈 주입
 	
 	public MyPageDto getUserById(int userId) {
 		return myPageMapper.getUserById(userId);
@@ -34,12 +34,12 @@ public class MyPageService {
 	        }
 
 	        // 3. 이제 안전하게 trim() 호출
-	        // 🌟 변경: 평문과 시큐리티 암호문 비교를 위해 passwordEncoder.matches()로 수정
+	        // 변경: 평문과 시큐리티 암호문 비교를 위해 passwordEncoder.matches()로 수정
 	        if (!passwordEncoder.matches(dto.getCurrentPassword().trim(), dbUser.getPassword().trim())) {
 	            return false;
 	        }
 	        
-	        // 🌟 추가: 검증 통과 시 사용자가 입력한 새 비밀번호를 암호화하여 DTO에 다시 세팅
+	        // 추가: 검증 통과 시 사용자가 입력한 새 비밀번호를 암호화하여 DTO에 다시 세팅
 	        String securePassword = passwordEncoder.encode(dto.getPassword().trim());
 	        dto.setPassword(securePassword);
 	        
@@ -60,12 +60,12 @@ public class MyPageService {
 	    return myPageMapper.selectPastReservations(userId);
 	}
 	
-	// 🌟 예약 삭제 로직
+	// 예약 삭제 로직
     public boolean cancelReservation(Long reservationId) {
         return myPageMapper.deleteReservation(reservationId) > 0;
     }
 
-    // 🌟 예약 변경 로직
+    // 예약 변경 로직
     public boolean modifyReservation(MyPageDto dto) {
         return myPageMapper.updateReservation(dto) > 0;
     }
