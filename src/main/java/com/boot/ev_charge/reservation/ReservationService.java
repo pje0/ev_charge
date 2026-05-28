@@ -1,9 +1,7 @@
 package com.boot.ev_charge.reservation;
 
 import java.sql.Timestamp;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -159,5 +157,15 @@ public class ReservationService {
         requiredMinutes += 15;
         
         return requiredMinutes;
+    }
+    // [관리자 전용] 조건별 전체 예약 리스트 서비스
+    public List<ReservationDto> getAdminReservationList(String searchStatus, String searchType, String searchKeyword) {
+        return reservationMapper.getAdminReservationList(searchStatus, searchType, searchKeyword);
+    }
+
+    // [관리자 전용] 예약 데이터 강제 삭제 서비스 (트랜잭션 보장)
+    @Transactional
+    public boolean deleteAdminReservation(Long reservationId) {
+        return reservationMapper.deleteReservationById(reservationId) > 0;
     }
 }

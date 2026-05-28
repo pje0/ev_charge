@@ -19,16 +19,21 @@
         
         <!-- 1. 부모 레벨의 메인 탭 메뉴 (여기서 통합 관리하므로 서브 페이지 내 중복 버튼들은 제거 가능합니다) -->
         <div class="ev-filter-tabs" style="margin-bottom: 25px;">
-            <button id="btn_notice" class="ev-btn ev-btn-primary" onclick="fn_switch_tab('notice')">공지 관리</button>
+            <button id="btn_reservation" class="ev-btn ev-btn-primary" onclick="fn_switch_tab('reservation')">예약 관리</button>
+            <button id="btn_notice" class="ev-btn ev-btn-outline" onclick="fn_switch_tab('notice')">공지 관리</button>
             <button id="btn_inquiry" class="ev-btn ev-btn-outline" onclick="fn_switch_tab('inquiry')">1:1 문의 관리</button>
         </div>
 
-        <!-- 2. 공지 관리 탭 (인클루드) -->
-        <section id="tab_notice" class="admin-tab-content active">
+        <!-- 2. 예약 관리 탭 (인클루드) -->
+        <section id="tab_reservation" class="admin-tab-content active">
+            <jsp:include page="admin_reservation.jsp" />
+        </section>
+        <!-- 3. 공지 관리 탭 (인클루드) -->
+        <section id="tab_notice" class="admin-tab-content">
             <jsp:include page="admin_notice.jsp" />
         </section>
 
-        <!-- 3. 문의 관리 탭 (인클루드) -->
+        <!-- 4. 문의 관리 탭 (인클루드) -->
         <section id="tab_inquiry" class="admin-tab-content">
             <jsp:include page="admin_inquiry.jsp" />
         </section>

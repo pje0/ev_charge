@@ -291,5 +291,66 @@
         where station_id = #{stationId}
         order by id asc
     </select>
+    
+	<!-- ===================================================== -->
+    <!-- [관리자 전용] 전체 회원 예약 내역 조회 (검색 필터 포함) -->
+    <!-- ===================================================== -->
+    <select id="getAdminReservationList"
+            parameterType="map"
+            resultType="com.boot.ev_charge.reservation.ReservationDto">
+        SELECT
+            r.id,
+            r.user_id AS userId,
+            u.name AS userName,
+            u.login_id AS loginId,
+            r.charger_id AS chargerId,
+            c.connector_type AS connectorType,
+            s.name AS stationName,
+            r.reservation_type AS reservationType,
+            r.status,
+            r.car_type AS carType,
+            r.reserved_at AS reservedAt,
+            rt.start_time AS startTime,
+            rt.end_time AS endTime,
+            tgt.target_kwh AS targetKwh,
+            tgt.max_minutes AS maxMinutes
+        FROM reservation r
+        JOIN user u ON r.user_id = u.id
+        LEFT JOIN charger c ON r.charger_id = c.id
+        LEFT JOIN station s ON c.station_id = s.id
+        LEFT JOIN reservation_time rt ON r.id = rt.reservation_id
+        LEFT JOIN reservation_target tgt ON r.id = tgt.reservation_id
+        <where>
+            <if test="searchStatus != null and searchStatus != ''">
+                AND r.status = #{searchStatus}
+            </if>
+            <if test="searchKeyword != null and searchKeyword != ''">
+                <choose>
+                    <when test="searchType == 'name'">
+                        AND u.name LIKE CONCAT('%', #{searchKeyword}, '%')
+                    </when>
+                    <when test="searchType == 'loginId'">
+                        AND u.login_id LIKE CONCAT('%', #{searchKeyword}, '%')
+                    </when>
+                    <when test="searchType == 'station'">
+                        AND s.name LIKE CONCAT('%', #{searchKeyword}, '%')
+                    </when>
+                    <otherwise>
+                        AND (u.name LIKE CONCAT('%', #{searchKeyword}, '%') 
+                             OR u.login_id LIKE CONCAT('%', #{searchKeyword}, '%')
+                             OR s.name LIKE CONCAT('%', #{searchKeyword}, '%'))
+                    </otherwise>
+                </choose>
+            </if>
+        </where>
+        ORDER BY r.id DESC
+    </select>
+
+    <!-- ===================================================== -->
+    <!-- [관리자 전용] 예약 데이터 완전 삭제 (DB에서 즉시 제거) -->
+    <!-- ===================================================== -->
+    <delete id="deleteReservationById" parameterType="long">
+        DELETE FROM reservation WHERE id = #{reservationId}
+    </delete>
 
 </mapper>
