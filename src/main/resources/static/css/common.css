@@ -252,18 +252,51 @@ body {
 }
 
 /* ========================================================== */
-/* 🔔 글로벌 알림센터 드롭다운 레이어 스타일                  */
+/* 🔔 글로벌 알림센터 드롭다운 레이어 통합 디자인 시스템        */
 /* ========================================================== */
 
-/* 알림 벨 버튼 위치 기준점 설정을 위한 랩퍼 */
+/* 알림 벨 전체 상위 랩퍼 박스 (우측 Action 바 내 수평 정렬용) */
 .ev-header-bell-wrap {
     position: relative;
     display: inline-block;
+    vertical-align: middle;
+    margin-right: 12px;
 }
 
-/* 알림센터 전체 팝업 레이어 박스 */
+/* 1. 종 모양 아이콘 버튼 기본 스타일 및 오버 효과 */
+.ev-header-bell {
+    position: relative;
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: var(--ev-foreground);
+    transition: background 0.15s;
+}
+.ev-header-bell:hover {
+    background: var(--ev-muted);
+}
+
+/* 🔴 새로운 알림 유입 시 우측 상단에 표시되는 빨간 배지 */
+.ev-header-bell-dot {
+    display: none; /* 기본 숨김 상태 - js에서 필요시 show() 제어 */
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--ev-destructive);
+}
+
+/* 2. 알림센터 전체 드롭다운 타임라인 팝업 컨테이너 상자 */
 .ev-noti-center-box {
-    display: none; /* 기본 숨김 */
+    display: none; /* 기본 숨김 상태 - js에서 토글 제어 */
     position: absolute;
     right: 0;
     top: 45px;
@@ -277,7 +310,7 @@ body {
     overflow: hidden;
 }
 
-/* 알림센터 헤더 구역 */
+/* 알림센터 상단 헤더 구역 */
 .ev-noti-center-header {
     display: flex;
     justify-content: space-between;
@@ -290,12 +323,21 @@ body {
     font-weight: 700;
     color: var(--ev-foreground);
 }
+/* 헤더 내부 톱니바퀴 세팅 아이콘 */
+.ev-noti-center-setting-icon {
+    stroke: var(--ev-muted-foreground);
+    cursor: pointer;
+    transition: stroke 0.15s;
+}
+.ev-noti-center-setting-icon:hover {
+    stroke: var(--ev-foreground);
+}
 
-/* 알림 / 대화 탭 메뉴 구역 */
+/* 알림 / 대화 2분할 서브 탭 레이아웃 */
 .ev-noti-tabs {
     display: flex;
     border-bottom: 1px solid var(--ev-border);
-    background: #fafafa;
+    background: var(--ev-background);
 }
 .ev-noti-tab-btn {
     flex: 1;
@@ -308,6 +350,7 @@ body {
     border: none;
     cursor: pointer;
     border-bottom: 2px solid transparent;
+    transition: all 0.15s;
 }
 .ev-noti-tab-btn.active {
     color: var(--ev-foreground);
@@ -315,15 +358,15 @@ body {
     background: #ffffff;
 }
 
-/* 알림 리스트 스크롤 스페이스 */
+/* 과거 알림 리스트 동적 누적 스크롤 스페이스 */
 .ev-noti-scroll-area {
     max-height: 400px;
     overflow-y: auto;
     padding: 15px 20px;
-    background: #f8f9fa;
+    background: var(--ev-muted); /* 시스템 배경보다 한 톤 어두운 배경색 연동 */
 }
 
-/* 세부 섹션 타이틀 (최근 받은 알림) */
+/* 세부 타이틀 컴포넌트 (최근 받은 알림) */
 .ev-noti-section-title {
     font-size: 13px;
     font-weight: 700;
@@ -332,25 +375,26 @@ body {
     margin-top: 5px;
 }
 
-/* 개별 알림 카드 아이템 */
+/* 동적 생성되는 개별 알림 요약 카드 아이템 */
 .ev-noti-item-card {
     background: #ffffff;
     border-radius: 8px;
     padding: 14px;
     margin-bottom: 10px;
     box-shadow: 0 2px 6px rgba(0,0,0,0.02);
-    border: 1px solid rgba(0,0,0,0.03);
+    border: 1px solid var(--ev-border);
     position: relative;
     cursor: pointer;
     transition: background 0.15s;
 }
 .ev-noti-item-card:hover {
-    background: #fafafa;
+    background: var(--ev-background);
 }
-/* 읽지 않은 알림 강조 효과 */
+
+/* 🌟 [핵심 연출] 읽지 않은 신규 알림 강조 효과 (보내주신 이미지의 파란색/보라색 왼쪽 라인 완벽 재현) */
 .ev-noti-item-card.unread {
-    background: oklch(0.38 0.18 258 / 0.03);
-    border-left: 3px solid var(--ev-primary);
+    background: oklch(0.38 0.18 258 / 0.03); /* 메인 브랜드 색상을 3%만 옅게 깔아 배경 투명 연출 */
+    border-left: 3px solid var(--ev-primary); /* 왼쪽에 3px 굵기의 메인 포인트 라인 생성 */
 }
 
 .ev-noti-item-meta {
@@ -359,24 +403,28 @@ body {
     gap: 6px;
     font-size: 12px;
     font-weight: 600;
-    color: #444;
+    color: var(--ev-foreground);
     margin-bottom: 6px;
 }
+/* 카드 본문 내부 원형 미니 아이콘 배경 */
 .ev-noti-item-icon {
-    width: 18px; height: 18px;
+    width: 18px;
+    height: 18px;
     border-radius: 50%;
     background: var(--ev-primary);
-    color: #fff;
-    display: inline-flex; align-items: center; justify-content: center;
+    color: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     font-size: 10px;
 }
 .ev-noti-item-body {
     font-size: 13px;
-    color: var(--ev-foreground);
+    color: var(--ev-muted-foreground);
     line-height: 1.4;
 }
 
-/* 알림 내역 공백 상태 */
+/* 내역 데이터 무존재 상태 컴포넌트 */
 .ev-noti-empty-state {
     padding: 60px 0;
     text-align: center;
