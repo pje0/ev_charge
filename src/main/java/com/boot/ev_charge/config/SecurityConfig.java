@@ -33,10 +33,12 @@ public class SecurityConfig {
             	        "/", "/login", "/signup", "/login-process",
             	        "/css/**", "/js/**", "/images/**",
             	        "/map", "/calculator",
-            	        "/api/**",
-            	        "/WEB-INF/**"  
+            	        "/api/stations", "/api/stations/**",
+            	        "/WEB-INF/**",
+            	        "notices/**"
             	    ).permitAll()
             	    .requestMatchers("/admin/**").hasRole("ADMIN")
+            	    .requestMatchers("/api/favorites/**").authenticated()
             	    .anyRequest().authenticated()
             	)
             .formLogin(form -> form
