@@ -6,6 +6,7 @@ import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder; //시큐리티 인코더 임포트
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.boot.ev_charge.reservation.ReservationMapper;
 
@@ -117,8 +118,24 @@ public class MyPageService {
     }
 
     // 예약 변경 로직
+    @Transactional
     public boolean modifyReservation(MyPageDto dto) {
-        return myPageMapper.updateReservation(dto) > 0;
+        try {
+            // 1. 예약 마스터(타입) 업데이트
+            myPageMapper.updateReservationMaster(dto);
+            
+            // 2. 시간 슬롯 업데이트
+            myPageMapper.updateReservationTime(dto);
+            
+            // 3. TARGET(목표 충전량) 모드일 경우에만 타겟 테이블 업데이트
+            if ("TARGET".equals(dto.getReservationType())) {
+                myPageMapper.upsertReservationTarget(dto);
+            }
+            return true;
+        } catch (Exception e) {
+            System.out.println("❌ [Service] 예약 업데이트 중 에러 발생: " + e.getMessage());
+            return false;
+        }
     }
     
     public MyPageDto getReservationById(Long reservationId) {

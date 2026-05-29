@@ -2,6 +2,9 @@ package com.boot.ev_charge.mypage;
 
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
+
+import org.springframework.format.annotation.DateTimeFormat;
+
 import lombok.Data;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
@@ -32,12 +35,16 @@ public class MyPageDto {
     private String reservationType; 
     private String status;
     private Timestamp reservationCreatedAt;
+    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") // 🟢 날짜 변환기 추가
     private Timestamp startTime;
+    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") // 🟢 날짜 변환기 추가
     private Timestamp endTime;
     private Integer targetAmount;
     
     // 4. 충전소 및 충전기 정보
+    private Long stationId;
     private String stationName;
     private String connectorType;   
-    private Integer powerKw;        
+    private Integer powerKw;      
+    private Integer maxMinutes;
 }
