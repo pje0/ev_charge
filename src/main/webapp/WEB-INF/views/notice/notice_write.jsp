@@ -112,7 +112,7 @@ function fn_submit_notice() {
         success: function(res) {
             if(res) {
                 alert("공지사항이 성공적으로 등록되었습니다.");
-                location.href = "${pageContext.request.contextPath}/admin/adminpage";
+                location.href = "${pageContext.request.contextPath}/admin/adminpage?tab=notice";
             } else {
                 alert("등록에 실패했습니다. 다시 시도해주세요.");
             }

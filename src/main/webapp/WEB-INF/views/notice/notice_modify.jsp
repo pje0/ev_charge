@@ -84,7 +84,7 @@ function fn_modify_notice() {
         success: function(res) {
             if(res) {
                 alert("성공적으로 수정되었습니다.");
-                location.href = "${pageContext.request.contextPath}/admin/adminpage";
+                location.href = "${pageContext.request.contextPath}/admin/adminpage?tab=notice";
             } else {
                 alert("수정에 실패했습니다.");
             }

@@ -1,5 +1,6 @@
 package com.boot.ev_charge.adminpage;
 
+import com.boot.ev_charge.dashboard.DashboardService;
 import com.boot.ev_charge.notice.NoticeCriteria;
 import com.boot.ev_charge.notice.NoticeDTO;
 import com.boot.ev_charge.notice.NoticeService;
@@ -21,12 +22,13 @@ import java.util.Map;
 
 @Controller
 @RequestMapping("/admin")
-@RequiredArgsConstructor // NoticeService를 자동으로 가져옵니다.
+@RequiredArgsConstructor
 @Slf4j
 public class AdminPageController {
 
     private final NoticeService noticeService; // 서비스 주입 필수!
     private final ReservationService reservationService; // 예약 서비스 주입 추가
+    private final DashboardService dashboardService;
 
     @GetMapping("/adminpage")
     public String adminDashboard(
@@ -57,10 +59,14 @@ public class AdminPageController {
         model.addAttribute("searchStatus", searchStatus);
         model.addAttribute("searchType", searchType);
         model.addAttribute("searchKeyword", searchKeyword);
+     // [추가] 관리자 Dashboard 요약 정보 전달
+        model.addAttribute("dashboard", dashboardService.getDashboardSummary());
 
         // WEB-INF/views/admin/admin_main.jsp 호출
         return "admin/admin_main"; 
     }
+    
+    
 
     // [추가] 관리자 예약 즉시 삭제 API
     @PostMapping("/reservation/delete")

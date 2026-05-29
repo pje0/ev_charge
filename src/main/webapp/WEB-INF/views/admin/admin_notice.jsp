@@ -92,10 +92,9 @@
             <c:forEach var="i" begin="1" end="${totalPages}">
                 <%-- class 속성 맨 뒤에 page-btn 추가 --%>
                 <button class="ev-btn ${cri.page == i ? 'ev-btn-primary' : 'ev-btn-outline'} page-btn" 
-                        style="min-width: 35px; height: 35px; padding: 0;"
-                        onclick="location.href='${pageContext.request.contextPath}/admin/adminpage?page=${i}&category=${cri.category}'">
-                    ${i}
-                </button>
+				        style="min-width: 35px; height: 35px; padding: 0;"
+				        onclick="location.href='${pageContext.request.contextPath}/admin/adminpage?page=${i}&category=${cri.category}&tab=notice'">${i}
+				</button>
             </c:forEach>
         </div>
     </c:if>
@@ -103,15 +102,32 @@
 
 <script>
     // 카테고리 필터링 (Criteria 연동)
-    function fn_filter_category(category) {
-        location.href = "${pageContext.request.contextPath}/admin/adminpage?page=1&category=" + encodeURIComponent(category);
-    }
+	function fn_filter_category(category) {
+	    location.href = "${pageContext.request.contextPath}/admin/adminpage?page=1&category=" + encodeURIComponent(category) + "&tab=notice";
+	}
 
     // 공지사항 삭제 (Service 연동)
     function fn_remove_notice(id) {
-        if(!confirm("해당 공지사항을 정말로 삭제하시겠습니까?")) return;
-        location.href = "${pageContext.request.contextPath}/admin/notice/delete/" + id;
-    }
+    if(!confirm("해당 공지사항을 정말로 삭제하시겠습니까?")) return;
+    
+    $.ajax({
+        url: "${pageContext.request.contextPath}/admin/notice/delete/" + id,
+        type: "GET",
+        success: function(res) {
+            // 백엔드가 리턴한 true 값을 가로채어 판단합니다.
+            if(res === true || res === "true") {
+                alert("공지사항이 성공적으로 삭제되었습니다.");
+                // 알림창 확인을 누르면 메인페이지의 '공지사항 탭'을 활성화한 채로 이동합니다.
+                location.href = "${pageContext.request.contextPath}/admin/adminpage?tab=notice";
+            } else {
+                alert("삭제 처리에 실패했습니다.");
+            }
+        },
+        error: function() {
+            alert("서버 통신 중 오류가 발생했습니다.");
+        }
+    });
+}
 </script>
 
 </body>
