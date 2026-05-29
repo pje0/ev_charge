@@ -1,46 +1,162 @@
 @charset "UTF-8";
 
-.ev-step-on {
-	color: #2563eb;
-	font-weight: 700;
+/* =========================================================================
+   🟢 글로벌 기본 세팅 (Tailwind Base 대체)
+   ========================================================================= */
+body {
+    background-color: #f9fafb;
+    color: #374151;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    margin: 0;
+}
+.hidden { display: none !important; }
+
+/* =========================================================================
+   🟢 레이아웃 및 타이포그래피
+   ========================================================================= */
+.ev-reservation-wrapper { width: 100%; padding-top: 130px; padding-bottom: 80px; }
+.ev-reservation-container { max-width: 72rem; margin: 0 auto; padding: 0 1rem; box-sizing: border-box; }
+.ev-reservation-header { margin-bottom: 40px; text-align: left; }
+.ev-reservation-title { font-size: 28px; font-weight: 800; margin: 0 0 8px 0; letter-spacing: -0.02em; color: #111827; }
+.ev-reservation-subtitle { font-size: 15px; margin: 0, #6b7280; }
+.ev-section-title { font-size: 1rem; font-weight: 700; margin: 0 0 0.75rem 0; color: #1f2937; }
+
+/* =========================================================================
+   🟢 상단 스텝 인디케이터
+   ========================================================================= */
+.ev-step-wrapper { margin-bottom: 2.5rem; }
+.ev-step-indicator { display: flex; align-items: center; justify-content: center; font-size: 0.75rem; gap: 0.75rem; max-width: 42rem; margin: 0 auto; }
+.ev-step { display: flex; align-items: center; gap: 0.5rem; }
+.ev-step-num { width: 1.25rem; height: 1.25rem; border-radius: 9999px; display: flex; align-items: center; justify-content: center; font-weight: 500; font-size: 0.75rem; background-color: #f3f4f6; color: #9ca3af; }
+.ev-step span { color: #9ca3af; font-weight: 500; }
+.ev-step-line { width: 4rem; height: 1px; background-color: #e5e7eb; }
+
+/* 현재 활성화된 스텝 강조 */
+.ev-step.ev-step-on .ev-step-num { background-color: #2563eb; color: white; }
+.ev-step.ev-step-on span { color: #111827; font-weight: 500; }
+
+/* =========================================================================
+   🟢 1단계: 패널 레이아웃 및 카드 리스트
+   ========================================================================= */
+.ev-panel-layout { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 1rem; }
+.ev-panel { background-color: white; padding: 1rem; border-radius: 0.5rem; border: 1px solid #e5e7eb; box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05); display: flex; flex-direction: column; height: 420px; }
+.ev-panel-title { font-size: 1rem; font-weight: 700; margin: 0 0 0.75rem 0; color: #1f2937; border-bottom: 1px solid #e5e7eb; padding-bottom: 0.375rem; flex: none; }
+
+.ev-panel-side { grid-column: span 12 / span 12; }
+.ev-panel-main { grid-column: span 12 / span 12; position: relative; }
+@media (min-width: 1024px) {
+    .ev-panel-side { grid-column: span 4 / span 4; }
+    .ev-panel-main { grid-column: span 8 / span 8; }
 }
 
-.ev-step-on .ev-step-num {
-	background-color: #2563eb;
-	color: white;
-}
+/* 충전소 목록 스크롤 */
+.ev-station-list { overflow-y: auto; padding-right: 0.25rem; flex: 1; height: 340px; display: flex; flex-direction: column; gap: 0.5rem; }
+.station-card { padding: 0.75rem; border: 1px solid #e5e7eb; border-radius: 0.375rem; cursor: pointer; transition: all 0.2s; }
+.station-card:hover, .station-card.active { border-color: #3b82f6; background-color: rgba(239, 246, 255, 0.5); }
+.station-card h3 { font-weight: 700; color: #111827; font-size: 0.875rem; margin: 0; }
+.station-card p { font-size: 0.75rem; color: #9ca3af; margin: 0.125rem 0 0 0; letter-spacing: -0.025em; }
 
-.ev-time-btn.active {
-	background-color: #2563eb;
-	color: white;
-	border-color: #2563eb;
-}
+/* 충전기 그리드 및 비어있을 때 메시지 */
+.ev-charger-grid { display: grid; grid-template-columns: repeat(1, minmax(0, 1fr)); gap: 0.75rem; overflow-y: auto; padding-right: 0.25rem; flex: 1; height: 320px; align-content: start; }
+@media (min-width: 768px) { .ev-charger-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.charger-empty { grid-column: span 1 / span 1; text-align: center; padding: 6rem 0; color: #9ca3af; font-size: 0.75rem; }
+@media (min-width: 768px) { .charger-empty { grid-column: span 2 / span 2; } }
 
-.ev-time-btn.in-range {
-	background-color: #dbeafe;
-	color: #1d4ed8;
-	border-color: #93c5fd;
-}
+/* 충전기 상태별 개별 카드 디자인 */
+.charger-card { border: 1px solid #e5e7eb; background-color: white; border-radius: 0.5rem; padding: 0.75rem; cursor: pointer; transition: all 0.2s; }
+.charger-card:hover { border-color: #3b82f6; }
+.charger-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem; }
+.charger-title { font-weight: 700; font-size: 0.875rem; color: #111827; margin: 0; }
+.charger-badge { font-size: 10px; padding: 0.125rem 0.375rem; border-radius: 0.25rem; font-weight: 500; }
+.charger-info-row { display: flex; align-items: center; gap: 0.375rem; margin-top: 0.25rem; }
+.speed-badge { font-size: 10px; padding: 0.125rem 0.375rem; border-radius: 0.25rem; font-weight: 600; }
+.speed-badge.rapid { background-color: #dbeafe; color: #1d4ed8; }
+.speed-badge.slow { background-color: #f3e8ff; color: #7e22ce; }
+.power-text { font-size: 0.75rem; color: #9ca3af; margin: 0; }
 
-.ev-res-type-btn.active {
-	background-color: #2563eb;
-	color: white;
-}
+/* 상태: 사용 가능 (기본) */
+.charger-card.available { border-color: #e5e7eb; background-color: white; }
+.charger-card.available .charger-badge { background-color: #dcfce7; color: #15803d; }
 
-.ev-time-btn.disabled {
-	background-color: #e5e7eb;
-	color: #9ca3af;
-	border-color: #d1d5db;
-	cursor: not-allowed;
-	pointer-events: none;
-	opacity: 0.7;
-}
+/* 🛑 상태: 기기 점검 중 / 고장 (빨간색 계열 - 완전 입구컷) */
+.charger-card.broken { border-color: #fca5a5; background-color: #fef2f2; }
+.charger-card.broken .charger-title { color: #991b1b; }
+.charger-card.broken .charger-badge { background-color: #ef4444; color: white; }
+.charger-card.broken .power-text { color: #991b1b; }
 
-.ev-time-btn.disabled:hover {
-	background-color: #e5e7eb;
-}
+/* 🛑 상태: 금일 예약 불가 (회색 계열 - 내일 예약 가능하므로 통과) */
+.charger-card.full { border-color: #cbd5e1; background-color: #f8fafc; }
+.charger-card.full .charger-title { color: #334155; }
+.charger-card.full .charger-badge { background-color: #64748b; color: white; }
+.charger-card.full .power-text { color: #475569; }
 
-.ev-time-btn.disabled.active {
-	background-color: #e5e7eb !important;
-	color: #9ca3af !important;
-} 
+/* 상태: 사용 중 (예약 가능) */
+.charger-card.occupied { border-color: #fde68a; background-color: rgba(254, 243, 199, 0.3); }
+.charger-card.occupied .charger-title { color: #78350f; }
+.charger-card.occupied .charger-badge { background-color: #fef3c7; color: #b45309; }
+.charger-card.occupied .power-text { color: #b45309; }
+
+/* =========================================================================
+   🟢 2단계/3단계: 예약 폼 컨테이너 및 인풋
+   ========================================================================= */
+.ev-page-wrapper { max-width: 48rem; margin: 0 auto; }
+.ev-page-wrapper-sm { max-width: 36rem; margin: 0 auto; }
+.ev-box { background-color: white; border-radius: 0.5rem; border: 1px solid #e5e7eb; box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05); padding: 1rem; }
+.mb-box { margin-bottom: 0.75rem; }
+.mt-box { margin-top: 1rem; }
+.ev-box-title { font-weight: 700; margin: 0 0 0.625rem 0; color: #374151; font-size: 0.75rem; }
+
+.ev-label { display: block; font-weight: 700; margin-bottom: 0.375rem; color: #374151; font-size: 0.75rem; }
+.ev-input { border: 1px solid #e5e7eb; border-radius: 0.375rem; padding: 0.375rem 0.75rem; font-size: 0.875rem; width: 100%; box-sizing: border-box; outline: none; transition: border-color 0.2s; }
+.ev-input:focus { border-color: #3b82f6; }
+
+.ev-btn-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem; }
+.ev-res-type-btn { border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 0.5rem 0; font-size: 0.875rem; font-weight: 700; transition: all 0.2s; background-color: white; color: #374151; cursor: pointer; }
+.ev-res-type-btn.active { background-color: #2563eb; color: white; border-color: #2563eb; }
+
+/* 타임 슬롯 그리드 */
+.time-slot-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.375rem; }
+@media (min-width: 640px) { .time-slot-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+@media (min-width: 768px) { .time-slot-grid { grid-template-columns: repeat(8, minmax(0, 1fr)); } }
+
+.ev-time-btn { border: 1px solid #e5e7eb; border-radius: 0.25rem; padding: 0.25rem 0; font-size: 0.75rem; text-align: center; cursor: pointer; user-select: none; transition: all 0.2s; background-color: white; color: #374151; }
+.ev-time-btn.active { background-color: #2563eb; color: white; border-color: #2563eb; }
+.ev-time-btn.in-range { background-color: #dbeafe; color: #1d4ed8; border-color: #93c5fd; }
+.ev-time-btn.disabled { background-color: #e5e7eb; color: #9ca3af; border-color: #d1d5db; cursor: not-allowed; pointer-events: none; opacity: 0.7; }
+.ev-time-btn.disabled.active { background-color: #e5e7eb !important; color: #9ca3af !important; border-color: #d1d5db !important; } 
+.ev-time-btn.is-past-hour { background-color: #374151 !important; color: #9ca3af !important; border-color: #4b5563 !important; pointer-events: none !important; cursor: not-allowed !important; opacity: 1; }
+.ev-time-btn.my-reservation { color: #2563eb !important; font-weight: 700 !important; opacity: 1; }
+
+/* 목표 충전량 슬라이더 및 퀵 버튼 */
+.target-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem; }
+.target-label { font-size: 0.75rem; color: #9ca3af; }
+.target-value { font-weight: 700; color: #2563eb; font-size: 1rem; }
+.quick-target-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0.375rem; margin-top: 0.75rem; }
+.btn-quick-target { border: 1px solid #e5e7eb; border-radius: 0.25rem; padding: 0.375rem 0; font-size: 0.75rem; font-weight: 500; color: #4b5563; background-color: white; cursor: pointer; transition: all 0.2s; }
+.btn-quick-target:hover { background-color: #eff6ff; color: #2563eb; border-color: #bfdbfe; }
+
+/* 웹킷 브라우저용 슬라이더 스타일 */
+input[type="range"].ev-range-slider { box-sizing: border-box !important; padding: 0 !important; margin: 0 !important; width: 100%; height: 0.375rem; background-color: #e5e7eb; border-radius: 0.5rem; appearance: none; -webkit-appearance: none; cursor: pointer; outline: none; display: block; }
+input[type="range"].ev-range-slider::-webkit-slider-runnable-track { background: transparent !important; border-radius: 8px; }
+input[type="range"].ev-range-slider::-webkit-slider-thumb { appearance: none; -webkit-appearance: none; background: #2563eb !important; border: 2px solid #ffffff; border-radius: 50%; width: 16px; height: 16px; margin-top: -5px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.2); position: relative; z-index: 10; }
+
+/* 내비게이션 버튼 (이전/다음/확정) */
+.ev-nav-buttons { margin-top: 1rem; display: flex; justify-content: space-between; }
+.btn-prev { border: 1px solid #d1d5db; background-color: white; color: #374151; padding: 0.5rem 1rem; border-radius: 0.5rem; font-weight: 700; font-size: 0.75rem; transition: all 0.2s; cursor: pointer; }
+.btn-prev:hover { background-color: #f3f4f6; }
+.btn-next { background-color: #2563eb; color: white; padding: 0.5rem 1rem; border-radius: 0.5rem; font-weight: 700; font-size: 0.75rem; transition: all 0.2s; border: none; cursor: pointer; box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05); }
+.btn-next:hover { background-color: #1d4ed8; }
+
+/* =========================================================================
+   🟢 3단계: 예약 내용 최종 요약 테이블
+   ========================================================================= */
+.summary-table-container { background-color: white; border-radius: 0.5rem; border: 1px solid #e5e7eb; box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05); overflow: hidden; }
+.summary-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; text-align: left; }
+.summary-table tr { border-bottom: 1px solid #f3f4f6; }
+.summary-table tr:last-child { border-bottom: none; }
+.summary-table td.th-style { padding: 0.75rem; font-weight: 700; background-color: rgba(249, 250, 251, 0.75); color: #4b5563; width: 8rem; text-align: center; }
+.summary-table td.td-style { padding: 0.75rem; color: #111827; font-weight: 500; }
+.summary-table td.val-time { color: #2563eb !important; font-weight: 700 !important; }
+.summary-table td.val-target { color: #4f46e5 !important; font-weight: 700 !important; }
