@@ -28,11 +28,11 @@
 					언제 어디서나<br> <span class="ev-main-hero-title-accent">스마트하게</span><br>
 					충전하세요
 				</h1>
-				<p class="ev-main-hero-desc">전국 EV 충전소를 실시간으로 확인하고 미리 예약하세요. 대기
-					없는 스마트 충전 경험을 제공합니다.</p>
+				<p class="ev-main-hero-desc">전국 EV 충전소를 실시간으로 확인하고 미리 예약하세요. 
+				대기 없는 스마트 충전 경험을 제공합니다.</p>
 				<div class="ev-main-hero-btns">
-					<a href="/map" class="ev-main-hero-btn-primary">📍 충전소 찾기</a> <a
-						href="/reservation" class="ev-main-hero-btn-outline">📅 예약하기</a>
+					<a href="/map" class="ev-main-hero-btn-primary">충전소 찾기</a> <a
+						href="/reservation" class="ev-main-hero-btn-outline">예약하기</a>
 				</div>
 			</div>
 		</div>
@@ -110,8 +110,8 @@
 				<div class="ev-main-cta-overlay"></div>
 				<div class="ev-main-cta-content">
 					<h2 class="ev-main-cta-title">지금 바로 시작하세요</h2>
-					<p class="ev-main-cta-desc">회원가입 후 첫 충전 50% 할인 혜택을 받으세요. 스마트한
-						EV 충전 라이프를 경험해보세요.</p>
+					<p class="ev-main-cta-desc">가까운 충전소를 간편하게 예약할 수 있습니다.<br>
+						스마트한 EV 충전 라이프를 경험해보세요.</p>
 					<a href="/signup" class="ev-main-cta-btn">⚡ 지금 시작하기</a>
 				</div>
 			</div>
