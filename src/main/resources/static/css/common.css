@@ -431,3 +431,22 @@ body {
     color: var(--ev-muted-foreground);
     font-size: 14px;
 }
+* 🔴 안 읽은 신규 알림 개수가 동적으로 표현되는 숫자 카운트 뱃지 */
+.ev-header-bell-badge {
+    display: none; /* 기본 숨김 상태 - 안 읽은 알림이 1개 이상일 때만 js에서 활성화 */
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    background: var(--ev-destructive); /* 기존 시스템의 빨간 파괴색 변수 상속 */
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 18px;
+    text-align: center;
+    box-sizing: border-box;
+    box-shadow: 0 0 0 2px #ffffff; /* 종 아이콘과 뱃지 경계를 분리해 주는 세련된 흰색 테두리 효과 */
+}

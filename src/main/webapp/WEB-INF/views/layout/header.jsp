@@ -62,15 +62,13 @@
 						<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
 						<path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
 					</svg>
-					<span id="globalBellDot" class="ev-header-bell-dot"></span>
+					<!-- 🔴 수정: 단순 점(Dot)에서 안 읽은 실시간 알림 개수 숫자가 찍히는 카운트 뱃지로 변경 -->
+					<span id="globalBellCount" class="ev-header-bell-badge">0</span>
 				</button>
 				
 				<div id="evNotiCenter" class="ev-noti-center-box">
 					<div class="ev-noti-center-header">
 						<span class="ev-noti-center-title">알림센터</span>
-							<circle cx="12" cy="12" r="3"></circle>
-							<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-						</svg>
 					</div>
 					<div id="evNotiListArea" class="ev-noti-scroll-area">
 						<div class="ev-noti-empty-state">알림 내역을 가져오는 중입니다...</div>
@@ -139,7 +137,7 @@
 	<div id="globalToastContainer"></div>
 </header>
 <script>
-//🔔 알림센터(보관함) 실시간 수신 및 UI 제어 공통 JavaScript
+// 🔔 알림센터(보관함) 실시간 수신 및 UI 제어 공통 JavaScript
 
 $(document).ready(function() {
  let currentLoginId = "";
@@ -155,8 +153,11 @@ $(document).ready(function() {
      // [실시간 수신] 백엔드에서 실시간 알림이 도달하면 실행
      eventSource.addEventListener("alarm", function(event) {
          try {
-             // 1. 종(🔔) 모양 아이콘 위에 즉시 빨간 점 활성화
-             $('#globalBellDot').show();
+             // 변경: 실시간 푸시 유입 시 현재 숫자를 가산(+1)하여 뱃지를 갱신 및 표시합니다.
+             const $badge = $('#globalBellCount');
+             let currentCount = $badge.is(':visible') ? parseInt($badge.text()) : 0;
+             currentCount += 1;
+             $badge.text(currentCount).show();
              
              // 2. 만약 알림센터 보관함 레이어가 열려있다면 화면 깜빡임 없이 즉시 리스트 새로고침
              if($('#evNotiCenter').is(':visible')) {
@@ -171,12 +172,18 @@ $(document).ready(function() {
          console.warn("실시간 알림 스트림 연결이 해제되어 재연결을 시도합니다.");
      };
 
-     // [최초 로드] 로그인 유저의 안 읽은 알림이 DB에 남아있는지 확인하여 빨간 점 표시 결정
+     // [최초 로드] 로그인 유저의 안 읽은 알림 개수를 확인하여 정확한 숫자로 세팅
      $.ajax({
          url: "${pageContext.request.contextPath}/api/notification/unread-count",
          type: "GET",
          success: function(count) {
-             if(parseInt(count) > 0) $('#globalBellDot').show();
+             const unreadCount = parseInt(count);
+             if(unreadCount > 0) {
+                 // 변경: 안 읽은 알림이 1개 이상 존재할 때만 뱃지에 숫자를 박아 노출합니다.
+                 $('#globalBellCount').text(unreadCount).show();
+             } else {
+                 $('#globalBellCount').hide();
+             }
          }
      });
  }
@@ -233,7 +240,7 @@ function fn_load_notification_history() {
          
          $listArea.append(htmlStr);
          
-         // 리스트 드로잉이 끝난 후 전체 읽음 및 빨간 점 제거 호출
+         // 리스트 드로잉이 끝난 후 전체 읽음 및 개수 뱃지 초기화 호출
          fn_mark_all_notifications_as_read();
      },
      error: function() {
@@ -242,9 +249,10 @@ function fn_load_notification_history() {
  });
 }
 
-//[전체 읽음] 빨간 배지를 끄고 서버 테이블의 모든 상태를 'Y'로 업데이트
+//[전체 읽음] 개수 뱃지를 끄고 서버 테이블의 모든 상태를 'Y'로 업데이트
 function fn_mark_all_notifications_as_read() {
- $('#globalBellDot').hide();
+ // 변경: 사용자가 목록을 확인했으므로 즉시 카운트를 0으로 밀고 비주얼을 은닉합니다.
+ $('#globalBellCount').text('0').hide();
  $.ajax({
      url: "${pageContext.request.contextPath}/api/notification/read-all",
      type: "POST"
