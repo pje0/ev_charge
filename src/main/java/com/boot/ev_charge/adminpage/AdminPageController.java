@@ -1,5 +1,6 @@
 package com.boot.ev_charge.adminpage;
 
+import com.boot.ev_charge.dashboard.DashboardDTO;
 import com.boot.ev_charge.dashboard.DashboardService;
 import com.boot.ev_charge.notice.NoticeCriteria;
 import com.boot.ev_charge.notice.NoticeDTO;
@@ -90,5 +91,14 @@ public class AdminPageController {
             resultMap.put("message", "데이터베이스 삭제 처리 중 오류가 발생했습니다.");
         }
         return resultMap;
+    }
+ // [추가] Dashboard 실시간 요약 조회 API
+    @GetMapping("/dashboard/summary")
+    @ResponseBody
+    public DashboardDTO getDashboardSummary() {
+
+        log.info("@# [GET] /admin/dashboard/summary -> Dashboard polling");
+
+        return dashboardService.getDashboardSummary();
     }
 }
