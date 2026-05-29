@@ -211,7 +211,8 @@ body {
 .ev-header-dropdown {
   display: none;
   position: absolute;
-  right: 0; top: calc(100% + 4px);
+  right: 0; top: 100%;
+  padding-top: 4px;
   width: 192px;
   background: white;
   border: 1px solid var(--ev-border);
