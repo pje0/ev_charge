@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.boot.ev_charge.vehicle.VehicleMapper">
+
+    <select id="getUserVehicleList" parameterType="long" resultType="com.boot.ev_charge.vehicle.VehicleDto">
+        SELECT 
+            uv.id,
+            uv.user_id AS userId,
+            uv.model_id AS modelId,
+            uv.car_number AS carNumber,
+            uv.nickname,
+            uv.is_primary AS isPrimary,
+            uv.created_at AS createdAt,
+            em.manufacturer,
+            em.model_name AS modelName,
+            em.car_size AS carSize,
+            em.connector_type AS connectorType,
+            em.battery_capacity AS batteryCapacity,
+            em.max_range AS maxRange,
+            em.efficiency
+        FROM user_vehicle uv
+        JOIN ev_model em ON uv.model_id = em.id
+        WHERE uv.user_id = #{userId}
+        ORDER BY uv.is_primary DESC, uv.id DESC
+    </select>
+
+    <insert id="insertUserVehicle" parameterType="com.boot.ev_charge.vehicle.VehicleDto">
+        INSERT INTO user_vehicle (
+            user_id, model_id, car_number, nickname, is_primary
+        ) VALUES (
+            #{userId}, #{modelId}, #{carNumber}, #{nickname}, #{isPrimary}
+        )
+    </insert>
+
+    <delete id="deleteUserVehicle">
+        DELETE FROM user_vehicle 
+        WHERE id = #{vehicleId} AND user_id = #{userId}
+    </delete>
+
+    <update id="resetPrimaryVehicle" parameterType="long">
+        UPDATE user_vehicle 
+        SET is_primary = 0 
+        WHERE user_id = #{userId}
+    </update>
+
+    <update id="setPrimaryVehicle">
+        UPDATE user_vehicle 
+        SET is_primary = 1 
+        WHERE id = #{vehicleId} AND user_id = #{userId}
+    </update>
+
+    <select id="getAllEvModels" resultType="com.boot.ev_charge.vehicle.VehicleDto">
+        SELECT 
+            id AS modelId,
+            manufacturer,
+            model_name AS modelName,
+            car_size AS carSize,
+            connector_type AS connectorType,
+            battery_capacity AS batteryCapacity,
+            max_range AS maxRange,
+            efficiency
+        FROM ev_model
+        ORDER BY manufacturer ASC, model_name ASC
+    </select>
+
+</mapper>

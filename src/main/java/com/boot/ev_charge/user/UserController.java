@@ -14,7 +14,8 @@ public class UserController {
     private UserService userService;
 
     @GetMapping("/login")
-    public String loginForm() {
+    public String loginForm(Model model) {
+        model.addAttribute("evModels", vehicleService.getAllEvModels());
         return "user/login";
     }
 
@@ -32,23 +33,41 @@ public class UserController {
         user.setLoginId(loginId);
         user.setPassword(password);
         user.setName(name);
+        if (email != null && email.trim().isEmpty()) {
+            email = null;
+        }
         user.setEmail(email);
         user.setPhone(phone);
 
         boolean result = userService.signup(user);
-
+        System.out.println("회원가입 후 user.getId(): " + user.getId());
+        
         if (result) {
-            // 차량 선택했으면 등록
+        	// 차량 선택했으면 등록
             if (modelId != null) {
-                com.boot.ev_charge.vehicle.VehicleDto vehicle = new com.boot.ev_charge.vehicle.VehicleDto();
+
+                System.out.println("선택한 modelId: " + modelId);
+
+                com.boot.ev_charge.vehicle.VehicleDto vehicle =
+                        new com.boot.ev_charge.vehicle.VehicleDto();
+
                 vehicle.setUserId(user.getId());
                 vehicle.setModelId(modelId);
+
+                System.out.println("vehicle userId: " + vehicle.getUserId());
+                System.out.println("vehicle modelId: " + vehicle.getModelId());
+
                 vehicleService.registerVehicle(vehicle);
+
+                System.out.println("차량 등록 호출 완료");
             }
+
             model.addAttribute("message", "회원가입 완료");
+
         } else {
             model.addAttribute("error", "중복된 계정");
         }
+        model.addAttribute("evModels", vehicleService.getAllEvModels());
 
         return "user/login";
     }

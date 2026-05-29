@@ -151,7 +151,7 @@
 								class="ev-auth-input">
 								<option value="">선택 안함</option>
 								<c:forEach var="car" items="${evModels}">
-									<option value="${car.id}">${car.manufacturer}
+									<option value="${car.modelId}">${car.manufacturer}
 										${car.modelName}</option>
 								</c:forEach>
 							</select>
