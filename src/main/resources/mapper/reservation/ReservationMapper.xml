@@ -5,9 +5,6 @@
 
 <mapper namespace="com.boot.ev_charge.reservation.ReservationMapper">
 
-    <!-- ===================================================== -->
-    <!-- 공통 예약 생성 -->
-    <!-- ===================================================== -->
     <insert id="insertReservation"
             parameterType="com.boot.ev_charge.reservation.ReservationDto"
             useGeneratedKeys="true"
@@ -16,74 +13,33 @@
         insert into reservation (
             user_id,
             charger_id,
-            reservation_type,
+            user_vehicle_id,  reservation_type,
             status,
-            car_type,
             reserved_at
         )
         values (
             #{userId},
             #{chargerId},
-            #{reservationType},
+            #{userVehicleId}, #{reservationType},
             'RESERVED',
-            #{carType},
             now()
         )
-
     </insert>
 
-
-    <!-- ===================================================== -->
-    <!-- 시간 예약 생성 -->
-    <!-- ===================================================== -->
-    <insert id="insertReservationTime"
-            parameterType="com.boot.ev_charge.reservation.ReservationDto">
-
-        insert into reservation_time (
-            reservation_id,
-            start_time,
-            end_time
-        )
-        values (
-            #{id},
-            #{startTime},
-            #{endTime}
-        )
-
+    <insert id="insertReservationTime" parameterType="com.boot.ev_charge.reservation.ReservationDto">
+        insert into reservation_time (reservation_id, start_time, end_time)
+        values (#{id}, #{startTime}, #{endTime})
     </insert>
 
-
-    <!-- ===================================================== -->
-    <!-- 목표 충전량 예약 생성 -->
-    <!-- ===================================================== -->
-    <insert id="insertReservationTarget"
-            parameterType="com.boot.ev_charge.reservation.ReservationDto">
-
-        insert into reservation_target (
-            reservation_id,
-            target_kwh,
-            max_minutes
-        )
-        values (
-            #{id},
-            #{targetKwh},
-            #{maxMinutes}
-        )
-
+    <insert id="insertReservationTarget" parameterType="com.boot.ev_charge.reservation.ReservationDto">
+        insert into reservation_target (reservation_id, target_kwh, max_minutes)
+        values (#{id}, #{targetKwh}, #{maxMinutes})
     </insert>
 
-
-    <!-- ===================================================== -->
-    <!-- 시간 중복 검사 -->
-    <!-- ===================================================== -->
-	<select id="countDuplicateReservation"
-            parameterType="com.boot.ev_charge.reservation.ReservationDto"
-            resultType="int">
-
+    <select id="countDuplicateReservation" parameterType="com.boot.ev_charge.reservation.ReservationDto" resultType="int">
         SELECT count(*)
         FROM reservation r
-        JOIN reservation_time rt
-            ON r.id = rt.reservation_id
+        JOIN reservation_time rt ON r.id = rt.reservation_id
         WHERE r.status IN ('RESERVED', 'CHARGING')
         AND r.charger_id = #{chargerId} 
         <![CDATA[
@@ -92,166 +48,80 @@
         ]]>
     </select>
 
-    <!-- ===================================================== -->
-    <!-- 예약 상세 조회 -->
-    <!-- ===================================================== -->
-    <select id="getReservationDetail"
-            parameterType="long"
-            resultType="com.boot.ev_charge.reservation.ReservationDto">
-
+    <select id="getReservationDetail" parameterType="long" resultType="com.boot.ev_charge.reservation.ReservationDto">
         select
             r.id,
             r.user_id as userId,
             r.charger_id as chargerId,
-            r.reservation_type as reservationType,
+            r.user_vehicle_id as userVehicleId,
+            em.model_name as carType, r.reservation_type as reservationType,
             r.status,
-            r.car_type as carType,
             r.reserved_at as reservedAt,
             r.actual_start_time as actualStartTime,
             r.actual_end_time as actualEndTime,
-
             rt.start_time as startTime,
             rt.end_time as endTime,
-
             tgt.target_kwh as targetKwh,
             tgt.max_minutes as maxMinutes
-
         from reservation r
-
-        left join reservation_time rt
-            on r.id = rt.reservation_id
-
-        left join reservation_target tgt
-            on r.id = tgt.reservation_id
-
-        where r.id = #{reservationId}
-
+        left join reservation_time rt on r.id = rt.reservation_id
+        left join reservation_target tgt on r.id = tgt.reservation_id
+        left join user_vehicle uv on r.user_vehicle_id = uv.id  left join ev_model em on uv.model_id = em.id            where r.id = #{reservationId}
     </select>
 
-
-    <!-- ===================================================== -->
-    <!-- 회원 예약 목록 -->
-    <!-- ===================================================== -->
-    <select id="getReservationListByUser"
-            parameterType="long"
-            resultType="com.boot.ev_charge.reservation.ReservationDto">
-
+    <select id="getReservationListByUser" parameterType="long" resultType="com.boot.ev_charge.reservation.ReservationDto">
         select
             r.id,
             r.user_id as userId,
             r.charger_id as chargerId,
-            r.reservation_type as reservationType,
+            r.user_vehicle_id as userVehicleId,
+            em.model_name as carType, r.reservation_type as reservationType,
             r.status,
-            r.car_type as carType,
             r.reserved_at as reservedAt,
-
             rt.start_time as startTime,
             rt.end_time as endTime,
-
             tgt.target_kwh as targetKwh,
             tgt.max_minutes as maxMinutes
-
         from reservation r
-
-        left join reservation_time rt
-            on r.id = rt.reservation_id
-
-        left join reservation_target tgt
-            on r.id = tgt.reservation_id
-
+        left join reservation_time rt on r.id = rt.reservation_id
+        left join reservation_target tgt on r.id = tgt.reservation_id
+        left join user_vehicle uv on r.user_vehicle_id = uv.id 
+        left join ev_model em on uv.model_id = em.id
         where r.user_id = #{userId}
-
         order by r.id desc
-
     </select>
 
-
-    <!-- ===================================================== -->
-    <!-- 충전 시작 -->
-    <!-- ===================================================== -->
-	<update id="startCharging"
-            parameterType="long">
-
-        update reservation
-        set
-            status = 'CHARGING',
-            actual_start_time = now()
-        where id = #{reservationId}
-
+    <update id="startCharging" parameterType="long">
+        update reservation set status = 'CHARGING', actual_start_time = now() where id = #{reservationId}
     </update>
 
-
-    <!-- ===================================================== -->
-    <!-- 충전 완료 -->
-    <!-- ===================================================== -->
-    <update id="completeCharging"
-            parameterType="long">
-
-        update reservation
-        set
-            status = 'COMPLETED',
-            actual_end_time = now()
-        where id = #{reservationId}
-
+    <update id="completeCharging" parameterType="long">
+        update reservation set status = 'COMPLETED', actual_end_time = now() where id = #{reservationId}
     </update>
 
-
-    <!-- ===================================================== -->
-    <!-- 예약 취소 -->
-    <!-- ===================================================== -->
-    <update id="cancelReservation"
-            parameterType="long">
-
-        update reservation
-        set status = 'CANCELED'
-        where id = #{reservationId}
-
+    <update id="cancelReservation" parameterType="long">
+        update reservation set status = 'CANCELED' where id = #{reservationId}
     </update>
 
-
-    <!-- ===================================================== -->
-    <!-- 예약 시간 만료 처리 -->
-    <!-- ===================================================== -->
     <update id="expireReservation">
-
         update reservation r
-        join reservation_time rt
-            on r.id = rt.reservation_id
-
+        join reservation_time rt on r.id = rt.reservation_id
         set r.status = 'EXPIRED'
-
         where r.status = 'RESERVED'
-
-        <![CDATA[
-            and rt.end_time < now()
-        ]]>
-
+        <![CDATA[ and rt.end_time < now() ]]>
     </update>
     
-    <!-- ===================================================== -->
-    <!-- 충전기 목록 조회 -->
-    <!-- ===================================================== -->
-	<select id="getChargerList"
-            resultType="com.boot.ev_charge.station.ChargerDto">
-
-        select
-            id,
-            station_id as stationId,
-            connector_type as connectorType,
-            power_kw as powerKw,
-            status
-        from charger
-        order by id asc
-
+    <select id="getChargerList" resultType="com.boot.ev_charge.station.ChargerDto">
+        select id, station_id as stationId, connector_type as connectorType, power_kw as powerKw, status
+        from charger order by id asc
     </select>
     
-	<select id="getReservedTimes" resultType="com.boot.ev_charge.reservation.ReservationDto">
+    <select id="getReservedTimes" resultType="com.boot.ev_charge.reservation.ReservationDto">
         SELECT 
             DATE_FORMAT(rt.start_time, '%Y-%m-%d %H:%i:%s') AS startTime,
             DATE_FORMAT(rt.end_time, '%Y-%m-%d %H:%i:%s') AS endTime
         FROM reservation r
-        JOIN reservation_time rt 
-            ON r.id = rt.reservation_id
+        JOIN reservation_time rt ON r.id = rt.reservation_id
         WHERE DATE(rt.start_time) = #{date}
           AND r.status IN ('RESERVED', 'CHARGING')
           <choose>
@@ -265,39 +135,16 @@
     </select>
 
     <select id="getStationList" resultType="com.boot.ev_charge.station.StationDto">
-        select 
-            id,
-            name,
-            address,
-            metro,
-            city,
-            rapid_cnt as rapidCnt,
-            slow_cnt as slowCnt,
-            car_type as carType,
-            latitude,
-            longitude
-        from station
-        order by name asc
+        select id, name, address, metro, city, rapid_cnt as rapidCnt, slow_cnt as slowCnt, car_type as carType, latitude, longitude
+        from station order by name asc
     </select>
     
     <select id="getChargersByStationId" parameterType="long" resultType="com.boot.ev_charge.station.ChargerDto">
-        select
-            id,
-            station_id as stationId,
-            connector_type as connectorType,
-            power_kw as powerKw,
-            status
-        from charger
-        where station_id = #{stationId}
-        order by id asc
+        select id, station_id as stationId, connector_type as connectorType, power_kw as powerKw, status
+        from charger where station_id = #{stationId} order by id asc
     </select>
     
-	<!-- ===================================================== -->
-    <!-- [관리자 전용] 전체 회원 예약 내역 조회 (검색 필터 포함) -->
-    <!-- ===================================================== -->
-    <select id="getAdminReservationList"
-            parameterType="map"
-            resultType="com.boot.ev_charge.reservation.ReservationDto">
+    <select id="getAdminReservationList" parameterType="map" resultType="com.boot.ev_charge.reservation.ReservationDto">
         SELECT
             r.id,
             r.user_id AS userId,
@@ -308,8 +155,8 @@
             s.name AS stationName,
             r.reservation_type AS reservationType,
             r.status,
-            r.car_type AS carType,
-            r.reserved_at AS reservedAt,
+            r.user_vehicle_id AS userVehicleId,
+            em.model_name AS carType, r.reserved_at AS reservedAt,
             rt.start_time AS startTime,
             rt.end_time AS endTime,
             tgt.target_kwh AS targetKwh,
@@ -320,6 +167,8 @@
         LEFT JOIN station s ON c.station_id = s.id
         LEFT JOIN reservation_time rt ON r.id = rt.reservation_id
         LEFT JOIN reservation_target tgt ON r.id = tgt.reservation_id
+        LEFT JOIN user_vehicle uv on r.user_vehicle_id = uv.id 
+        LEFT JOIN ev_model em on uv.model_id = em.id
         <where>
             <if test="searchStatus != null and searchStatus != ''">
                 AND r.status = #{searchStatus}
@@ -346,11 +195,19 @@
         ORDER BY r.id DESC
     </select>
 
-    <!-- ===================================================== -->
-    <!-- [관리자 전용] 예약 데이터 완전 삭제 (DB에서 즉시 제거) -->
-    <!-- ===================================================== -->
     <delete id="deleteReservationById" parameterType="long">
         DELETE FROM reservation WHERE id = #{reservationId}
     </delete>
+    
+    <select id="getUserChargeStatistics" parameterType="long" resultType="map">
+        SELECT 
+            COUNT(r.id) AS totalChargeCount,
+            COALESCE(SUM(rt.target_kwh), 0) AS totalChargeKw,
+            ROUND(COALESCE(SUM(rt.target_kwh), 0) * 0.42, 1) AS savedCarbon
+        FROM reservation r
+        LEFT JOIN reservation_target rt ON r.id = rt.reservation_id
+        WHERE r.user_id = #{userId} 
+          AND r.status = 'COMPLETED'
+    </select>
 
 </mapper>

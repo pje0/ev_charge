@@ -1,10 +1,13 @@
 package com.boot.ev_charge.mypage;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder; //시큐리티 인코더 임포트
 import org.springframework.stereotype.Service;
+
+import com.boot.ev_charge.reservation.ReservationMapper;
 
 @Service
 public class MyPageService {
@@ -15,9 +18,57 @@ public class MyPageService {
 	@Autowired
 	private PasswordEncoder passwordEncoder; //시큐리티 비밀번호 암호화 빈 주입
 	
-	public MyPageDto getUserById(int userId) {
-		return myPageMapper.getUserById(userId);
-	}
+// MyPageService.java 내부
+    
+    @Autowired
+    private ReservationMapper reservationMapper; // 🟢 예약 매퍼 주입 (없으면 상단에 추가)
+
+    public MyPageDto getUserById(int userId) {
+        MyPageDto dto = myPageMapper.getUserById(userId); 
+        
+        if (dto != null) {
+            try {
+                Long longUserId = (long) userId;
+                Map<String, Object> stats = reservationMapper.getUserChargeStatistics(longUserId);
+                
+                if (stats != null) {
+                    int count = 0;
+                    double totalKw = 0.0;
+                    double carbon = 0.0;
+                    
+                    // 🌟 핵심: DB 툴에 따라 키 값이 대문자(TOTALCHARGECOUNT)로 넘어올 수 있으므로, 소문자로 강제 변환하여 안전하게 검사
+                    for (String key : stats.keySet()) {
+                        String lowerKey = key.toLowerCase();
+                        Object value = stats.get(key);
+                        
+                        if (value != null) {
+                            if (lowerKey.equals("totalchargecount")) {
+                                count = Integer.parseInt(String.valueOf(value));
+                            } else if (lowerKey.equals("totalchargekw")) {
+                                totalKw = Double.parseDouble(String.valueOf(value));
+                            } else if (lowerKey.equals("savedcarbon")) {
+                                carbon = Double.parseDouble(String.valueOf(value));
+                            }
+                        }
+                    }
+                    
+                    System.out.println("✅ [MyPageService] 통계 맵핑 완료! 횟수: " + count + "회, 전력량: " + totalKw + "kWh");
+                    
+                    dto.setTotalChargeCount(count);
+                    dto.setTotalChargeKw(totalKw);
+                    dto.setSavedCarbon(carbon);
+                }
+            } catch (Exception e) {
+                System.out.println("❌ [MyPageService] 통계 맵핑 에러 발생! 아래 원인을 확인하세요.");
+                e.printStackTrace(); // 어떤 에러인지 콘솔에 확실히 찍어줌
+                
+                dto.setTotalChargeCount(0);
+                dto.setTotalChargeKw(0.0);
+                dto.setSavedCarbon(0.0);
+            }
+        }
+        return dto;
+    }
 	
 	public boolean updateUserInfo(MyPageDto dto) {
 	    // 1. DB에서 데이터 가져오기

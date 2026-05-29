@@ -1,6 +1,7 @@
 package com.boot.ev_charge.reservation;
 
 import java.util.List;
+import java.util.Map;
 
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -42,4 +43,9 @@ public interface ReservationMapper {
     int deleteReservationTimeByResId(Long reservationId);
     int deleteReservationTargetByResId(Long reservationId);
     int updateReservationMaster(ReservationDto dto);
+    
+    // 🟢 특정 유저의 완료된 충전 통계 데이터 실시간 조회 (횟수, 누적 전력량, 탄소 절감량)
+    // @param userId 로그인한 회원의 고유 ID
+    // @return 통계 필드명을 key로 하는 Map 객체
+    Map<String, Object> getUserChargeStatistics(@Param("userId") Long userId);
 }

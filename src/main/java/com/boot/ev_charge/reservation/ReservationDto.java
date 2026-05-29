@@ -11,6 +11,7 @@ public class ReservationDto {
     private Long userId;    // 예약한 회원 ID (user 테이블 FK)
     private Long chargerId; // 예약한 충전기 ID (charger 테이블 FK)
     private Long stationId; // 충전소 ID (station 테이블 FK 또는 조회용)
+    private Long userVehicleId;
 
     private String reservationType;     // 예약 유형 (시간 예약 TIME, 목표 충전량 예약 TARGET)
     private String status;              // 예약 상태

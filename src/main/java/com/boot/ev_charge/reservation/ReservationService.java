@@ -1,7 +1,9 @@
 package com.boot.ev_charge.reservation;
 
 import java.sql.Timestamp;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -185,5 +187,26 @@ public class ReservationService {
         }
         
         log.info("## [Service] 예약 수정 완료 -> Reservation ID: {}", dto.getId());
+    }
+    
+    public Map<String, Object> getMypageStats(Long userId) {
+        log.info("📊 [Service] 마이페이지 실시간 통계 연산 가동 -> User ID: {}", userId);
+        
+        // DB에서 통계 데이터 맵 수신
+        Map<String, Object> statsMap = reservationMapper.getUserChargeStatistics(userId);
+        
+        // 만약 충전 내역이 아예 없는 신규 회원의 경우 null 리턴 대비 방어막 구축
+        if (statsMap == null) {
+            log.warn("⚠️ [Service] 조회된 통계 데이터가 없어 기본값(0)으로 초기화 맵을 생성합니다.");
+            statsMap = new HashMap<>();
+            statsMap.put("totalChargeCount", 0);
+            statsMap.put("totalChargeKw", 0.0);
+            statsMap.put("savedCarbon", 0.0);
+        }
+        
+        log.info("✅ [Service] 통계 계산 완료 -> 횟수: {}회, 총량: {}kWh, 탄소: {}kg", 
+                 statsMap.get("totalChargeCount"), statsMap.get("totalChargeKw"), statsMap.get("savedCarbon"));
+                 
+        return statsMap;
     }
 }
