@@ -11,6 +11,7 @@ public class ReservationDto {
     private Long userId;    // 예약한 회원 ID (user 테이블 FK)
     private Long chargerId; // 예약한 충전기 ID (charger 테이블 FK)
     private Long stationId; // 충전소 ID (station 테이블 FK 또는 조회용)
+    private Long userVehicleId;
 
     private String reservationType;     // 예약 유형 (시간 예약 TIME, 목표 충전량 예약 TARGET)
     private String status;              // 예약 상태
@@ -32,6 +33,7 @@ public class ReservationDto {
 
     // TARGET 예약
     private Integer targetKwh;   // 목표 충전량(kWh)
+    private Integer targetPercent; // 추가: 프론트엔드 % 값 수신 전용 필드
     private Integer maxMinutes;  // 최대 충전 가능 시간(분)
     
     // 예약 생성 시간 관리

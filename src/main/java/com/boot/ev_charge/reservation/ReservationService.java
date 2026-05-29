@@ -1,7 +1,9 @@
 package com.boot.ev_charge.reservation;
 
 import java.sql.Timestamp;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -23,32 +25,29 @@ public class ReservationService {
     @Transactional
     public void createReservation(ReservationDto dto) {
 
-        // [시간 예약(TIME)인 경우 유효성 검증]
-        if ("TIME".equals(dto.getReservationType())) {
+        // 🌟 [버그 수리 1] "TIME" 조건문을 뜯어내어, "TARGET" 예약일 때도 무조건 시간 유효성 및 중복 검사를 수행하게 만듭니다.
+        int startMinute = dto.getStartTime().toLocalDateTime().getMinute();
+        int endMinute = dto.getEndTime().toLocalDateTime().getMinute();
 
-            int startMinute = dto.getStartTime().toLocalDateTime().getMinute();
-            int endMinute = dto.getEndTime().toLocalDateTime().getMinute();
+        // 30분 단위 검증
+        if (!((startMinute == 0 || startMinute == 30) && (endMinute == 0 || endMinute == 30))) {
+            throw new RuntimeException("30분 단위 예약만 가능합니다.");
+        }
 
-            // 30분 단위 검증
-            if (!((startMinute == 0 || startMinute == 30) && (endMinute == 0 || endMinute == 30))) {
-                throw new RuntimeException("30분 단위 예약만 가능합니다.");
-            }
+        // 시간 순서 검증
+        if (!dto.getEndTime().after(dto.getStartTime())) {
+            throw new RuntimeException("종료시간은 시작 시간 이후여야 합니다.");
+        }
 
-            // 시간 순서 검증
-            if (!dto.getEndTime().after(dto.getStartTime())) {
-                throw new RuntimeException("종료시간은 시작 시간 이후여야 합니다.");
-            }
+        // 과거 시간 검증
+        if (dto.getStartTime().before(new Timestamp(System.currentTimeMillis()))) {
+            throw new RuntimeException("과거 시간은 예약할 수 없습니다.");
+        }
 
-            // 과거 시간 검증
-            if (dto.getStartTime().before(new Timestamp(System.currentTimeMillis()))) {
-                throw new RuntimeException("과거 시간은 예약할 수 없습니다.");
-            }
-
-            // 중복 예약 검증
-            int count = reservationMapper.countDuplicateReservation(dto);
-            if (count > 0) {
-                throw new RuntimeException("이미 예약된 시간입니다.");
-            }
+        // 중복 예약 검증
+        int count = reservationMapper.countDuplicateReservation(dto);
+        if (count > 0) {
+            throw new RuntimeException("이미 예약된 시간입니다.");
         }
 
         // 2. 공통 예약 마스터 테이블 저장 (무조건 1번만 실행)
@@ -59,6 +58,8 @@ public class ReservationService {
             reservationMapper.insertReservationTime(dto);
         } else if ("TARGET".equals(dto.getReservationType())) {
             reservationMapper.insertReservationTarget(dto);
+            // 🌟 [버그 수리 2 핵심] TARGET 예약도 타임 슬롯을 점유해야 하므로 Time 테이블에 함께 기록을 남겨줍니다!
+            reservationMapper.insertReservationTime(dto);
         }
     }
 
@@ -87,12 +88,6 @@ public class ReservationService {
         reservationMapper.cancelReservation(reservationId);
     }
 
-    // 7. 예약 자동 만료 처리 스케줄러 (필요 시 주석 해제하여 사용 가능)
-    // @Scheduled(fixedRate = 60000)
-    // public void expireReservation() {
-    //     reservationMapper.expireReservation();
-    // }
-    
     // 8. 충전기 목록 조회
     public List<ChargerDto> getChargerList() {
         return reservationMapper.getChargerList();
@@ -104,7 +99,6 @@ public class ReservationService {
         log.info("## [Service] getReservedTimes 가동 -> chargerId: {}, stationId: {}, date: {}", chargerId, stationId, date);
         
         try {
-            // MyBatis 매퍼 인터페이스로 3개의 인자(chargerId, stationId, date)를 안전하게 패스합니다.
             List<ReservationDto> dtoList = reservationMapper.getReservedTimes(chargerId, stationId, date);
             
             if (dtoList == null) {
@@ -130,34 +124,31 @@ public class ReservationService {
         return reservationMapper.getChargersByStationId(stationId);
     }
     
- // 🌟 목표 충전량에 따른 예상 소요 시간 계산 메서드 (서비스 내부 활용)
+    // 🌟 목표 충전량에 따른 예상 소요 시간 계산 메서드
     public int calculateRequiredMinutes(Integer targetPercent, double chargerKw) {
         if (targetPercent == null || targetPercent <= 0) return 0;
         
-        double batteryCapacity = 70.0; // 기본 차량 배터리 용량 70kWh 가정
-        double currentPercent = 20.0;  // 현재 잔량 20% 가정
+        double batteryCapacity = 70.0; 
+        double currentPercent = 20.0;  
         
         if (targetPercent <= currentPercent) return 0;
         
-        // 필요한 충전량 (kWh)
         double requiredKwh = batteryCapacity * ((targetPercent - currentPercent) / 100.0);
         
-        // 기본 소요 시간 (시간 단위 -> 분 단위 변환)
         double durationHours = requiredKwh / chargerKw;
         int requiredMinutes = (int) Math.ceil(durationHours * 60);
         
-        // 🌟 [가중치 보정] 80%를 초과하는 급속 구간은 속도가 저하되므로 시간 1.5배 가중
         if (targetPercent > 80 && chargerKw >= 50) {
             double overEightyKwh = batteryCapacity * ((targetPercent - 80) / 100.0);
-            double extraHours = (overEightyKwh / chargerKw) * 0.5; // 50% 지연 가중
+            double extraHours = (overEightyKwh / chargerKw) * 0.5; 
             requiredMinutes += (int) Math.ceil(extraHours * 60);
         }
         
-        // 🌟 [안전 버퍼] 노쇼 및 오버타임 방지용 버퍼 15분 추가
         requiredMinutes += 15;
         
         return requiredMinutes;
     }
+
     // [관리자 전용] 조건별 전체 예약 리스트 서비스
     public List<ReservationDto> getAdminReservationList(String searchStatus, String searchType, String searchKeyword) {
         return reservationMapper.getAdminReservationList(searchStatus, searchType, searchKeyword);
@@ -167,5 +158,55 @@ public class ReservationService {
     @Transactional
     public boolean deleteAdminReservation(Long reservationId) {
         return reservationMapper.deleteReservationById(reservationId) > 0;
+    }
+    
+ // =====================================================
+    // 🟢 예약 수정 비즈니스 로직 추가
+    // =====================================================
+    @Transactional
+    public void updateReservation(ReservationDto dto) {
+        log.info("## [Service] 예약 수정 로직 가동 -> Reservation ID: {}", dto.getId());
+
+        // 1. (선택 사항) TIME 타입일 경우 시간 유효성 및 중복 검사 로직 재수행 가능 
+        // (createReservation에 있던 검증 로직을 별도 메서드로 빼서 재사용하면 더 좋습니다)
+
+        // 2. 예약 마스터 테이블 타입 업데이트
+        reservationMapper.updateReservationMaster(dto);
+
+        // 3. 기존 하위 상세 데이터 완전히 삭제 (초기화)
+        reservationMapper.deleteReservationTimeByResId(dto.getId());
+        reservationMapper.deleteReservationTargetByResId(dto.getId());
+
+        // 4. 새로운 예약 데이터 인서트
+        if ("TIME".equals(dto.getReservationType())) {
+            reservationMapper.insertReservationTime(dto);
+        } else if ("TARGET".equals(dto.getReservationType())) {
+            reservationMapper.insertReservationTarget(dto);
+            // TARGET 예약도 타임 슬롯을 점유해야 하므로 Time 테이블에 함께 기록
+            reservationMapper.insertReservationTime(dto);
+        }
+        
+        log.info("## [Service] 예약 수정 완료 -> Reservation ID: {}", dto.getId());
+    }
+    
+    public Map<String, Object> getMypageStats(Long userId) {
+        log.info("📊 [Service] 마이페이지 실시간 통계 연산 가동 -> User ID: {}", userId);
+        
+        // DB에서 통계 데이터 맵 수신
+        Map<String, Object> statsMap = reservationMapper.getUserChargeStatistics(userId);
+        
+        // 만약 충전 내역이 아예 없는 신규 회원의 경우 null 리턴 대비 방어막 구축
+        if (statsMap == null) {
+            log.warn("⚠️ [Service] 조회된 통계 데이터가 없어 기본값(0)으로 초기화 맵을 생성합니다.");
+            statsMap = new HashMap<>();
+            statsMap.put("totalChargeCount", 0);
+            statsMap.put("totalChargeKw", 0.0);
+            statsMap.put("savedCarbon", 0.0);
+        }
+        
+        log.info("✅ [Service] 통계 계산 완료 -> 횟수: {}회, 총량: {}kWh, 탄소: {}kg", 
+                 statsMap.get("totalChargeCount"), statsMap.get("totalChargeKw"), statsMap.get("savedCarbon"));
+                 
+        return statsMap;
     }
 }

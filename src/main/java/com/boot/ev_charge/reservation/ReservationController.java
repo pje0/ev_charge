@@ -81,9 +81,9 @@ public class ReservationController {
     }
     
     // 4. 내 예약 목록 조회 (마이페이지용)
-    @GetMapping("/my")
+    @GetMapping("//mypage")
     public String myReservation(@AuthenticationPrincipal UserDetails userDetails, Model model) {
-        log.info("@# [GET] /reservation/my -> myReservation() 호출");
+        log.info("@# [GET] /reservation//mypage -> /mypage() 호출");
         
         if (userDetails == null) {
             log.warn("@# [경고] 내 예약 목록 요청했으나 세션 없음");
@@ -180,6 +180,48 @@ public class ReservationController {
         } catch (Exception e) {
             log.error("@# [오류 발생] 예약 시간 조회 중 에러 발생: {}", e.getMessage(), e);
             return java.util.Collections.emptyList(); 
+        }
+    }
+    
+    // =====================================================
+    // 🟢 예약 수정 페이지 이동 (마이페이지 -> 수정 페이지)
+    // =====================================================
+    @GetMapping("/mypage/reservation/edit")
+    public String editReservationFromMyPage(@RequestParam("id") Long id, 
+                                            Model model, 
+                                            @AuthenticationPrincipal UserDetails userDetails) {
+        if (userDetails == null) return "redirect:/login";
+        
+        // 예약 상세 정보 조회
+        ReservationDto res = reservationService.getReservationDetail(id);
+        model.addAttribute("res", res);
+        model.addAttribute("today", LocalDate.now().toString());
+        
+        // 🚨 파일 경로와 일치하게 뷰 이름을 반환하세요! 
+        // 예: /WEB-INF/views/reservation/reservationEdit.jsp 라면 아래와 같이
+        return "reservation/reservationEdit"; 
+    }
+
+    // =====================================================
+    // 🟢 예약 수정 폼 제출 처리 (Fetch API 대응)
+    // =====================================================
+    @PostMapping("/update")
+    @ResponseBody
+    public String updateReservationAction(ReservationDto reservationDto, 
+                                          @AuthenticationPrincipal UserDetails userDetails) {
+        log.info("@# [POST] /reservation/update -> updateReservationAction() 가동");
+        
+        if (userDetails == null) {
+            return "FAIL:LOGIN_REQUIRED";
+        }
+
+        try {
+            // Service를 통해 데이터 덮어쓰기
+            reservationService.updateReservation(reservationDto);
+            return "SUCCESS";
+        } catch (Exception e) {
+            log.error("@# [예약 수정 에러] {}", e.getMessage());
+            return "FAIL:ERROR";
         }
     }
 }

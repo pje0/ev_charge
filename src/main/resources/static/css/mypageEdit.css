@@ -1,0 +1,137 @@
+@charset "UTF-8";
+
+/* ============================================================
+   EV 충전소 - 회원정보수정 전용 스타일 (공통 디자인 가이드 준수)
+   prefix: ev-mypageEdit-
+   ============================================================ */
+
+/* ── 바디 기본 제어 ── */
+.ev-mypageEdit-body {
+    background-color: #f9fafb;
+    margin: 0;
+    font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+    color: #374151;
+}
+
+/* ── 전체 패딩 및 상단 공통 눈높이 맞춤 정렬 ── */
+.ev-mypageEdit-main {
+    width: 100%;
+    padding-top: 150px; /* 🟢 마이페이지 및 공지사항과 칼각 높이 동기화 */
+    padding-bottom: 3rem;
+    min-height: 100vh;
+    box-sizing: border-box;
+}
+
+.ev-mypageEdit-container {
+    max-width: 32rem; /* max-w-lg (512px) 매칭 */
+    margin: 0 auto;
+    padding: 0 1rem;
+    box-sizing: border-box;
+}
+
+.ev-mypageEdit-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0 0 2rem 0;
+    color: #111827;
+    text-align: left;
+}
+
+/* ── 폼 컨테이너 박스 ── */
+.ev-mypageEdit-form {
+    background-color: #ffffff;
+    padding: 2rem;
+    border-radius: 1rem;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+}
+
+.ev-mypageEdit-form-body {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem; /* space-y-6 매칭 */
+}
+
+.ev-mypageEdit-form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.ev-mypageEdit-label {
+    display: block;
+    text-align: left;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 0.5rem;
+}
+
+/* ── 인풋 컨트롤 요소 ── */
+.ev-mypageEdit-input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.75rem;
+    font-size: 0.875rem;
+    outline: none;
+    box-sizing: border-box;
+    transition: all 0.2s ease-in-out;
+}
+
+.ev-mypageEdit-input:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+}
+
+/* ── 구분선 및 안내문구 ── */
+.ev-mypageEdit-divider {
+    margin: 0.5rem 0;
+    border: 0;
+    border-top: 1px solid #e5e7eb;
+}
+
+.ev-mypageEdit-notice {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    margin: 0;
+    text-align: left;
+}
+
+/* ── 하단 액션 버튼 그룹 ── */
+.ev-mypageEdit-btn-group {
+    margin-top: 2rem;
+    display: flex;
+    gap: 0.75rem;
+}
+
+.ev-mypageEdit-btn {
+    flex: 1;
+    padding: 0.75rem 0;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border-radius: 0.75rem;
+    cursor: pointer;
+    text-align: center;
+    transition: background-color 0.2s ease-in-out;
+    box-sizing: border-box;
+}
+
+.ev-mypageEdit-btn-cancel {
+    border: 1px solid #d1d5db;
+    background-color: #ffffff;
+    color: #4b5563;
+}
+
+.ev-mypageEdit-btn-cancel:hover {
+    background-color: #f9fafb;
+}
+
+.ev-mypageEdit-btn-submit {
+    border: none;
+    background-color: #2563eb;
+    color: #ffffff;
+}
+
+.ev-mypageEdit-btn-submit:hover {
+    background-color: #1d4ed8;
+}
