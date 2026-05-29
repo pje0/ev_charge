@@ -274,4 +274,41 @@ public class MapController {
             );
         }
     }
+    
+    @GetMapping("/api/directions")
+    @ResponseBody
+    public Object getDirections(
+            @RequestParam(name = "startLat") double startLat,
+            @RequestParam(name = "startLng") double startLng,
+            @RequestParam(name = "endLat") double endLat,
+            @RequestParam(name = "endLng") double endLng) {
+        try {
+            org.springframework.web.util.UriComponentsBuilder builder =
+                org.springframework.web.util.UriComponentsBuilder
+                .fromHttpUrl("https://apis-navi.kakaomobility.com/v1/directions")
+                    .queryParam("origin", startLng + "," + startLat)
+                    .queryParam("destination", endLng + "," + endLat)
+                    .queryParam("priority", "RECOMMEND")
+                    .queryParam("road_details", true);
+
+            HttpHeaders kakaoHeaders = new HttpHeaders();
+            kakaoHeaders.set("Authorization", "KakaoAK " + KAKAO_REST_API_KEY);
+            HttpEntity<String> kakaoEntity = new HttpEntity<>(kakaoHeaders);
+
+            RestTemplate restTemplate = new RestTemplate();
+            ResponseEntity<String> response = restTemplate.exchange(
+                builder.build().encode().toUri(),
+                HttpMethod.GET,
+                kakaoEntity,
+                String.class
+            );
+
+            ObjectMapper mapper = new ObjectMapper();
+            return mapper.readValue(response.getBody(), Map.class);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Map.of("error", e.getMessage());
+        }
+    }
 }
