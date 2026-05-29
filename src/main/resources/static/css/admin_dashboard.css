@@ -1,113 +1,127 @@
-/* ============================================================
-   관리자 Dashboard 전용 스타일
-   common.css 디자인 시스템 상속
-   ============================================================ */
-
-/* ── 전체 영역 ───────────────── */
+/* ── 전체 래퍼 ───────────────── */
 .dashboard-wrap {
-    margin-bottom: 32px;
+    /* common.css의 헤더 높이(64px)를 고려한 상단 여백 확보 */
+    margin-top: 84px; 
+    margin-bottom: 0px;
 }
 
-/* ── 헤더 ───────────────── */
+/* ── 헤더 (심플 타이틀) ───────────────── */
 .dashboard-header {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding: 0 4px;
 }
 
 .dashboard-header h2 {
-    font-size: 22px;
+    font-size: 20px;
     font-weight: 800;
     color: var(--ev-foreground);
-    margin-bottom: 4px;
+    margin: 0;
 }
 
 .dashboard-header p {
-    font-size: 14px;
+    font-size: 13px;
     color: var(--ev-muted-foreground);
+    margin: 0;
 }
 
-/* ── 카드 그리드 (3x2 중앙정렬) ───────────────── */
+/* ── 카드 그리드 (슬림 바 형태) ───────────────── */
 .dashboard-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(260px, 320px));
-    justify-content: center;
-    gap: 18px;
+    /* 6개 항목을 균등하게 한 줄 배치 */
+    grid-template-columns: repeat(6, 1fr); 
+    gap: 8px;
 }
 
-/* ── 카드 ───────────────── */
+/* ── 카드 (Status Bar 스타일) ───────────────── */
 .dashboard-card {
     background: #fff;
     border: 1px solid var(--ev-border);
-    border-radius: 14px;
-    padding: 20px;
-    min-height: 140px;
-
+    border-radius: 12px;
+    padding: 10px 14px;
+    /* 높이를 대폭 줄여서 상단 바 처럼 보이게 함 */
+    min-height: 74px; 
     display: flex;
     flex-direction: column;
     justify-content: center;
-    gap: 10px;
-
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-    transition: all 0.18s ease;
+    gap: 4px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 
 .dashboard-card:hover {
+    border-color: var(--ev-primary);
     transform: translateY(-2px);
-    box-shadow: 0 6px 18px rgba(0,0,0,0.07);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
-/* ── 카드 텍스트 ───────────────── */
+/* ── 카드 내부 요소 ───────────────── */
 .dash-label {
-    font-size: 13px;
-    font-weight: 600;
+    font-size: 11px;
+    font-weight: 700;
     color: var(--ev-muted-foreground);
-    letter-spacing: -0.2px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .dash-value {
-    font-size: 34px;
+    font-size: 22px;
     font-weight: 800;
     color: var(--ev-foreground);
     line-height: 1;
 }
 
-.dash-desc {
-    font-size: 12px;
-    color: var(--ev-muted-foreground);
-    line-height: 1.4;
+/* 미니 상태 표시 (안정, 활성 등) */
+.dash-meta {
+    font-size: 11px;
+    font-weight: 600;
+    margin-top: 2px;
 }
 
-/* ── 강조 카드 (미확인 문의) ───────────────── */
+.dash-trend.up { color: var(--ev-accent); } /* common.css의 accent 컬러 활용 */
+.dash-trend.down { color: var(--ev-destructive); }
+.dash-trend.neutral { color: var(--ev-muted-foreground); }
+
+/* ── 특수 상태 카드 ───────────────── */
+
+/* 알림 상태 (미확인 문의) */
 .dashboard-alert {
-    border-color: oklch(0.88 0.03 25);
-    background: oklch(0.985 0.01 25);
+    border-color: oklch(0.58 0.22 25 / 0.2);
+    background: oklch(0.58 0.22 25 / 0.02);
 }
+.dashboard-alert .dash-label { color: var(--ev-destructive); }
+.dashboard-alert .dash-value { color: var(--ev-destructive); }
 
-.dashboard-alert .dash-value {
-    color: var(--ev-destructive);
+/* 강조 상태 (충전중) */
+.dashboard-warning {
+    border-color: oklch(0.75 0.15 80 / 0.3);
 }
+.dashboard-warning .dash-value { color: oklch(0.65 0.18 80); }
 
 /* ── 반응형 ───────────────── */
-@media (max-width: 1024px) {
-
+@media (max-width: 1280px) {
     .dashboard-grid {
-        grid-template-columns: repeat(2, minmax(240px, 1fr));
+        grid-template-columns: repeat(3, 1fr);
     }
 }
 
 @media (max-width: 768px) {
+    .dashboard-wrap {
+        margin-top: 80px;
+    }
+    .dashboard-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .dash-value {
+        font-size: 22px;
+    }
+}
 
+@media (max-width: 480px) {
     .dashboard-grid {
         grid-template-columns: 1fr;
-    }
-
-    .dashboard-card {
-        min-height: 120px;
-    }
-
-    .dash-value {
-        font-size: 28px;
     }
 }
