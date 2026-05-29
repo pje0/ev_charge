@@ -1,0 +1,127 @@
+/* 1. 전체 컨테이너: 고정 높이를 주어 내부 스크롤 유도 */
+.admin-inquiry-layout {
+    display: flex !important;
+    width: 100%;
+    height: 600px;           /* 탭 내부에서 가질 고정 높이 */
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    overflow: hidden;        /* 전체 페이지가 길어지는 것 방지 */
+    margin-top: 10px;
+    box-sizing: border-box;
+}
+
+/* 2. 왼쪽 리스트 영역 */
+.inquiry-side-list {
+    width: 280px;
+    height: 100%;
+    border-right: 1px solid #f1f5f9;
+    display: flex;
+    flex-direction: column;
+    background: #ffffff;
+    flex-shrink: 0;          /* 리스트 너비 고정 */
+}
+
+.side-header {
+    padding: 16px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.list-wrapper {
+    flex: 1;
+    overflow-y: auto;        /* 리스트만 독립 스크롤 */
+}
+
+.room-item {
+    padding: 15px 18px;
+    border-bottom: 1px solid #f9fafb;
+    cursor: pointer;
+}
+
+.room-item.active {
+    background: #f3f4f6;
+    border-left: 4px solid #00459c;
+}
+
+/* 3. 오른쪽 채팅 메인 영역 */
+.inquiry-chat-main {
+    flex: 1;
+    height: 100%;            /* 부모 높이 100% 사용 */
+    display: flex;
+    flex-direction: column;  /* 위에서 아래로(헤더-내용-입력창) 배치 */
+    background: #ffffff;
+    overflow: hidden;        /* 자식들이 밀고 나가는 것 방지 */
+}
+
+/* ⭐ 중요: 채팅룸 레이아웃 컨테이너 */
+#chatRoomArea {
+    display: none;           /* 초기에는 숨김, JS에서 flex로 변경 */
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+}
+
+/* 채팅 헤더 (상단 고정) */
+.chat-header {
+    padding: 14px 20px;
+    background: #ffffff;
+    border-bottom: 1px solid #f3f4f6;
+    font-size: 14px;
+    font-weight: 700;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;          /* 절대 밀려나지 않음 */
+}
+
+/* 채팅 내용 (가변 높이 및 스크롤) */
+.chat-content {
+    flex: 1;                 /* 남은 공간을 모두 차지 ⭐ 핵심 */
+    padding: 20px;
+    overflow-y: auto;        /* ⭐ 여기서만 스크롤 발생 */
+    background: #f8fafc;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 0;           /* flex 자식의 높이 버그 방지 */
+}
+
+/* 말풍선 스타일 */
+.msg { display: flex; width: 100%; }
+.msg .txt {
+    padding: 10px 14px;
+    font-size: 13px;
+    border-radius: 8px;
+    max-width: 75%;
+    line-height: 1.5;
+    word-break: break-all;
+}
+.msg.me { justify-content: flex-end; }
+.msg.me .txt { background: #00459c; color: #ffffff; }
+.msg.admin { justify-content: flex-start; }
+.msg.admin .txt { background: #ffffff; border: 1px solid #e5e7eb; color: #111827; }
+
+/* 하단 입력창 (하단 고정) */
+.chat-input-wrap {
+    padding: 16px;
+    border-top: 1px solid #f1f5f9;
+    background: #ffffff;
+    display: flex;
+    gap: 10px;
+    flex-shrink: 0;          /* 내용에 밀려서 밑으로 사라지지 않음 ⭐ 핵심 */
+}
+
+#adminMsgInput {
+    flex: 1;
+    padding: 10px 12px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    font-size: 13px;
+    outline: none;
+}
+
+/* 스크롤바 디자인 */
+.list-wrapper::-webkit-scrollbar,
+.chat-content::-webkit-scrollbar { width: 5px; }
+.list-wrapper::-webkit-scrollbar-thumb,
+.chat-content::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 10px; }
