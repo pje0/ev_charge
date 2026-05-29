@@ -27,8 +27,9 @@
         UPDATE notification SET is_read = 'Y' WHERE id = #{id}
     </update>
 
-    <update id="updateAllNotificationReadStatus">
-        UPDATE notification SET is_read = 'Y' WHERE user_id = #{userId} AND is_read = 'N'
-    </update>
+    <delete id="updateAllNotificationReadStatus">
+        DELETE FROM notification
+        WHERE user_id = #{userId}
+    </delete>
 
 </mapper>
