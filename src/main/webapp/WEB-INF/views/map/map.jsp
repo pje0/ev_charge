@@ -9,13 +9,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>충전소 지도 - EV 충전소</title>
-<link
-	href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap"
-	rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/common.css">
 <link rel="stylesheet" href="/css/map.css">
 <script type="text/javascript"
-	src="//dapi.kakao.com/v2/maps/sdk.js?appkey=d5fdc4f5945a067850cad3bbd4d6308a&libraries=services"></script>
+	src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=d5fdc4f5945a067850cad3bbd4d6308a&libraries=services"></script>
 </head>
 <body class="ev-map-page">
 
@@ -32,6 +30,10 @@
 					onclick="switchTab('nearby', this)">주변 충전소</button>
 				<button type="button" class="ev-map-tab"
 					onclick="switchTab('region', this)">지역 충전소</button>
+				<sec:authorize access="isAuthenticated()">
+				<button type="button" class="ev-map-tab"
+					onclick="switchTab('favorite', this)">즐겨찾기</button>
+				</sec:authorize>
 			</div>
 
 			<!-- 주변 충전소 탭 -->
@@ -41,8 +43,7 @@
 						<button type="button" class="ev-map-btn-primary"
 							onclick="getMyLocation()">📍 내 위치</button>
 						<button type="button" class="ev-map-btn-outline"
-							onclick="findNearest()" id="nearestBtn" disabled>🔍 가장
-							가까운</button>
+							onclick="findNearest()" id="nearestBtn" disabled>🔍 가장 가까운</button>
 					</div>
 					<div class="ev-map-filter-row">
 						<button type="button" class="ev-map-filter-btn active"
@@ -65,8 +66,8 @@
 				<div class="ev-map-sidebar-header">
 					<div class="ev-map-select-group">
 						<div class="ev-map-select-row">
-							<span class="ev-map-select-label">시/도</span> <select
-								class="ev-map-select" id="metroCd" onchange="onMetroChange()">
+							<span class="ev-map-select-label">시/도</span>
+							<select class="ev-map-select" id="metroCd" onchange="onMetroChange()">
 								<option value="">선택</option>
 								<option value="11">서울특별시</option>
 								<option value="21">부산광역시</option>
@@ -88,16 +89,14 @@
 							</select>
 						</div>
 						<div class="ev-map-select-row">
-							<span class="ev-map-select-label">시/군/구</span> <select
-								class="ev-map-select" id="cityCd"
-								onchange="loadRegionStations()" disabled>
+							<span class="ev-map-select-label">시/군/구</span>
+							<select class="ev-map-select" id="cityCd" onchange="loadRegionStations()" disabled>
 								<option value="">전체</option>
 							</select>
 						</div>
 						<div class="ev-map-select-row">
-							<span class="ev-map-select-label">충전속도</span> <select
-								class="ev-map-select" id="chargeSpeed"
-								onchange="loadRegionStations()">
+							<span class="ev-map-select-label">충전속도</span>
+							<select class="ev-map-select" id="chargeSpeed" onchange="loadRegionStations()">
 								<option value="all">급속 + 완속</option>
 								<option value="rapid">급속만</option>
 								<option value="slow">완속만</option>
@@ -110,6 +109,15 @@
 					<div class="ev-map-empty">시/도를 선택해주세요</div>
 				</div>
 			</div>
+
+			<!-- 즐겨찾기 탭 -->
+			<sec:authorize access="isAuthenticated()">
+			<div class="ev-map-tab-content" id="tab-favorite">
+				<div class="ev-map-station-list" id="favoriteList">
+					<div class="ev-map-empty">⭐ 즐겨찾기한 충전소가 없습니다</div>
+				</div>
+			</div>
+			</sec:authorize>
 
 		</div>
 
@@ -173,25 +181,26 @@
 				<div class="ev-map-detail-body">
 					<div class="ev-map-detail-grid">
 						<div class="ev-map-detail-card">
-							<span class="ev-map-detail-card-label">⚡ 급속</span> <span
-								class="ev-map-detail-card-value" id="detailRapid"></span>
+							<span class="ev-map-detail-card-label">⚡ 급속</span>
+							<span class="ev-map-detail-card-value" id="detailRapid"></span>
 						</div>
 						<div class="ev-map-detail-card">
-							<span class="ev-map-detail-card-label">🔋 완속</span> <span
-								class="ev-map-detail-card-value" id="detailSlow"></span>
+							<span class="ev-map-detail-card-label">🔋 완속</span>
+							<span class="ev-map-detail-card-value" id="detailSlow"></span>
 						</div>
 						<div class="ev-map-detail-card" style="grid-column: span 2">
-							<span class="ev-map-detail-card-label">🚗 지원차종</span> <span
-								class="ev-map-detail-card-value ev-map-detail-car"
-								id="detailCar"></span>
+							<span class="ev-map-detail-card-label">🚗 지원차종</span>
+							<span class="ev-map-detail-card-value ev-map-detail-car" id="detailCar"></span>
 						</div>
 						<div class="ev-map-detail-card" style="grid-column: span 2">
-						    <span class="ev-map-detail-card-label">충전기 상태</span>
-						    <span class="ev-map-detail-card-value" id="detailStatus"></span>
+							<span class="ev-map-detail-card-label">충전기 상태</span>
+							<span class="ev-map-detail-card-value" id="detailStatus"></span>
 						</div>
 					</div>
 				</div>
 				<div class="ev-map-detail-footer">
+					<a id="detailNavi" href="#" target="_blank" class="ev-map-reserve-btn"
+						style="background:#2563eb;">길찾기 →</a>
 					<sec:authorize access="isAuthenticated()">
 						<a href="/reservation" class="ev-map-reserve-btn">예약하기 →</a>
 					</sec:authorize>
@@ -211,6 +220,8 @@
     var userLocation = null;
     var userMarker = null;
     var currentTab = 'nearby';
+    var favoriteIds = [];  // 즐겨찾기 station id 목록
+    var isLoggedIn = <sec:authorize access="isAuthenticated()">true</sec:authorize><sec:authorize access="isAnonymous()">false</sec:authorize>;
 
     // 지도 초기화
     kakao.maps.load(function() {
@@ -220,7 +231,100 @@
         level: 10
       };
       map = new kakao.maps.Map(container, options);
+
+      // 로그인 상태면 즐겨찾기 목록 로드
+      if (isLoggedIn) {
+        loadFavoriteIds();
+      }
     });
+
+    // ── 즐겨찾기 ──
+    function loadFavoriteIds() {
+      fetch('/api/favorites/ids')
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+          favoriteIds = data || [];
+        });
+    }
+
+    function isFavorite(stationId) {
+      return favoriteIds.indexOf(Number(stationId)) !== -1;
+    }
+
+    function toggleFavorite(stationId, event) {
+      event.stopPropagation(); // 목록 클릭 이벤트 전파 방지
+      if (!isLoggedIn) {
+        alert('로그인 후 이용 가능합니다.');
+        return;
+      }
+      fetch('/api/favorites/toggle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stationId: Number(stationId) })
+      })
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
+        if (data.favorite) {
+          favoriteIds.push(Number(stationId));
+        } else {
+          favoriteIds = favoriteIds.filter(function(id) { return id !== Number(stationId); });
+        }
+        // 별표 UI 업데이트
+        var starEl = document.getElementById('star-' + stationId);
+        if (starEl) starEl.textContent = data.favorite ? '★' : '☆';
+        if (starEl) starEl.style.color = data.favorite ? '#f59e0b' : '#9ca3af';
+
+        // 즐겨찾기 탭 갱신
+        if (currentTab === 'favorite') loadFavoriteStations();
+      });
+    }
+
+    function starBtn(stationId) {
+      var fav = isFavorite(stationId);
+      return '<button type="button" id="star-' + stationId + '" ' +
+        'onclick="toggleFavorite(' + stationId + ', event)" ' +
+        'style="background:none;border:none;cursor:pointer;font-size:18px;color:' +
+        (fav ? '#f59e0b' : '#9ca3af') + ';padding:0 4px;">' +
+        (fav ? '★' : '☆') + '</button>';
+    }
+
+    // 즐겨찾기 탭 - 충전소 목록 불러오기
+    function loadFavoriteStations() {
+      if (favoriteIds.length === 0) {
+        document.getElementById('favoriteList').innerHTML = '<div class="ev-map-empty">⭐ 즐겨찾기한 충전소가 없습니다</div>';
+        clearMarkers();
+        return;
+      }
+      // stations 배열에서 즐겨찾기된 것만 필터
+      var favStations = stations.filter(function(s) {
+        return isFavorite(s.id);
+      });
+
+      if (favStations.length === 0) {
+        document.getElementById('favoriteList').innerHTML = '<div class="ev-map-empty">⭐ 즐겨찾기한 충전소가 없습니다</div>';
+        return;
+      }
+
+      clearMarkers();
+      var html = '';
+      favStations.forEach(function(s, idx) {
+        html += '<div class="ev-map-station-item" onclick="moveToNearbyStation(' + idx + ')">' +
+          '<div class="ev-map-station-item-top">' +
+            (isLoggedIn ? starBtn(s.id) : '') +
+            '<span class="ev-map-station-item-name">' + (s.stnPlace || '-') + '</span>' +
+          '</div>' +
+          '<p class="ev-map-station-item-addr">📍 ' + (s.stnAddr || '-') + '</p>' +
+          '<div class="ev-map-station-item-bottom">' +
+            '<span class="ev-map-station-item-rapid">급속 ' + (s.rapidCnt || 0) + '대</span>' +
+            '<span class="ev-map-station-item-slow">완속 ' + (s.slowCnt || 0) + '대</span>' +
+            '<span style="margin-left:auto; color:#16a34a; font-size:12px;">사용가능 ' + (s.availableCnt||0) + '/' + ((s.rapidCnt||0)+(s.slowCnt||0)) + '</span>' +
+          '</div>' +
+        '</div>';
+        addMarker(s.lat, s.lng, s.markerColor || '#16a34a', s);
+      });
+      document.getElementById('favoriteList').innerHTML = html;
+      window._nearbyStations = favStations;
+    }
 
     // 탭 전환
     function switchTab(tab, btn) {
@@ -230,6 +334,7 @@
       document.querySelectorAll('.ev-map-tab-content').forEach(function(c) { c.classList.remove('active'); });
       document.getElementById('tab-' + tab).classList.add('active');
       clearMarkers();
+      if (tab === 'favorite') loadFavoriteStations();
     }
 
     // 마커 SVG
@@ -245,37 +350,30 @@
 
     // 마커 추가
     function addMarker(lat, lng, color, station) {
+      lat = parseFloat(lat);
+      lng = parseFloat(lng);
+      if (isNaN(lat) || isNaN(lng)) return;
 
-    lat = parseFloat(lat);
-    lng = parseFloat(lng);
-
-    console.log('마커 생성:', station.stnPlace, lat, lng);
-
-    if (isNaN(lat) || isNaN(lng)) {
-        console.log('좌표 오류');
-        return;
-    }
-
-    var markerImage = new kakao.maps.MarkerImage(
+      var markerImage = new kakao.maps.MarkerImage(
         getMarkerSVG(color),
         new kakao.maps.Size(36, 44),
         { offset: new kakao.maps.Point(18, 44) }
-    );
+      );
 
-    var marker = new kakao.maps.Marker({
+      var marker = new kakao.maps.Marker({
         position: new kakao.maps.LatLng(lat, lng),
         map: map,
         image: markerImage,
         title: station.stnPlace || station.name
-    });
+      });
 
-    kakao.maps.event.addListener(marker, 'click', function() {
+      kakao.maps.event.addListener(marker, 'click', function() {
         showDetail(station);
         map.setCenter(new kakao.maps.LatLng(lat, lng));
-    });
+      });
 
-    markers.push(marker);
-}
+      markers.push(marker);
+    }
 
     // 마커 전체 제거
     function clearMarkers() {
@@ -285,121 +383,120 @@
 
     // 상세 패널
     function showDetail(station) {
-	  document.getElementById('detailName').textContent = station.stnPlace || station.name || '-';
-	  document.getElementById('detailAddr').textContent = station.stnAddr || station.address || '-';
-	  document.getElementById('detailRapid').textContent = (station.rapidCnt || 0) + '대';
-	  document.getElementById('detailSlow').textContent = (station.slowCnt || 0) + '대';
-	  document.getElementById('detailCar').textContent = station.carType || '-';
-	
-	  // 상태 정보 추가 (detailPanel HTML에 id 추가 필요)
-	  var statusEl = document.getElementById('detailStatus');
-	  if (statusEl) {
-	      statusEl.innerHTML =
-	          '<span style="color:#16a34a">사용가능 ' + (station.availableCnt||0) + '대</span> / ' +
-	          '<span style="color:#d97706">사용중 ' + (station.inUseCnt||0) + '대</span> / ' +
-	          '<span style="color:#dc2626">점검중 ' + (station.outOfServiceCnt||0) + '대</span>';
-	  }
-	  document.getElementById('detailPanel').style.display = 'flex';
-	}
+      document.getElementById('detailName').textContent = station.stnPlace || station.name || '-';
+      document.getElementById('detailAddr').textContent = station.stnAddr || station.address || '-';
+      document.getElementById('detailRapid').textContent = (station.rapidCnt || 0) + '대';
+      document.getElementById('detailSlow').textContent = (station.slowCnt || 0) + '대';
+      document.getElementById('detailCar').textContent = station.carType || '-';
+
+      var statusEl = document.getElementById('detailStatus');
+      if (statusEl) {
+        statusEl.innerHTML =
+          '<span style="color:#16a34a">사용가능 ' + (station.availableCnt||0) + '대</span> / ' +
+          '<span style="color:#d97706">사용중 ' + (station.inUseCnt||0) + '대</span> / ' +
+          '<span style="color:#dc2626">점검중 ' + (station.outOfServiceCnt||0) + '대</span>';
+      }
+
+      // 길찾기 버튼 URL 설정
+      var naviEl = document.getElementById('detailNavi');
+      if (naviEl && station.lat && station.lng) {
+        var stationName = encodeURIComponent(station.stnPlace || station.name || '충전소');
+        if (userLocation) {
+          naviEl.href = 'https://map.kakao.com/link/from/내위치,' +
+            userLocation.lat + ',' + userLocation.lng +
+            '/to/' + stationName + ',' + station.lat + ',' + station.lng;
+        } else {
+          naviEl.href = 'https://map.kakao.com/link/to/' +
+            stationName + ',' + station.lat + ',' + station.lng;
+        }
+      }
+
+      document.getElementById('detailPanel').style.display = 'flex';
+    }
 
     function closeDetail() {
       document.getElementById('detailPanel').style.display = 'none';
     }
 
     // ── 지역 충전소 탭 ──
-    // 시/도별 시/군/구 코드
-var cityMap = {
-  '11': [
-    {code:'11110',name:'종로구'},{code:'11140',name:'중구'},{code:'11170',name:'용산구'},
-    {code:'11200',name:'성동구'},{code:'11215',name:'광진구'},{code:'11230',name:'동대문구'},
-    {code:'11260',name:'중랑구'},{code:'11290',name:'성북구'},{code:'11305',name:'강북구'},
-    {code:'11320',name:'도봉구'},{code:'11350',name:'노원구'},{code:'11380',name:'은평구'},
-    {code:'11410',name:'서대문구'},{code:'11440',name:'마포구'},{code:'11470',name:'양천구'},
-    {code:'11500',name:'강서구'},{code:'11530',name:'구로구'},{code:'11545',name:'금천구'},
-    {code:'11560',name:'영등포구'},{code:'11590',name:'동작구'},{code:'11620',name:'관악구'},
-    {code:'11650',name:'서초구'},{code:'11680',name:'강남구'},{code:'11710',name:'송파구'},
-    {code:'11740',name:'강동구'}
-  ],
-  '21': [
-    {code:'21110',name:'중구'},{code:'21120',name:'서구'},{code:'21130',name:'동구'},
-    {code:'21140',name:'영도구'},{code:'21150',name:'부산진구'},{code:'21160',name:'동래구'},
-    {code:'21170',name:'남구'},{code:'21180',name:'북구'},{code:'21190',name:'해운대구'},
-    {code:'21200',name:'사하구'},{code:'21210',name:'금정구'},{code:'21220',name:'강서구'},
-    {code:'21230',name:'연제구'},{code:'21240',name:'수영구'},{code:'21250',name:'사상구'},
-    {code:'21310',name:'기장군'}
-  ],
-  '31': [
-    {code:'31110',name:'수원시'},{code:'31150',name:'성남시'},{code:'31170',name:'의정부시'},
-    {code:'31180',name:'안양시'},{code:'31190',name:'부천시'},{code:'31200',name:'광명시'},
-    {code:'31210',name:'평택시'},{code:'31230',name:'동두천시'},{code:'31250',name:'안산시'},
-    {code:'31260',name:'고양시'},{code:'31270',name:'과천시'},{code:'31280',name:'구리시'},
-    {code:'31290',name:'남양주시'},{code:'31300',name:'오산시'},{code:'31310',name:'시흥시'},
-    {code:'31320',name:'군포시'},{code:'31330',name:'의왕시'},{code:'31340',name:'하남시'},
-    {code:'31350',name:'용인시'},{code:'31360',name:'파주시'},{code:'31370',name:'이천시'},
-    {code:'31380',name:'안성시'},{code:'31390',name:'김포시'},{code:'31400',name:'화성시'},
-    {code:'31410',name:'광주시'},{code:'31420',name:'양주시'},{code:'31430',name:'포천시'},
-    {code:'31440',name:'여주시'},{code:'31710',name:'연천군'},{code:'31720',name:'가평군'},
-    {code:'31730',name:'양평군'}
-  ]
-};
+    var cityMap = {
+      '11': [
+        {code:'11110',name:'종로구'},{code:'11140',name:'중구'},{code:'11170',name:'용산구'},
+        {code:'11200',name:'성동구'},{code:'11215',name:'광진구'},{code:'11230',name:'동대문구'},
+        {code:'11260',name:'중랑구'},{code:'11290',name:'성북구'},{code:'11305',name:'강북구'},
+        {code:'11320',name:'도봉구'},{code:'11350',name:'노원구'},{code:'11380',name:'은평구'},
+        {code:'11410',name:'서대문구'},{code:'11440',name:'마포구'},{code:'11470',name:'양천구'},
+        {code:'11500',name:'강서구'},{code:'11530',name:'구로구'},{code:'11545',name:'금천구'},
+        {code:'11560',name:'영등포구'},{code:'11590',name:'동작구'},{code:'11620',name:'관악구'},
+        {code:'11650',name:'서초구'},{code:'11680',name:'강남구'},{code:'11710',name:'송파구'},
+        {code:'11740',name:'강동구'}
+      ],
+      '21': [
+        {code:'21110',name:'중구'},{code:'21120',name:'서구'},{code:'21130',name:'동구'},
+        {code:'21140',name:'영도구'},{code:'21150',name:'부산진구'},{code:'21160',name:'동래구'},
+        {code:'21170',name:'남구'},{code:'21180',name:'북구'},{code:'21190',name:'해운대구'},
+        {code:'21200',name:'사하구'},{code:'21210',name:'금정구'},{code:'21220',name:'강서구'},
+        {code:'21230',name:'연제구'},{code:'21240',name:'수영구'},{code:'21250',name:'사상구'},
+        {code:'21310',name:'기장군'}
+      ],
+      '31': [
+        {code:'31110',name:'수원시'},{code:'31150',name:'성남시'},{code:'31170',name:'의정부시'},
+        {code:'31180',name:'안양시'},{code:'31190',name:'부천시'},{code:'31200',name:'광명시'},
+        {code:'31210',name:'평택시'},{code:'31230',name:'동두천시'},{code:'31250',name:'안산시'},
+        {code:'31260',name:'고양시'},{code:'31270',name:'과천시'},{code:'31280',name:'구리시'},
+        {code:'31290',name:'남양주시'},{code:'31300',name:'오산시'},{code:'31310',name:'시흥시'},
+        {code:'31320',name:'군포시'},{code:'31330',name:'의왕시'},{code:'31340',name:'하남시'},
+        {code:'31350',name:'용인시'},{code:'31360',name:'파주시'},{code:'31370',name:'이천시'},
+        {code:'31380',name:'안성시'},{code:'31390',name:'김포시'},{code:'31400',name:'화성시'},
+        {code:'31410',name:'광주시'},{code:'31420',name:'양주시'},{code:'31430',name:'포천시'},
+        {code:'31440',name:'여주시'},{code:'31710',name:'연천군'},{code:'31720',name:'가평군'},
+        {code:'31730',name:'양평군'}
+      ]
+    };
 
-function onMetroChange() {
-	  var metroCd = document.getElementById('metroCd').value;
-	  var cityCdSelect = document.getElementById('cityCd');
-	  
-	  cityCdSelect.innerHTML = '<option value="">전체</option>';
-	  cityCdSelect.disabled = true;
-	  
-	  if (!metroCd) return;
+    function onMetroChange() {
+      var metroCd = document.getElementById('metroCd').value;
+      var cityCdSelect = document.getElementById('cityCd');
+      cityCdSelect.innerHTML = '<option value="">전체</option>';
+      cityCdSelect.disabled = true;
+      if (!metroCd) return;
 
-	  // 먼저 전체 데이터 불러와서 city 목록 추출
-	  fetch('/api/stations?metroCd=' + metroCd)
-	    .then(function(res) { return res.json(); })
-	    .then(function(data) {
-	      if (!data || !data.data) return;
-	      
-	      // city 필드에서 unique 목록 추출
-	      var cities = [];
-	      data.data.forEach(function(s) {
-	        if (s.city && !cities.includes(s.city)) {
-	          cities.push(s.city);
-	        }
-	      });
-	      cities.sort();
-	      
-	      cities.forEach(function(city) {
-	        var opt = document.createElement('option');
-	        opt.value = city;
-	        opt.textContent = city;
-	        cityCdSelect.appendChild(opt);
-	      });
-	      
-	      cityCdSelect.disabled = false;
-	      
-	      // 전체 데이터도 바로 렌더링
-	      window._allData = data.data;
-	      filterAndRender();
-	    });
-	}
+      fetch('/api/stations?metroCd=' + metroCd)
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+          if (!data || !data.data) return;
+          var cities = [];
+          data.data.forEach(function(s) {
+            if (s.city && !cities.includes(s.city)) cities.push(s.city);
+          });
+          cities.sort();
+          cities.forEach(function(city) {
+            var opt = document.createElement('option');
+            opt.value = city;
+            opt.textContent = city;
+            cityCdSelect.appendChild(opt);
+          });
+          cityCdSelect.disabled = false;
+          window._allData = data.data;
+          filterAndRender();
+        });
+    }
 
-function loadRegionStations() {
-	  if (!window._allData) return;
-	  filterAndRender();
-	}
+    function loadRegionStations() {
+      if (!window._allData) return;
+      filterAndRender();
+    }
 
-	function filterAndRender() {
-	  var city = document.getElementById('cityCd').value;
-	  var speed = document.getElementById('chargeSpeed').value;
-	  
-	  var list = window._allData;
-	  
-	  if (city) list = list.filter(function(s) { return s.city === city; });
-	  if (speed === 'rapid') list = list.filter(function(s) { return s.rapidCnt > 0; });
-	  if (speed === 'slow') list = list.filter(function(s) { return s.slowCnt > 0; });
-	  
-	  document.getElementById('regionCount').textContent = list.length + '개 충전소';
-	  renderRegionList(list);
-	}
+    function filterAndRender() {
+      var city = document.getElementById('cityCd').value;
+      var speed = document.getElementById('chargeSpeed').value;
+      var list = window._allData;
+      if (city) list = list.filter(function(s) { return s.city === city; });
+      if (speed === 'rapid') list = list.filter(function(s) { return s.rapidCnt > 0; });
+      if (speed === 'slow') list = list.filter(function(s) { return s.slowCnt > 0; });
+      document.getElementById('regionCount').textContent = list.length + '개 충전소';
+      renderRegionList(list);
+    }
 
     function renderRegionList(list) {
       clearMarkers();
@@ -408,7 +505,6 @@ function loadRegionStations() {
         return;
       }
 
-      // 지오코더로 주소 → 좌표 변환 후 마커
       var geocoder = new kakao.maps.services.Geocoder();
       var bounds = new kakao.maps.LatLngBounds();
 
@@ -416,6 +512,7 @@ function loadRegionStations() {
       list.forEach(function(s, idx) {
         html += '<div class="ev-map-station-item" onclick="moveToRegionStation(' + idx + ')">' +
           '<div class="ev-map-station-item-top">' +
+            (isLoggedIn ? starBtn(s.id) : '') +
             '<span class="ev-map-station-item-name">' + (s.stnPlace || '-') + '</span>' +
           '</div>' +
           '<p class="ev-map-station-item-addr">📍 ' + (s.stnAddr || '-') + '</p>' +
@@ -425,7 +522,6 @@ function loadRegionStations() {
           '</div>' +
         '</div>';
 
-        // 주소로 마커 찍기
         geocoder.addressSearch(s.stnAddr, function(result, status) {
           if (status === kakao.maps.services.Status.OK) {
             var lat = parseFloat(result[0].y);
@@ -441,7 +537,6 @@ function loadRegionStations() {
       document.getElementById('regionList').innerHTML = html;
       window._regionStations = list;
 
-      // 첫번째 주소 기준으로 지도 이동
       if (list[0] && list[0].stnAddr) {
         geocoder.addressSearch(list[0].stnAddr, function(result, status) {
           if (status === kakao.maps.services.Status.OK) {
@@ -471,11 +566,20 @@ function loadRegionStations() {
 
     function renderNearbyList() {
       if (!userLocation || stations.length === 0) return;
+
       var list = stations.filter(function(s) {
-        if (currentFilter === 'AVAILABLE') return s.availCnt > 0;
+        if (currentFilter === 'AVAILABLE') return s.availableCnt > 0;
         if (currentFilter === 'rapid') return s.rapidCnt > 0;
         if (currentFilter === 'slow') return s.slowCnt > 0;
         return true;
+      });
+
+      // 즐겨찾기 상단 고정
+      list.sort(function(a, b) {
+        var aFav = isFavorite(a.id) ? 0 : 1;
+        var bFav = isFavorite(b.id) ? 0 : 1;
+        if (aFav !== bFav) return aFav - bFav;
+        return (a.dist || 0) - (b.dist || 0);
       });
 
       clearMarkers();
@@ -487,19 +591,22 @@ function loadRegionStations() {
       var html = '';
       list.forEach(function(s, idx) {
         var dist = s.dist ? s.dist.toFixed(1) + 'km' : '';
+        var favMark = isFavorite(s.id) ? '<span style="color:#f59e0b;font-size:11px;margin-right:4px;">★ 즐겨찾기</span>' : '';
         html += '<div class="ev-map-station-item" onclick="moveToNearbyStation(' + idx + ')">' +
-        '<div class="ev-map-station-item-top">' +
-          '<span class="ev-map-station-item-name">' + (s.stnPlace || '-') + '</span>' +
-          (dist ? '<span class="ev-map-station-item-dist">' + dist + '</span>' : '') +
-        '</div>' +
-        '<p class="ev-map-station-item-addr">📍 ' + (s.stnAddr || '-') + '</p>' +
-        '<div class="ev-map-station-item-bottom">' +
-          '<span class="ev-map-station-item-rapid">급속 ' + (s.rapidCnt || 0) + '대</span>' +
-          '<span class="ev-map-station-item-slow">완속 ' + (s.slowCnt || 0) + '대</span>' +
-          '<span style="margin-left:auto; color:#16a34a; font-size:12px;">사용가능 ' + s.availableCnt + '/' + ((s.rapidCnt||0)+(s.slowCnt||0)) + '</span>' +
-        '</div>' +
-      '</div>';
-        addMarker(s.lat, s.lng, '#16a34a', s);
+          '<div class="ev-map-station-item-top">' +
+            (isLoggedIn ? starBtn(s.id) : '') +
+            '<span class="ev-map-station-item-name">' + (s.stnPlace || '-') + '</span>' +
+            (dist ? '<span class="ev-map-station-item-dist">' + dist + '</span>' : '') +
+          '</div>' +
+          (isFavorite(s.id) ? '<div style="padding:0 12px 2px;"><span style="color:#f59e0b;font-size:11px;">★ 즐겨찾기</span></div>' : '') +
+          '<p class="ev-map-station-item-addr">📍 ' + (s.stnAddr || '-') + '</p>' +
+          '<div class="ev-map-station-item-bottom">' +
+            '<span class="ev-map-station-item-rapid">급속 ' + (s.rapidCnt || 0) + '대</span>' +
+            '<span class="ev-map-station-item-slow">완속 ' + (s.slowCnt || 0) + '대</span>' +
+            '<span style="margin-left:auto; color:#16a34a; font-size:12px;">사용가능 ' + (s.availableCnt||0) + '/' + ((s.rapidCnt||0)+(s.slowCnt||0)) + '</span>' +
+          '</div>' +
+        '</div>';
+        addMarker(s.lat, s.lng, s.markerColor || '#16a34a', s);
       });
       document.getElementById('nearbyList').innerHTML = html;
       window._nearbyStations = list;
@@ -515,129 +622,75 @@ function loadRegionStations() {
     }
 
     // 내 위치
-   function getMyLocation() {
-	  if (!navigator.geolocation) { alert('위치 정보를 지원하지 않는 브라우저입니다.'); return; }
-	  navigator.geolocation.getCurrentPosition(function(pos) {
-	    userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-	    map.setCenter(new kakao.maps.LatLng(userLocation.lat, userLocation.lng));
-	    map.setLevel(8);
-	
-	    if (userMarker) userMarker.setMap(null);
-	    userMarker = new kakao.maps.Marker({
-	      position: new kakao.maps.LatLng(userLocation.lat, userLocation.lng),
-	      map: map,
-	      title: '내 위치'
-	    });
-	
-	    document.getElementById('nearestBtn').disabled = false;
-	    document.getElementById('nearbyList').innerHTML = '<div class="ev-map-loading">주변 충전소 불러오는 중...</div>';
-	
-	    var geocoder = new kakao.maps.services.Geocoder();
-	    geocoder.coord2RegionCode(userLocation.lng, userLocation.lat, function(result, status) {
-	        if (status === kakao.maps.services.Status.OK) {
-	            var region = result[0];
-	            var metro = region.region_1depth_name; // ex) 경기도
-	            var city = region.region_2depth_name;  // ex) 수원시 장안구
-	            console.log('metro:', metro, 'city:', city);
-	            loadNearbyStationsFromDb(metro, city);
-	        }
-	    });
-	  }, function() {
-	    alert('위치 정보를 가져올 수 없습니다.');
-	  });
-	}
-    
-   function loadNearbyStationsFromDb(metro, city) {
-	    var cityKeyword = city ? city.split(' ')[0] : '';
-	    fetch('/api/stations/db?metroCd=' + encodeURIComponent(metro) + '&city=' + encodeURIComponent(cityKeyword))
-	        .then(function(res) { return res.json(); })
-	        .then(function(data) {
-	            if (!data || data.length === 0) {
-	                document.getElementById('nearbyList').innerHTML = '<div class="ev-map-empty">주변 충전소 없음</div>';
-	                return;
-	            }
-	            
-	            // DB 필드명 맞게 변환
-	            stations = data.map(function(s) {
-				    s.stnPlace = s.name;
-				    s.stnAddr = s.address;
-				    s.lat = parseFloat(s.latitude);
-				    s.lng = parseFloat(s.longitude);
-				    s.availableCnt = s.availableCnt || 0;
-				    s.inUseCnt = s.inUseCnt || 0;
-				    s.outOfServiceCnt = s.outOfServiceCnt || 0;
-				
-				    // 마커 색상 결정
-				    if (s.availableCnt > 0) s.markerColor = '#16a34a';
-				    else if (s.inUseCnt > 0) s.markerColor = '#d97706';
-				    else s.markerColor = '#dc2626';
-				
-				    s.dist = !isNaN(s.lat) && !isNaN(s.lng)
-				        ? calcDistance(userLocation.lat, userLocation.lng, s.lat, s.lng)
-				        : null;
-				    return s;
-				});
-	            stations.sort(function(a, b) { return (a.dist || 0) - (b.dist || 0); });
+    function getMyLocation() {
+      if (!navigator.geolocation) { alert('위치 정보를 지원하지 않는 브라우저입니다.'); return; }
+      navigator.geolocation.getCurrentPosition(function(pos) {
+        userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        map.setCenter(new kakao.maps.LatLng(userLocation.lat, userLocation.lng));
+        map.setLevel(8);
 
-	            clearMarkers();
-	            stations.forEach(function(s) {
-	                if (!isNaN(s.lat) && !isNaN(s.lng)) {
-	                    addMarker(s.lat, s.lng, s.markerColor, s);
-	                }
-	            });
-	            renderNearbyList();
-	        });
-	}
+        if (userMarker) userMarker.setMap(null);
+        userMarker = new kakao.maps.Marker({
+          position: new kakao.maps.LatLng(userLocation.lat, userLocation.lng),
+          map: map,
+          title: '내 위치'
+        });
 
-    function getMetroCd(regionName) {
-      var map = {
-        '서울': '11', '부산': '21', '대구': '22', '인천': '23',
-        '광주': '24', '대전': '25', '울산': '26', '세종': '29',
-        '경기': '31', '강원': '32', '충북': '33', '충남': '34',
-        '전북': '35', '전남': '36', '경북': '37', '경남': '38', '제주': '39'
-      };
-      for (var key in map) {
-        if (regionName.includes(key)) return map[key];
-      }
-      return '11';
+        document.getElementById('nearestBtn').disabled = false;
+        document.getElementById('nearbyList').innerHTML = '<div class="ev-map-loading">주변 충전소 불러오는 중...</div>';
+
+        var geocoder = new kakao.maps.services.Geocoder();
+        geocoder.coord2RegionCode(userLocation.lng, userLocation.lat, function(result, status) {
+          if (status === kakao.maps.services.Status.OK) {
+            var region = result[0];
+            var metro = region.region_1depth_name;
+            var city = region.region_2depth_name;
+            loadNearbyStationsFromDb(metro, city);
+          }
+        });
+      }, function() {
+        alert('위치 정보를 가져올 수 없습니다.');
+      });
     }
 
-    function loadNearbyStations(metroCd, userCity) {
-    	  fetch('/api/stations?metroCd=' + metroCd)
-    	    .then(function(res) { return res.json(); })
-    	    .then(function(data) {
-    	      if (!data || !data.data) return;
+    function loadNearbyStationsFromDb(metro, city) {
+      var cityKeyword = city ? city.split(' ')[0] : '';
+      fetch('/api/stations/db?metroCd=' + encodeURIComponent(metro) + '&city=' + encodeURIComponent(cityKeyword))
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+          if (!data || data.length === 0) {
+            document.getElementById('nearbyList').innerHTML = '<div class="ev-map-empty">주변 충전소 없음</div>';
+            return;
+          }
 
-    	      var cityKeyword = userCity ? userCity.split(' ')[0] : '';
-    	      var list = data.data.filter(function(s) {
-    	        return !cityKeyword || (s.city && s.city.includes(cityKeyword));
-    	      });
+          stations = data.map(function(s) {
+            s.stnPlace = s.name;
+            s.stnAddr = s.address;
+            s.lat = parseFloat(s.latitude);
+            s.lng = parseFloat(s.longitude);
+            s.availableCnt = s.availableCnt || 0;
+            s.inUseCnt = s.inUseCnt || 0;
+            s.outOfServiceCnt = s.outOfServiceCnt || 0;
 
-    	      var geocoder = new kakao.maps.services.Geocoder();
-    	      var idx = 0;
+            if (s.availableCnt > 0) s.markerColor = '#16a34a';
+            else if (s.inUseCnt > 0) s.markerColor = '#d97706';
+            else s.markerColor = '#dc2626';
 
-    	      function geocodeNext() {
-    	        if (idx >= list.length) {
-    	          stations = list.filter(function(s) { return s.lat; });
-    	          stations.sort(function(a, b) { return (a.dist || 0) - (b.dist || 0); });
-    	          renderNearbyList();
-    	          return;
-    	        }
-    	        var s = list[idx];
-    	        geocoder.addressSearch(s.stnAddr, function(result, status) {
-    	          if (status === kakao.maps.services.Status.OK) {
-    	            s.lat = parseFloat(result[0].y);
-    	            s.lng = parseFloat(result[0].x);
-    	            s.dist = calcDistance(userLocation.lat, userLocation.lng, s.lat, s.lng);
-    	            addMarker(s.lat, s.lng, '#16a34a', s);
-    	          }
-    	          idx++;
-    	          setTimeout(geocodeNext, 150);
-    	        });
-    	      }
-    	      geocodeNext();
-    	    });
-    	}
+            s.dist = !isNaN(s.lat) && !isNaN(s.lng)
+              ? calcDistance(userLocation.lat, userLocation.lng, s.lat, s.lng)
+              : null;
+            return s;
+          });
+
+          clearMarkers();
+          stations.forEach(function(s) {
+            if (!isNaN(s.lat) && !isNaN(s.lng)) {
+              addMarker(s.lat, s.lng, s.markerColor, s);
+            }
+          });
+          renderNearbyList();
+        });
+    }
 
     // 가장 가까운 충전소
     function findNearest() {
@@ -660,21 +713,20 @@ function loadRegionStations() {
         Math.sin(dLng/2) * Math.sin(dLng/2);
       return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     }
-    
+
     function initStationData() {
-    	  var metroCd = document.getElementById('initMetroCd').value;
-    	  if (!confirm('해당 지역 충전소 데이터를 DB에 저장할까요?')) return;
-    	  
-    	  fetch('/api/stations/init?metroCd=' + metroCd)
-    	    .then(function(res) { return res.json(); })
-    	    .then(function(data) {
-    	      if (data.success !== undefined) {
-    	        alert(data.total + '개 중 ' + data.success + '개 저장 완료!');
-    	      } else {
-    	        alert('오류: ' + data.error);
-    	      }
-    	    });
-    	}
+      var metroCd = document.getElementById('initMetroCd').value;
+      if (!confirm('해당 지역 충전소 데이터를 DB에 저장할까요?')) return;
+      fetch('/api/stations/init?metroCd=' + metroCd)
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+          if (data.success !== undefined) {
+            alert(data.total + '개 중 ' + data.success + '개 저장 완료!');
+          } else {
+            alert('오류: ' + data.error);
+          }
+        });
+    }
   </script>
 
 </body>
