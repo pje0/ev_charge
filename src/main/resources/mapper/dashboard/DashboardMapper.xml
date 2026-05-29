@@ -1,0 +1,58 @@
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+
+<mapper namespace="com.boot.ev_charge.dashboard.DashboardMapper">
+
+    <!-- 관리자 메인 Dashboard 집계 -->
+    <select id="getDashboardSummary"
+            resultType="com.boot.ev_charge.dashboard.DashboardDTO">
+
+        SELECT
+
+        /* 전체 회원(USER만) */
+        (
+            SELECT COUNT(*)
+            FROM user
+            WHERE role = 'USER'
+        ) AS userCount,
+
+        /* 오늘 예약 생성 수 */
+        (
+            SELECT COUNT(*)
+            FROM reservation
+            WHERE DATE(created_at) = CURDATE()
+        ) AS todayReservationCount,
+
+        /* 현재 충전중 */
+        (
+            SELECT COUNT(*)
+            FROM reservation
+            WHERE status = 'CHARGING'
+        ) AS chargingCount,
+
+        /* 예약 대기 */
+        (
+            SELECT COUNT(*)
+            FROM reservation
+            WHERE status = 'RESERVED'
+        ) AS reservedCount,
+
+        /* 관리자 미확인 문의 */
+        (
+            SELECT COUNT(*)
+            FROM inquiry_message
+            WHERE sender_role = 'USER'
+              AND is_read = 'N'
+        ) AS unreadInquiryCount,
+
+        /* 전체 공지 */
+        (
+            SELECT COUNT(*)
+            FROM notice
+        ) AS noticeCount
+
+    </select>
+
+</mapper>

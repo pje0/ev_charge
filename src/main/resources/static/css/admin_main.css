@@ -1,0 +1,28 @@
+/* ==========================================================================
+   EV 충전소 - 관리자 메인 전용 스타일 (admin_main.css)
+   ========================================================================== */
+
+/* ── 1. 관리자 레이아웃 전체 컨테이너 ── */
+.ev-admin-main-container {
+    /* 상단 고정(fixed) 헤더 64px + 여유 마진을 고려한 안정적인 상단 패딩 */
+    padding-top: 104px !important;
+    padding-bottom: 80px !important;
+    min-height: 100vh;
+    box-sizing: border-box;
+    background-color: var(--ev-background);
+}
+
+/* ── 2. 상단 통합 탭 바 영역 ── */
+.admin-tab-bar {
+    margin-bottom: 24px !important;
+    display: flex;
+    gap: 8px;
+}
+
+/* ── 3. 컨텐츠 탭 및 섹션 제어 ── */
+.admin-tab-content {
+    display: none;
+}
+.admin-tab-content.active {
+    display: block;
+}

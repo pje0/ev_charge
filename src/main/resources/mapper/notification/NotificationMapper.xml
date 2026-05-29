@@ -1,0 +1,35 @@
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.boot.ev_charge.notification.NotificationMapper">
+
+    <insert id="insertNotification" parameterType="com.boot.ev_charge.notification.NotificationDTO" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO notification (user_id, type, title, content, is_read, reference_id, reference_type, created_at)
+        VALUES (#{userId}, #{type}, #{title}, #{content}, COALESCE(#{isRead}, 'N'), #{referenceId}, #{referenceType}, CURRENT_TIMESTAMP)
+    </insert>
+
+    <select id="selectUnreadListByUserId" resultType="com.boot.ev_charge.notification.NotificationDTO">
+        SELECT id, user_id AS userId, type, title, content, is_read AS isRead, reference_id AS referenceId, reference_type AS referenceType, created_at AS createdAt
+        FROM notification
+        WHERE user_id = #{userId} AND is_read = 'N'
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="selectAllListByUserId" resultType="com.boot.ev_charge.notification.NotificationDTO">
+        SELECT id, user_id AS userId, type, title, content, is_read AS isRead, reference_id AS referenceId, reference_type AS referenceType, created_at AS createdAt
+        FROM notification
+        WHERE user_id = #{userId}
+        ORDER BY created_at DESC
+    </select>
+
+    <update id="updateNotificationReadStatus">
+        UPDATE notification SET is_read = 'Y' WHERE id = #{id}
+    </update>
+
+    <delete id="updateAllNotificationReadStatus">
+        DELETE FROM notification
+        WHERE user_id = #{userId}
+    </delete>
+
+</mapper>

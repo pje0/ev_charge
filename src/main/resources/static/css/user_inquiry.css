@@ -1,0 +1,124 @@
+/* ==========================================================================
+   EV 충전소 - 1:1 문의 전용 스타일 (user_inquiry.css)
+   ========================================================================== */
+
+/* ── 채팅창 전체 레이아웃 ── */
+.chat-window {
+    width: 100%;
+    max-width: 600px;
+    height: 700px;
+    /* 💡 수정: 상단 fixed 헤더 및 타이틀 영역과의 자연스러운 간격을 위해 마진을 조정합니다 */
+    margin: 0 auto; 
+    display: flex;
+    flex-direction: column;
+    background: #ffffff;
+    border: 1px solid var(--ev-border);
+    border-radius: 12px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+/* 대화 내역 영역 */
+.chat-content {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    background-color: #f8fafc;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* 메시지 공통 레이아웃 */
+.msg { 
+    display: flex; 
+    width: 100%; 
+    align-items: flex-end; 
+    gap: 8px;
+    margin-bottom: 15px;
+}
+
+/* 🔵 내 메시지 (오른쪽 정렬) */
+.msg.me { 
+    justify-content: flex-end; 
+}
+
+/* 내 말풍선 */
+.msg.me .txt {
+    order: 2; 
+    background: var(--ev-primary);
+    color: white;
+    border-bottom-right-radius: 2px;
+    max-width: 70%;
+    padding: 10px 14px;
+    font-size: 14px;
+    line-height: 1.5;
+    border-radius: 12px;
+    word-break: break-all;
+}
+
+/* 내 읽음 표시 */
+.msg.me .read-status {
+    order: 1; 
+    margin-left: auto; 
+}
+
+/* ⚪ 관리자 메시지 (왼쪽 정렬) */
+.msg.admin { 
+    justify-content: flex-start; 
+}
+
+.msg.admin .txt {
+    background: white;
+    border: 1px solid var(--ev-border);
+    color: var(--ev-foreground);
+    border-bottom-left-radius: 2px;
+    max-width: 70%;
+    padding: 10px 14px;
+    font-size: 14px;
+    line-height: 1.5;
+    border-radius: 12px;
+    word-break: break-all;
+}
+
+/* 읽음 상태 텍스트 스타일 */
+.read-status {
+    font-size: 10px;
+    color: #a1a1aa;
+    white-space: nowrap;
+    line-height: 1;
+    margin-bottom: 2px; 
+}
+
+.read-status.unread {
+    color: var(--ev-primary);
+    font-weight: bold;
+}
+
+/* 입력창 영역 */
+.chat-input-wrap {
+    padding: 16px;
+    background: white;
+    border-top: 1px solid var(--ev-border);
+    display: flex;
+    gap: 8px;
+}
+
+#msgInput {
+    flex: 1;
+    padding: 10px 12px;
+    border: 1px solid var(--ev-border);
+    border-radius: 6px;
+    font-size: 14px;
+    outline: none;
+}
+#msgInput:focus { border-color: var(--ev-primary); }
+
+/* ── 💡 추가: 우측 하단 전송 버튼 정렬 및 규격 보정 ── */
+.inquiry-send-btn {
+    justify-content: center !important; /* 글자 가로 정중앙 정렬 */
+    align-items: center !important;     /* 글자 세로 정중앙 정렬 */
+    text-align: center !important;
+    gap: 0 !important;                  /* 공통 CSS의 gap 여백 제거로 글자 쏠림 완전히 제거 */
+    padding: 0 20px !important;         /* 전송 버튼 고유 규격 패딩 확보 */
+}
