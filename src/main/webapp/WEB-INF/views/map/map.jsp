@@ -266,8 +266,9 @@
     }
 
     function isFavorite(stationId) {
-      return favoriteIds.indexOf(Number(stationId)) !== -1;
-    }
+    	  if (!Array.isArray(favoriteIds)) return false;
+    	  return favoriteIds.indexOf(Number(stationId)) !== -1;
+    	}
 
     function toggleFavorite(stationId, event) {
       event.stopPropagation(); // 목록 클릭 이벤트 전파 방지
