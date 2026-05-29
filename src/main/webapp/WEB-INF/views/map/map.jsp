@@ -9,7 +9,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>충전소 지도 - EV 충전소</title>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link
+	href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap"
+	rel="stylesheet">
 <link rel="stylesheet" href="/css/common.css">
 <link rel="stylesheet" href="/css/map.css">
 <script type="text/javascript"
@@ -31,8 +33,8 @@
 				<button type="button" class="ev-map-tab"
 					onclick="switchTab('region', this)">지역 충전소</button>
 				<sec:authorize access="isAuthenticated()">
-				<button type="button" class="ev-map-tab"
-					onclick="switchTab('favorite', this)">즐겨찾기</button>
+					<button type="button" class="ev-map-tab"
+						onclick="switchTab('favorite', this)">즐겨찾기</button>
 				</sec:authorize>
 			</div>
 
@@ -41,9 +43,9 @@
 				<div class="ev-map-sidebar-header">
 					<div class="ev-map-location-btns">
 						<button type="button" class="ev-map-btn-primary"
-							onclick="getMyLocation()">📍 내 위치</button>
+							onclick="getMyLocation()">내 위치</button>
 						<button type="button" class="ev-map-btn-outline"
-							onclick="findNearest()" id="nearestBtn" disabled>🔍 가장 가까운</button>
+							onclick="findNearest()" id="nearestBtn" disabled>가장 가까운</button>
 					</div>
 					<div class="ev-map-filter-row">
 						<button type="button" class="ev-map-filter-btn active"
@@ -57,7 +59,7 @@
 					</div>
 				</div>
 				<div class="ev-map-station-list" id="nearbyList">
-					<div class="ev-map-empty">📍 내 위치 버튼을 눌러주세요</div>
+					<div class="ev-map-empty">내 위치 버튼을 눌러주세요</div>
 				</div>
 			</div>
 
@@ -66,8 +68,8 @@
 				<div class="ev-map-sidebar-header">
 					<div class="ev-map-select-group">
 						<div class="ev-map-select-row">
-							<span class="ev-map-select-label">시/도</span>
-							<select class="ev-map-select" id="metroCd" onchange="onMetroChange()">
+							<span class="ev-map-select-label">시/도</span> <select
+								class="ev-map-select" id="metroCd" onchange="onMetroChange()">
 								<option value="">선택</option>
 								<option value="11">서울특별시</option>
 								<option value="21">부산광역시</option>
@@ -89,14 +91,16 @@
 							</select>
 						</div>
 						<div class="ev-map-select-row">
-							<span class="ev-map-select-label">시/군/구</span>
-							<select class="ev-map-select" id="cityCd" onchange="loadRegionStations()" disabled>
+							<span class="ev-map-select-label">시/군/구</span> <select
+								class="ev-map-select" id="cityCd"
+								onchange="loadRegionStations()" disabled>
 								<option value="">전체</option>
 							</select>
 						</div>
 						<div class="ev-map-select-row">
-							<span class="ev-map-select-label">충전속도</span>
-							<select class="ev-map-select" id="chargeSpeed" onchange="loadRegionStations()">
+							<span class="ev-map-select-label">충전속도</span> <select
+								class="ev-map-select" id="chargeSpeed"
+								onchange="loadRegionStations()">
 								<option value="all">급속 + 완속</option>
 								<option value="rapid">급속만</option>
 								<option value="slow">완속만</option>
@@ -112,11 +116,11 @@
 
 			<!-- 즐겨찾기 탭 -->
 			<sec:authorize access="isAuthenticated()">
-			<div class="ev-map-tab-content" id="tab-favorite">
-				<div class="ev-map-station-list" id="favoriteList">
-					<div class="ev-map-empty">⭐ 즐겨찾기한 충전소가 없습니다</div>
+				<div class="ev-map-tab-content" id="tab-favorite">
+					<div class="ev-map-station-list" id="favoriteList">
+						<div class="ev-map-empty">⭐ 즐겨찾기한 충전소가 없습니다</div>
+					</div>
 				</div>
-			</div>
 			</sec:authorize>
 
 		</div>
@@ -153,7 +157,7 @@
 
 			<!-- 범례 -->
 			<div class="ev-map-legend">
-				<p class="ev-map-legend-title">범례</p>
+				<p class="ev-map-legend-title">상태</p>
 				<div class="ev-map-legend-item">
 					<div class="ev-map-legend-dot" style="background: #16a34a"></div>
 					<span>사용 가능</span>
@@ -181,26 +185,40 @@
 				<div class="ev-map-detail-body">
 					<div class="ev-map-detail-grid">
 						<div class="ev-map-detail-card">
-							<span class="ev-map-detail-card-label">⚡ 급속</span>
-							<span class="ev-map-detail-card-value" id="detailRapid"></span>
+							<span class="ev-map-detail-card-label">⚡ 급속</span> <span
+								class="ev-map-detail-card-value" id="detailRapid"></span>
 						</div>
 						<div class="ev-map-detail-card">
-							<span class="ev-map-detail-card-label">🔋 완속</span>
-							<span class="ev-map-detail-card-value" id="detailSlow"></span>
+							<span class="ev-map-detail-card-label">🔋 완속</span> <span
+								class="ev-map-detail-card-value" id="detailSlow"></span>
 						</div>
 						<div class="ev-map-detail-card" style="grid-column: span 2">
-							<span class="ev-map-detail-card-label">🚗 지원차종</span>
-							<span class="ev-map-detail-card-value ev-map-detail-car" id="detailCar"></span>
+							<span class="ev-map-detail-card-label">🚗 지원차종</span> <span
+								class="ev-map-detail-card-value ev-map-detail-car"
+								id="detailCar"></span>
 						</div>
 						<div class="ev-map-detail-card" style="grid-column: span 2">
-							<span class="ev-map-detail-card-label">충전기 상태</span>
-							<span class="ev-map-detail-card-value" id="detailStatus"></span>
+							<span class="ev-map-detail-card-label">충전기 상태</span> <span
+								class="ev-map-detail-card-value" id="detailStatus"></span>
 						</div>
 					</div>
 				</div>
 				<div class="ev-map-detail-footer">
-					<a id="detailNavi" href="#" target="_blank" class="ev-map-reserve-btn"
-						style="background:#2563eb;">길찾기 →</a>
+					<!-- 경로 정보 표시 영역 -->
+					<div id="routeInfo"
+						style="display: none; width: 100%; padding: 10px 14px; font-size: 14px; color: #374151; background: #f8fafc; border-radius: 8px; margin-bottom: 8px;">
+						<span>거리 <strong id="routeDistance" style="color: #1d4ed8;"></strong></span>
+						&nbsp;&nbsp; <span>소요시간 <strong id="routeDuration"
+							style="color: #1d4ed8;"></strong></span> &nbsp;&nbsp; 
+							<a id="kakaoMapLink" href="#" target="_blank"
+							style="font-size: 12px; color: #9ca3af; text-decoration: underline; float:right;">
+							카카오맵에서 보기</a>
+					</div>
+
+					<button type="button" id="routeBtn"
+						style="padding: 8px 16px; background: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600;">
+						길찾기</button>
+
 					<sec:authorize access="isAuthenticated()">
 						<a href="/reservation" class="ev-map-reserve-btn">예약하기 →</a>
 					</sec:authorize>
@@ -396,19 +414,32 @@
           '<span style="color:#d97706">사용중 ' + (station.inUseCnt||0) + '대</span> / ' +
           '<span style="color:#dc2626">점검중 ' + (station.outOfServiceCnt||0) + '대</span>';
       }
+      
+   // 경로 초기화
+      document.getElementById('routeInfo').style.display = 'none';
+      if (routePolyline) {
+          routePolyline.setMap(null);
+          routePolyline = null;
+      }
+      
+      
+      var routeBtn = document.getElementById('routeBtn');
+      if (routeBtn) {
+          routeBtn.textContent = '길찾기';
+          routeBtn.onclick = function() { drawRoute(station); };
+      }
 
-      // 길찾기 버튼 URL 설정
-      var naviEl = document.getElementById('detailNavi');
-      if (naviEl && station.lat && station.lng) {
-        var stationName = encodeURIComponent(station.stnPlace || station.name || '충전소');
-        if (userLocation) {
-          naviEl.href = 'https://map.kakao.com/link/from/내위치,' +
-            userLocation.lat + ',' + userLocation.lng +
-            '/to/' + stationName + ',' + station.lat + ',' + station.lng;
-        } else {
-          naviEl.href = 'https://map.kakao.com/link/to/' +
-            stationName + ',' + station.lat + ',' + station.lng;
-        }
+      var kakaoMapLink = document.getElementById('kakaoMapLink');
+      if (kakaoMapLink && station.lat && station.lng) {
+          var stationName = encodeURIComponent(station.stnPlace || station.name || '충전소');
+          if (userLocation) {
+              kakaoMapLink.href = 'https://map.kakao.com/link/from/내위치,' +
+                  userLocation.lat + ',' + userLocation.lng +
+                  '/to/' + stationName + ',' + station.lat + ',' + station.lng;
+          } else {
+              kakaoMapLink.href = 'https://map.kakao.com/link/to/' +
+                  stationName + ',' + station.lat + ',' + station.lng;
+          }
       }
 
       document.getElementById('detailPanel').style.display = 'flex';
@@ -692,15 +723,19 @@
         });
     }
 
-    // 가장 가까운 충전소
     function findNearest() {
-      if (!userLocation || stations.length === 0) return;
-      var nearest = stations[0];
-      showDetail(nearest);
-      if (nearest.lat && nearest.lng) {
-        map.setCenter(new kakao.maps.LatLng(nearest.lat, nearest.lng));
-        map.setLevel(4);
-      }
+        if (!userLocation || stations.length === 0) return;
+        
+        // 거리순으로 가장 가까운 충전소 찾기
+        var nearest = stations.reduce(function(a, b) {
+            return (a.dist || Infinity) < (b.dist || Infinity) ? a : b;
+        });
+        
+        showDetail(nearest);
+        if (nearest.lat && nearest.lng) {
+            map.setCenter(new kakao.maps.LatLng(nearest.lat, nearest.lng));
+            map.setLevel(4);
+        }
     }
 
     // 거리 계산
@@ -727,6 +762,107 @@
           }
         });
     }
+    
+    var routePolyline = null; // 경로 폴리라인 전역 변수
+	
+	 // 경로 그리기 함수
+	 function drawRoute(station) {
+	     if (!userLocation) {
+	         alert('먼저 내 위치를 확인해주세요.');
+	         return;
+	     }
+	     if (!station.lat || !station.lng) {
+	         alert('충전소 위치 정보가 없습니다.');
+	         return;
+	     }
+	
+	     // 기존 경로 제거
+	     if (routePolyline) {
+	         routePolyline.setMap(null);
+	         routePolyline = null;
+	     }
+	
+	     var routeBtn = document.getElementById('routeBtn');
+	     if (routeBtn) routeBtn.textContent = '경로 탐색 중...';
+	
+	     fetch('/api/directions?startLat=' + userLocation.lat +
+	           '&startLng=' + userLocation.lng +
+	           '&endLat=' + station.lat +
+	           '&endLng=' + station.lng)
+	     .then(function(res) { return res.json(); })
+	     .then(function(data) {
+	         if (data.error) {
+	             alert('경로 탐색 실패: ' + data.error);
+	             if (routeBtn) routeBtn.textContent = '길찾기';
+	             return;
+	         }
+	
+	         var routes = data.routes;
+	         if (!routes || routes.length === 0) {
+	             alert('경로를 찾을 수 없습니다.');
+	             if (routeBtn) routeBtn.textContent = '길찾기';
+	             return;
+	         }
+	
+	         var route = routes[0];
+	         var summary = route.summary;
+	         var distanceKm = (summary.distance / 1000).toFixed(1);
+	         var durationMin = Math.ceil(summary.duration / 60);
+	
+	         // 경로 정보 표시
+	         document.getElementById('routeInfo').style.display = 'block';
+	         document.getElementById('routeDistance').textContent = distanceKm + 'km';
+	         document.getElementById('routeDuration').textContent = durationMin + '분';
+	
+	         // 좌표 파싱 (vertexes: [x1,y1,x2,y2,...])
+	         var path = [];
+	         route.sections.forEach(function(section) {
+	             section.roads.forEach(function(road) {
+	                 var vertexes = road.vertexes;
+	                 for (var i = 0; i < vertexes.length; i += 2) {
+	                     var x = vertexes[i];     // 경도
+	                     var y = vertexes[i + 1]; // 위도
+	                     path.push(new kakao.maps.LatLng(y, x));
+	                 }
+	             });
+	         });
+	
+	         // 폴리라인 생성
+	         routePolyline = new kakao.maps.Polyline({
+	             path: path,
+	             strokeWeight: 5,
+	             strokeColor: '#2563eb',
+	             strokeOpacity: 0.8,
+	             strokeStyle: 'solid'
+	         });
+	         routePolyline.setMap(map);
+	
+	         // 지도 범위 자동 조정
+	         var bounds = new kakao.maps.LatLngBounds();
+	         path.forEach(function(latlng) { bounds.extend(latlng); });
+	         map.setBounds(bounds);
+	
+	         if (routeBtn) routeBtn.textContent = '경로 지우기';
+	         routeBtn.onclick = function() { clearRoute(station); };
+	     })
+	     .catch(function(err) {
+	         alert('오류가 발생했습니다.');
+	         if (routeBtn) routeBtn.textContent = '길찾기';
+	     });
+	 }
+	
+	 function clearRoute(station) {
+	     if (routePolyline) {
+	         routePolyline.setMap(null);
+	         routePolyline = null;
+	     }
+	     document.getElementById('routeInfo').style.display = 'none';
+	     var routeBtn = document.getElementById('routeBtn');
+	     if (routeBtn) {
+	         routeBtn.textContent = '길찾기';
+	         routeBtn.onclick = function() { drawRoute(station); };
+	     }
+	 }
   </script>
 
 </body>
