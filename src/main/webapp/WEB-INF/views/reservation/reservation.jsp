@@ -50,6 +50,8 @@
 	            <input type="hidden" name="reservationType" id="reservationType" value="TIME">
 	            <input type="hidden" name="startTime" id="startTime">
 	            <input type="hidden" name="endTime" id="endTime">
+	            <input type="hidden" id="userBatteryCapacity" value="${primaryVehicle.batteryCapacity != null ? primaryVehicle.batteryCapacity : 70.0}">
+				<input type="hidden" id="userConnectorType" value="${primaryVehicle.connectorType}">
 	
 	            <div id="ev-page-1" class="ev-page ev-panel-layout">
 	                <div class="ev-panel ev-panel-side">

@@ -30,10 +30,15 @@
                 <input type="hidden" name="stationId" id="stationId" value="${reservation.stationId}">
                 <input type="hidden" name="reservationType" id="reservationType" value="${reservation.reservationType}">
                 
-                <input type="hidden" name="startTime" id="startTime" value="<fmt:formatDate value='${reservation.startTime}' pattern='yyyy-MM-dd HH:mm:00'/>">
-                <input type="hidden" name="endTime" id="endTime" value="<fmt:formatDate value='${reservation.endTime}' pattern='yyyy-MM-dd HH:mm:00'/>">
+                <input type="hidden" id="chargerConnector" value="${reservation.connectorType}">
+                <input type="hidden" id="carConnector" value="${reservation.carConnectorType}">
                 
-                <input type="hidden" id="initialTargetPercent" value="<fmt:formatNumber value='${reservation.targetAmount != null ? (reservation.targetAmount * 100 / 70) : 0}' maxFractionDigits='0'/>">
+                <input type="hidden" name="editStartTime" id="startTime" value="<fmt:formatDate value='${reservation.startTime}' pattern='yyyy-MM-dd HH:mm:00'/>">
+                <input type="hidden" name="editEndTime" id="endTime" value="<fmt:formatDate value='${reservation.endTime}' pattern='yyyy-MM-dd HH:mm:00'/>">
+                
+                <input type="hidden" id="carBatteryCapacity" value="${reservation.batteryCapacity != null ? reservation.batteryCapacity : 70.0}">
+                
+                <input type="hidden" id="initialTargetPercent" value="<fmt:formatNumber value='${reservation.targetAmount != null && reservation.batteryCapacity != null ? (reservation.targetAmount * 100 / reservation.batteryCapacity) : 0}' maxFractionDigits='0'/>">
                 <input type="hidden" id="chargerKwHidden" value="${reservation.powerKw != null ? reservation.powerKw : 50.0}">
 
                 <div class="ev-page-wrapper">
@@ -108,8 +113,9 @@
                         </div>
                     </div>
 
-                    <div class="ev-nav-buttons" style="margin-top: 24px;">
-                        <button type="button" onclick="location.href='/mypage'" class="btn-prev">수정 취소</button>
+                    <div class="ev-nav-buttons" style="margin-top: 24px; gap: 8px;">
+                        <button type="button" onclick="goBackWithCheck()" class="btn-prev" style="margin-right: auto;">수정 취소</button>
+                        <button type="button" onclick="resetFormToInitial()" class="btn-prev" style="background-color: #f1f5f9;">🔄 초기화</button>
                         <button type="button" onclick="submitReservationEdit()" class="btn-next">변경사항 저장</button>
                     </div>
                     

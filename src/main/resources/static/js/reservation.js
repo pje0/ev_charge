@@ -17,6 +17,10 @@ if (typeof globalAlertLock === 'undefined') { var globalAlertLock = false; }
 let lastSafeTargetPercent = 0; 
 let isBookingInProgress = false; 
 
+// 🟢 [NEW] 유저 대표 차량 전역 변수
+let userBatteryCapacity = 70.0; 
+let userConnectorType = "";
+
 // ==========================================
 // 1. 단계 제어 (Step View Control)
 // ==========================================
@@ -122,20 +126,13 @@ function applyChargerStatusUI(chargerId, isNotBookable) {
  * =========================================================================
  */
 async function loadChargers(stationId, element) {
-    console.log(`🔌 [loadChargers CSS 분리본] 충전기 목록 조회 프로세스 가동 -> stationId: ${stationId}`);
+    console.log(`🔌 [loadChargers] 충전기 목록 조회 프로세스 가동 -> stationId: ${stationId}`);
 
-    if (!stationId) {
-        console.warn("⚠️ [loadChargers] stationId 파라미터 누락으로 조회를 파기합니다.");
-        return;
-    }
+    if (!stationId) return;
     selectedStationId = Number(stationId);
     
-    document.querySelectorAll('.station-card').forEach(el => {
-        el.classList.remove('active');
-    });
-    if (element) {
-        element.classList.add('active');
-    }
+    document.querySelectorAll('.station-card').forEach(el => el.classList.remove('active'));
+    if (element) element.classList.add('active');
     
     clearAllReservationStyles();
     
@@ -167,7 +164,6 @@ async function loadChargers(stationId, element) {
                 const isBroken = (statusLower === 'maintenance' || statusLower === 'out_of_service');
                 const isOccupied = (statusLower === 'charging' || statusLower === 'occupied' || statusLower === 'in_use');
 
-                // 🛑 초기 클래스 셋팅 (점검 중은 빨간색, 나머지는 상태에 맞게)
                 let cardClass = 'available';
                 let badgeText = '사용 가능';
 
@@ -183,8 +179,7 @@ async function loadChargers(stationId, element) {
                     <div class="charger-card ${cardClass}" 
                          id="charger-card-${c.id}" 
                          data-status="${statusLower}"
-                         onclick="selectCharger(this, '${c.id}', '${connectorName}', ${c.powerKw})">
-                        <div class="charger-card-header">
+                         onclick="selectCharger(this, '${c.id}', '${connectorName}', ${c.powerKw}, '${c.connectorType}')"> <div class="charger-card-header">
                             <h3 class="charger-title">${connectorName}</h3>
                             <span class="charger-badge">${badgeText}</span>
                         </div>
@@ -194,8 +189,6 @@ async function loadChargers(stationId, element) {
                         </div>
                     </div>`;
             }).join('');
-            
-            console.log("🏁 [loadChargers] 순수 마크업 드로잉 종료. 각 충전기별 예약 슬롯 전수 검증을 시작합니다.");
             
             if (selectedDateStr === todayStr) {
                 chargers.forEach(async (c) => {
@@ -213,6 +206,34 @@ async function loadChargers(stationId, element) {
     } catch (error) {
         console.error("❌ [loadChargers] 통신 예외 발생:", error);
     }
+}
+
+// 🟢 규격 비교 로직이 추가된 selectCharger 함수
+function selectCharger(element, chargerId, chargerName, powerKw, rawConnectorType) {
+    if (element.classList.contains("broken")) {
+        alert("해당 기기는 현재 점검 중이므로 예약할 수 없습니다.");
+        return;
+    }
+
+    // 🟢 충전기 규격과 내 대표 차량 규격 비교 알럿
+    if (userConnectorType && rawConnectorType && userConnectorType !== rawConnectorType) {
+        const warnMsg = `[경고] 고객님 대표 차량의 충전 규격(${userConnectorType})과 선택하신 충전기의 규격(${rawConnectorType})이 다릅니다.\n\n그래도 예약을 계속 진행하시겠습니까?`;
+        if (!confirm(warnMsg)) {
+            console.log("🛑 [Select Cancel] 규격 불일치로 충전기 선택 취소");
+            return;
+        }
+    }
+
+    isBookingInProgress = true; 
+    document.getElementById("chargerId").value = chargerId;
+    selectedChargerId = Number(chargerId);
+    selectedChargerKw = Number(powerKw || 50.0);
+    document.getElementById("summaryCharger").innerText = chargerName;
+    
+    console.log(`🔌 [충전기 선택 완료] 번호: ${selectedChargerId}, 출력: ${selectedChargerKw}kW, 규격: ${rawConnectorType}`);
+    clearAllReservationStyles();
+    moveStep(2);
+    loadReservedTimes();
 }
 
 /**
@@ -374,7 +395,8 @@ function updateSliderBackground(value) {
 
 function calculateRequiredMinutes(targetVal) {
     const chargerKw = selectedChargerKw; 
-    const batteryCapacity = 70.0; 
+    // 🟢 하드코딩 제거, 유저의 실제 배터리 용량 대입
+    const batteryCapacity = userBatteryCapacity; 
     const currentPercent = 0.0; 
 
     if (targetVal <= currentPercent) return 0;
@@ -386,6 +408,8 @@ function calculateRequiredMinutes(targetVal) {
     if (chargerKw > 20 && targetVal > 80) { 
         requiredMinutes += Math.ceil(((batteryCapacity * (targetVal - 80) / 100.0) / chargerKw) * 0.5 * 60);
     }
+    
+    console.log(`🧮 [소요 시간 연산] 목표: ${targetVal}%, 배터리: ${batteryCapacity}kWh, 충전기: ${chargerKw}kW -> ${requiredMinutes}분 예상`);
     return requiredMinutes;
 }
 
@@ -942,13 +966,14 @@ function syncMidnightSlot() {
 }
 
 // ==========================================
-// 10. 예약 최종 제출
+// 10. 예약 최종 제출 (reservation.js 전용)
 // ==========================================
 let isSubmittingForm = false; 
 
 function submitReservation() {
+    // 1. 중복 클릭 락 (따닥 방지)
     if (isSubmittingForm) {
-        console.warn("⚠️ [submitReservation] 이미 예약 요청이 서버로 전송 중입니다. 중복 제출을 차단합니다.");
+        console.warn("⚠️ [submitReservation] 이미 예약 요청이 서버로 전송 중입니다.");
         return;
     }
 
@@ -957,6 +982,7 @@ function submitReservation() {
     const now = new Date();
     const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`; 
 
+    // 2. 시간대 지정 여부 검사
     if (type === "TIME") {
         if (startTime == null || endTime == null) {
             alert("예약 시간을 선택하세요.");
@@ -969,39 +995,31 @@ function submitReservation() {
         }
         
         const percentVal = parseInt(document.getElementById("targetPercent")?.value) || 0;
-        const calculatedKwh = Math.round(70.0 * (percentVal / 100.0));
+        const calculatedKwh = Math.round(userBatteryCapacity * (percentVal / 100.0));
         
         let targetPctHidden = document.getElementById("targetPercentHiddenForm");
         if (!targetPctHidden) {
-            targetPctHidden = document.createElement("input");
-            targetPctHidden.type = "hidden";
-            targetPctHidden.name = "targetPercent"; 
-            targetPctHidden.id = "targetPercentHiddenForm";
+            targetPctHidden = document.createElement("input"); targetPctHidden.type = "hidden"; targetPctHidden.name = "targetPercent"; targetPctHidden.id = "targetPercentHiddenForm";
             document.getElementById("reservationForm").appendChild(targetPctHidden);
         }
         targetPctHidden.value = percentVal;
 
         let targetHidden = document.getElementById("targetKwhHidden");
         if (!targetHidden) {
-            targetHidden = document.createElement("input");
-            targetHidden.type = "hidden";
-            targetHidden.name = "targetKwh"; 
-            targetHidden.id = "targetKwhHidden";
+            targetHidden = document.createElement("input"); targetHidden.type = "hidden"; targetHidden.name = "targetKwh"; targetHidden.id = "targetKwhHidden";
             document.getElementById("reservationForm").appendChild(targetHidden);
         }
         targetHidden.value = calculatedKwh;
 
         let minutesHidden = document.getElementById("maxMinutesHidden");
         if (!minutesHidden) {
-            minutesHidden = document.createElement("input");
-            minutesHidden.type = "hidden";
-            minutesHidden.name = "maxMinutes"; 
-            minutesHidden.id = "maxMinutesHidden";
+            minutesHidden = document.createElement("input"); minutesHidden.type = "hidden"; minutesHidden.name = "maxMinutes"; minutesHidden.id = "maxMinutesHidden";
             document.getElementById("reservationForm").appendChild(minutesHidden);
         }
         minutesHidden.value = calculateRequiredMinutes(percentVal);
     }
     
+    // 3. 날짜 및 과거 시간 검사
     if (!date) {
         alert("예약 날짜를 선택해 주세요.");
         return;
@@ -1015,24 +1033,41 @@ function submitReservation() {
         }
     }
 
+    // 🟢 4. 최종 확정 알럿 띄우기 (reservation.js 전용)
+    if (!confirm("예약을 이대로 확정하시겠습니까?")) {
+        console.log("🛑 [Submit Cancel] 사용자가 예약 확정을 취소했습니다.");
+        return;
+    }
+
+    // 5. 날짜와 시간 조립 및 폼 전송
     const finalStartTimeStr = `${date} ${startTime.substring(0, 5)}:00`;
     const finalEndTimeStr = `${date} ${endTime.substring(0, 5)}:00`;
 
     document.getElementById("startTime").value = finalStartTimeStr;
     document.getElementById("endTime").value = finalEndTimeStr;
     
+    // 🟢 6. 폼 전송 직전에 이탈 방지 알럿(beforeunload) 강제 해제!
+    isBookingInProgress = false; 
+    
     isSubmittingForm = true;
     document.getElementById("reservationForm").submit();
 
-    setTimeout(() => {
-        isSubmittingForm = false;
-    }, 3000);
+    setTimeout(() => { isSubmittingForm = false; }, 3000);
 }
 
 // ==========================================
-// 11. DOM 이벤트 리스너 바인딩
+// 11. DOM 이벤트 리스너 바인딩 (파일 하단에 있던 DOMContentLoaded를 위로 끌어올리거나 병합)
 // ==========================================
 window.addEventListener("DOMContentLoaded", () => {
+    // 🟢 JSP에서 넘겨준 대표 차량 정보 파싱
+    const batteryInput = document.getElementById("userBatteryCapacity");
+    if (batteryInput && batteryInput.value) userBatteryCapacity = Number(batteryInput.value);
+    
+    const connectorInput = document.getElementById("userConnectorType");
+    if (connectorInput && connectorInput.value) userConnectorType = connectorInput.value;
+    
+    console.log(`🚗 [차량 정보 로드] 배터리: ${userBatteryCapacity}kWh, 규격: ${userConnectorType}`);
+
     document.getElementById("reservationDate")?.addEventListener("change", () => {
         loadReservedTimes();
         syncMidnightSlot(); 
@@ -1048,9 +1083,7 @@ window.addEventListener("DOMContentLoaded", () => {
     } 
     
     const textDisplay = document.getElementById("chargeValueText") || document.getElementById("targetPercentText");
-    if (textDisplay) {
-        textDisplay.innerText = "0%";
-    }
+    if (textDisplay) textDisplay.innerText = "0%";
 });
 
 // ==========================================
