@@ -147,8 +147,14 @@
 					</div>
 					<div class="ev-auth-form-row">
 						<div class="ev-auth-form-group">
-							<label class="ev-auth-label">차량 모델</label> <input type="text"
-								name="carModel" class="ev-auth-input" placeholder="현대 아이오닉 6">
+							<label class="ev-auth-label">차량 모델</label> <select name="modelId"
+								class="ev-auth-input">
+								<option value="">선택 안함</option>
+								<c:forEach var="car" items="${evModels}">
+									<option value="${car.id}">${car.manufacturer}
+										${car.modelName}</option>
+								</c:forEach>
+							</select>
 						</div>
 						<div class="ev-auth-form-group">
 							<label class="ev-auth-label">차량 번호</label> <input type="text"
