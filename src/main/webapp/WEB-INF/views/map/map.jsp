@@ -157,7 +157,7 @@
 
 			<!-- 범례 -->
 			<div class="ev-map-legend">
-				<p class="ev-map-legend-title">범례</p>
+				<p class="ev-map-legend-title">상태</p>
 				<div class="ev-map-legend-item">
 					<div class="ev-map-legend-dot" style="background: #16a34a"></div>
 					<span>사용 가능</span>
@@ -723,15 +723,19 @@
         });
     }
 
-    // 가장 가까운 충전소
     function findNearest() {
-      if (!userLocation || stations.length === 0) return;
-      var nearest = stations[0];
-      showDetail(nearest);
-      if (nearest.lat && nearest.lng) {
-        map.setCenter(new kakao.maps.LatLng(nearest.lat, nearest.lng));
-        map.setLevel(4);
-      }
+        if (!userLocation || stations.length === 0) return;
+        
+        // 거리순으로 가장 가까운 충전소 찾기
+        var nearest = stations.reduce(function(a, b) {
+            return (a.dist || Infinity) < (b.dist || Infinity) ? a : b;
+        });
+        
+        showDetail(nearest);
+        if (nearest.lat && nearest.lng) {
+            map.setCenter(new kakao.maps.LatLng(nearest.lat, nearest.lng));
+            map.setLevel(4);
+        }
     }
 
     // 거리 계산
