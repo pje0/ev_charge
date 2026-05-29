@@ -252,80 +252,134 @@ body {
 }
 
 /* ========================================================== */
-/* 글로벌 실시간 알림 토스트 (React Style Toast)             */
+/* 🔔 글로벌 알림센터 드롭다운 레이어 스타일                  */
 /* ========================================================== */
 
-/* 토스트 알림들이 쌓이는 전체 컨테이너 */
-#globalToastContainer {
-    position: fixed;
-    bottom: 25px;
-    right: 25px;
-    z-index: 99999;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    pointer-events: none; /* 뒷배경 클릭 방해 금지 */
+/* 알림 벨 버튼 위치 기준점 설정을 위한 랩퍼 */
+.ev-header-bell-wrap {
+    position: relative;
+    display: inline-block;
 }
 
-/* 개별 토스트 알림창 본체 */
-.ev-global-toast {
-    width: 320px;
-    background-color: #1e293b; /* 세련된 다크 크롬/네이비 색상 */
-    color: #ffffff;
-    padding: 16px;
-    border-radius: 8px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
-    box-sizing: border-box;
-    pointer-events: auto; /* 토스트 내부 요소는 클릭 가능 */
-    animation: toastSlideIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; /* 약간의 탄성 효과 */
+/* 알림센터 전체 팝업 레이어 박스 */
+.ev-noti-center-box {
+    display: none; /* 기본 숨김 */
+    position: absolute;
+    right: 0;
+    top: 45px;
+    width: 360px;
+    max-height: 520px;
+    background: #ffffff;
+    border: 1px solid var(--ev-border);
+    border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+    z-index: 200;
+    overflow: hidden;
 }
 
-/* 사라질 때 적용되는 클래스 */
-.ev-global-toast.fade-out {
-    animation: toastFadeOut 0.3s ease-out forwards;
-}
-
-/* 토스트 상단 (타이틀 & 닫기 버튼) */
-.ev-global-toast-header {
+/* 알림센터 헤더 구역 */
+.ev-noti-center-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--ev-border);
+}
+.ev-noti-center-title {
+    font-size: 16px;
     font-weight: 700;
-    font-size: 14px;
-    margin-bottom: 6px;
-    border-bottom: 1px solid #334155;
-    padding-bottom: 5px;
+    color: var(--ev-foreground);
 }
 
-/* 토스트 내용 구역 */
-.ev-global-toast-body {
+/* 알림 / 대화 탭 메뉴 구역 */
+.ev-noti-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--ev-border);
+    background: #fafafa;
+}
+.ev-noti-tab-btn {
+    flex: 1;
+    text-align: center;
+    padding: 12px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ev-muted-foreground);
+    background: none;
+    border: none;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+}
+.ev-noti-tab-btn.active {
+    color: var(--ev-foreground);
+    border-bottom-color: var(--ev-foreground);
+    background: #ffffff;
+}
+
+/* 알림 리스트 스크롤 스페이스 */
+.ev-noti-scroll-area {
+    max-height: 400px;
+    overflow-y: auto;
+    padding: 15px 20px;
+    background: #f8f9fa;
+}
+
+/* 세부 섹션 타이틀 (최근 받은 알림) */
+.ev-noti-section-title {
     font-size: 13px;
-    color: #cbd5e1;
+    font-weight: 700;
+    color: var(--ev-foreground);
+    margin-bottom: 10px;
+    margin-top: 5px;
+}
+
+/* 개별 알림 카드 아이템 */
+.ev-noti-item-card {
+    background: #ffffff;
+    border-radius: 8px;
+    padding: 14px;
+    margin-bottom: 10px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+    border: 1px solid rgba(0,0,0,0.03);
+    position: relative;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.ev-noti-item-card:hover {
+    background: #fafafa;
+}
+/* 읽지 않은 알림 강조 효과 */
+.ev-noti-item-card.unread {
+    background: oklch(0.38 0.18 258 / 0.03);
+    border-left: 3px solid var(--ev-primary);
+}
+
+.ev-noti-item-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #444;
+    margin-bottom: 6px;
+}
+.ev-noti-item-icon {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--ev-primary);
+    color: #fff;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 10px;
+}
+.ev-noti-item-body {
+    font-size: 13px;
+    color: var(--ev-foreground);
     line-height: 1.4;
 }
 
-/* 우측 상단 X 닫기 버튼 */
-.ev-global-toast-close {
-    background: none;
-    border: none;
-    color: #94a3b8;
-    font-size: 18px;
-    cursor: pointer;
-    padding: 0;
-    line-height: 1;
-}
-.ev-global-toast-close:hover {
-    color: #ffffff;
-}
-
-/* 오른쪽 아래에서 왼쪽으로 스르륵 나오는 애니메이션 */
-@keyframes toastSlideIn {
-    from { transform: translateX(120%); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
-}
-
-/* 부드럽게 작아지며 사라지는 애니메이션 */
-@keyframes toastFadeOut {
-    from { opacity: 1; transform: scale(1); }
-    to { opacity: 0; transform: scale(0.9); }
+/* 알림 내역 공백 상태 */
+.ev-noti-empty-state {
+    padding: 60px 0;
+    text-align: center;
+    color: var(--ev-muted-foreground);
+    font-size: 14px;
 }
