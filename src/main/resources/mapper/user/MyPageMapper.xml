@@ -52,15 +52,33 @@
         DELETE FROM reservation WHERE id = #{reservationId}
     </delete>
 
-    <update id="updateReservation" parameterType="com.boot.ev_charge.mypage.MyPageDto">
+    <update id="updateReservationMaster" parameterType="com.boot.ev_charge.mypage.MyPageDto">
         UPDATE reservation
-        SET charger_id = #{chargerId}
+        SET reservation_type = #{reservationType}
         WHERE id = #{reservationId}
     </update>
+
+    <update id="updateReservationTime" parameterType="com.boot.ev_charge.mypage.MyPageDto">
+        UPDATE reservation_time
+        SET start_time = #{startTime}, end_time = #{endTime}
+        WHERE reservation_id = #{reservationId}
+    </update>
+
+    <insert id="upsertReservationTarget" parameterType="com.boot.ev_charge.mypage.MyPageDto">
+        INSERT INTO reservation_target (reservation_id, target_kwh, max_minutes)
+        VALUES (#{reservationId}, #{targetAmount}, #{maxMinutes})
+        ON DUPLICATE KEY UPDATE 
+            target_kwh = #{targetAmount},
+            max_minutes = #{maxMinutes}
+    </insert>
     
-    <select id="getReservationById" parameterType="long" resultType="com.boot.ev_charge.mypage.MyPageDto">
+	<select id="getReservationById" parameterType="long" resultType="com.boot.ev_charge.mypage.MyPageDto">
         SELECT 
             r.id AS reservationId,
+            r.charger_id AS chargerId,
+            c.station_id AS stationId,
+            c.power_kw AS powerKw,
+            c.connector_type AS connectorType,
             r.reservation_type AS reservationType,
             r.status,
             rt.start_time AS startTime,
