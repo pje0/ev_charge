@@ -169,7 +169,7 @@ $(document).ready(function() {
      });
 
      eventSource.onerror = function() {
-         console.warn("실시간 알림 스트림 연결이 해제되어 재연결을 시도합니다.");
+         console.warn("실시간 알림 SNIPER 스트림 연결이 해제되어 재연결을 시도합니다.");
      };
 
      // [최초 로드] 로그인 유저의 안 읽은 알림 개수를 확인하여 정확한 숫자로 세팅
@@ -225,14 +225,15 @@ function fn_load_notification_history() {
              if(item.type === "CHARGE_COMPLETE") iconSymbol = "⚡";
              if(item.type === "CHARGE_ERROR") iconSymbol = "⚠️";
              
+             // 수정 구역: JSP EL식 가로채기 방지를 위해 백틱 문자열 내부 변수명 앞에 역슬래시(\)를 전부 추가했습니다.
              htmlStr += `
-                 <div class="ev-noti-item-card ${unreadClass}" onclick="fn_click_read_notification('${item.id}', '${item.referenceId}', '${item.referenceType}')">
+                 <div class="ev-noti-item-card \${unreadClass}" onclick="fn_click_read_notification('\${item.id}', '\${item.referenceId}', '\${item.referenceType}')">
                      <div class="ev-noti-item-meta">
-                         <span class="ev-noti-item-icon">${iconSymbol}</span>
-                         <span>${item.title}</span>
+                         <span class="ev-noti-item-icon">\${iconSymbol}</span>
+                         <span>\${item.title}</span>
                      </div>
                      <div class="ev-noti-item-body">
-                         ${item.content}
+                         \${item.content}
                      </div>
                  </div>
              `;

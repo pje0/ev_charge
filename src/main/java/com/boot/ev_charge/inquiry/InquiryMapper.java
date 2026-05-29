@@ -40,4 +40,7 @@ public interface InquiryMapper {
 
     // 8. 읽음 처리 (관리자가 방 입장 시 실행)
     int updateReadStatus(Long roomId);
+    
+ // ⭕ [추가]: 알림 발송 시 유저 로그인 ID 추적을 위한 단건 조회 창구
+    InquiryRoomDTO findRoomById(@Param("roomId") Long roomId);
 }
