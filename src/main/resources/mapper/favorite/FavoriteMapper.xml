@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.boot.ev_charge.favorite.FavoriteMapper">
+
+    <insert id="insert" parameterType="com.boot.ev_charge.favorite.FavoriteDto">
+        INSERT IGNORE INTO favorite (user_id, station_id)
+        VALUES (#{userId}, #{stationId})
+    </insert>
+
+    <delete id="delete" parameterType="com.boot.ev_charge.favorite.FavoriteDto">
+        DELETE FROM favorite
+        WHERE user_id = #{userId} AND station_id = #{stationId}
+    </delete>
+
+    <select id="count" parameterType="com.boot.ev_charge.favorite.FavoriteDto" resultType="int">
+        SELECT COUNT(*) FROM favorite
+        WHERE user_id = #{userId} AND station_id = #{stationId}
+    </select>
+
+    <select id="findStationIdsByUserId" parameterType="Long" resultType="Long">
+        SELECT station_id FROM favorite
+        WHERE user_id = #{userId}
+    </select>
+
+</mapper>

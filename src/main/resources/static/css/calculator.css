@@ -1,0 +1,192 @@
+/* ============================================================
+   EV 충전소 - 충전 요금 계산기 스타일
+   prefix: ev-calc-
+   ============================================================ */
+
+.ev-calc-main {
+  margin-top: 64px;
+  padding: 48px 0;
+  min-height: calc(100vh - 64px);
+  background: var(--ev-background);
+}
+
+.ev-calc-title {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-bottom: 8px;
+}
+
+.ev-calc-desc {
+  font-size: 15px;
+  color: var(--ev-muted-foreground);
+  margin-bottom: 32px;
+}
+
+/* ── 입력 폼 ── */
+.ev-calc-form {
+  display: flex;
+  align-items: flex-end;
+  gap: 20px;
+  flex-wrap: wrap;
+  background: white;
+  border: 1px solid var(--ev-border);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 40px;
+}
+
+.ev-calc-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ev-calc-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ev-muted-foreground);
+}
+
+.ev-calc-radio-group {
+  display: flex;
+  gap: 6px;
+}
+
+.ev-calc-radio {
+  padding: 8px 20px;
+  border: 1px solid var(--ev-border);
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  background: white;
+  color: var(--ev-muted-foreground);
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.ev-calc-radio.active {
+  background: var(--ev-primary);
+  color: white;
+  border-color: var(--ev-primary);
+}
+.ev-calc-radio:hover:not(.active) { background: var(--ev-muted); }
+
+.ev-calc-kwh-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ev-calc-kwh-input {
+  width: 100px;
+  padding: 8px 12px;
+  border: 1px solid var(--ev-border);
+  border-radius: 6px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.ev-calc-kwh-input:focus { border-color: var(--ev-primary); }
+
+.ev-calc-kwh-unit {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ev-muted-foreground);
+}
+
+.ev-calc-btn {
+  padding: 10px 24px;
+  background: var(--ev-primary);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+.ev-calc-btn:hover { background: var(--ev-primary-light); }
+
+.ev-calc-btn-reset {
+  padding: 10px 24px;
+  background: white;
+  color: var(--ev-foreground);
+  border: 1px solid var(--ev-border);
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+.ev-calc-btn-reset:hover { background: var(--ev-muted); }
+
+/* ── 결과 ── */
+.ev-calc-result-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+
+.ev-calc-result-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.ev-calc-result-item {
+  background: white;
+  border: 1px solid var(--ev-border);
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: box-shadow 0.15s;
+}
+.ev-calc-result-item:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+.ev-calc-result-item.best {
+  border-color: var(--ev-primary);
+  background: oklch(0.38 0.18 258 / 0.04);
+}
+
+.ev-calc-result-name {
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ev-calc-badge-best {
+  font-size: 11px;
+  padding: 2px 8px;
+  background: var(--ev-primary);
+  color: white;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.ev-calc-result-rate {
+  font-size: 12px;
+  color: var(--ev-muted-foreground);
+}
+
+.ev-calc-result-total {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--ev-primary);
+}
+
+@media (max-width: 768px) {
+  .ev-calc-form { flex-direction: column; align-items: stretch; }
+  .ev-calc-result-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 480px) {
+  .ev-calc-result-grid { grid-template-columns: 1fr; }
+}

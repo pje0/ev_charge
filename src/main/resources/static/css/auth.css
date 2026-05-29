@@ -1,0 +1,222 @@
+/* ============================================================
+   EV 충전소 - 로그인/회원가입 페이지 스타일
+   prefix: ev-auth-
+   ============================================================ */
+
+.ev-auth-page {
+  min-height: 100vh;
+  background: white;
+  display: flex;
+  flex-direction: column;
+}
+
+.ev-auth-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 24px;
+  margin-top: 64px;
+}
+
+.ev-auth-wrap {
+  width: 100%;
+  max-width: 400px;
+}
+
+/* ── 탭 ── */
+.ev-auth-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--ev-border);
+  margin-bottom: 40px;
+}
+.ev-auth-tab {
+  padding: 12px 24px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: var(--ev-muted-foreground);
+  font-family: inherit;
+  transition: all 0.15s;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+.ev-auth-tab.active {
+  color: var(--ev-primary);
+  border-bottom-color: var(--ev-primary);
+}
+.ev-auth-tab:hover:not(.active) { color: var(--ev-foreground); }
+
+/* ── 폼 제목 ── */
+.ev-auth-title {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--ev-foreground);
+  margin-bottom: 32px;
+  letter-spacing: -0.02em;
+}
+
+/* ── 탭 컨텐츠 ── */
+.ev-auth-tab-content { display: none; }
+.ev-auth-tab-content.active { display: block; }
+
+/* ── 폼 ── */
+.ev-auth-form { display: flex; flex-direction: column; gap: 16px; }
+.ev-auth-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.ev-auth-form-group { display: flex; flex-direction: column; gap: 6px; }
+
+.ev-auth-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ev-muted-foreground);
+}
+.ev-auth-label-required { color: var(--ev-destructive); margin-left: 2px; }
+
+.ev-auth-input-wrap { position: relative; }
+.ev-auth-input {
+  width: 100%;
+  padding: 12px 0;
+  border: none;
+  border-bottom: 1px solid var(--ev-border);
+  border-radius: 0;
+  font-size: 15px;
+  color: var(--ev-foreground);
+  outline: none;
+  transition: border-color 0.15s;
+  font-family: inherit;
+  background: transparent;
+}
+.ev-auth-input::placeholder { color: var(--ev-muted-foreground); font-size: 14px; }
+.ev-auth-input:focus { border-bottom-color: var(--ev-primary); }
+.ev-auth-input-pw { padding-right: 40px; }
+
+/* ── 비밀번호 토글 ── */
+.ev-auth-pw-toggle {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--ev-muted-foreground);
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s;
+}
+.ev-auth-pw-toggle:hover { color: var(--ev-foreground); }
+.ev-auth-pw-toggle svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ── 제출 버튼 ── */
+.ev-auth-submit {
+  width: 100%;
+  padding: 14px;
+  background: var(--ev-primary);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+  margin-top: 8px;
+}
+.ev-auth-submit:hover { background: var(--ev-primary-light); }
+
+/* ── 하단 링크 ── */
+.ev-auth-links {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 16px;
+}
+.ev-auth-links a {
+  font-size: 13px;
+  color: var(--ev-muted-foreground);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.ev-auth-links a:hover { color: var(--ev-foreground); }
+.ev-auth-links-divider {
+  width: 1px;
+  height: 12px;
+  background: var(--ev-border);
+}
+
+/* ── SNS 로그인 ── */
+.ev-auth-sns-wrap {
+  margin-top: 32px;
+  padding-top: 32px;
+  border-top: 1px solid var(--ev-border);
+}
+.ev-auth-sns-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ev-muted-foreground);
+  margin-bottom: 16px;
+}
+.ev-auth-sns-btns {
+  display: flex;
+  gap: 12px;
+}
+.ev-auth-sns-btn {
+  flex: 1;
+  padding: 12px;
+  border: 1px solid var(--ev-border);
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.15s;
+  color: var(--ev-foreground);
+  text-decoration: none;
+}
+.ev-auth-sns-btn:hover { background: var(--ev-muted); }
+.ev-auth-sns-btn-kakao { background: #FEE500; border-color: #FEE500; color: #000; }
+.ev-auth-sns-btn-kakao:hover { background: #f0d800; }
+.ev-auth-sns-btn-naver { background: #03C75A; border-color: #03C75A; color: white; }
+.ev-auth-sns-btn-naver:hover { background: #02b350; }
+
+/* ── 에러/성공 ── */
+.ev-auth-error {
+  background: oklch(0.94 0.07 25);
+  border: 1px solid oklch(0.75 0.18 25);
+  color: oklch(0.45 0.22 25);
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+.ev-auth-success {
+  background: oklch(0.93 0.08 145);
+  border: 1px solid oklch(0.75 0.14 145);
+  color: oklch(0.38 0.17 145);
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+@media (max-width: 480px) {
+  .ev-auth-form-row { grid-template-columns: 1fr; }
+}
