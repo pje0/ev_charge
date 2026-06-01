@@ -35,7 +35,7 @@ public class SecurityConfig {
             	        "/map", "/calculator",
             	        "/api/stations", "/api/stations/**",
             	        "/WEB-INF/**",
-            	        "notices/**"
+            	        "notices/**", "/api/directions"
             	    ).permitAll()
             	    .requestMatchers("/admin/**").hasRole("ADMIN")
             	    .requestMatchers("/api/favorites/**").authenticated()
