@@ -137,58 +137,6 @@
 	<div id="globalToastContainer"></div>
 </header>
 <script>
-// 🔔 알림센터(보관함) 실시간 수신 및 UI 제어 공통 JavaScript
-
-$(document).ready(function() {
- let currentLoginId = "";
- 
- <sec:authorize access="isAuthenticated()">
-     currentLoginId = "<sec:authentication property='principal.username' />";
- </sec:authorize>
- 
- if (currentLoginId && currentLoginId.trim() !== "") {
-     const sseUrl = "${pageContext.request.contextPath}/api/notification/subscribe/" + encodeURIComponent(currentLoginId);
-     const eventSource = new EventSource(sseUrl);
-
-     // [실시간 수신] 백엔드에서 실시간 알림이 도달하면 실행
-     eventSource.addEventListener("alarm", function(event) {
-         try {
-             // 변경: 실시간 푸시 유입 시 현재 숫자를 가산(+1)하여 뱃지를 갱신 및 표시합니다.
-             const $badge = $('#globalBellCount');
-             let currentCount = $badge.is(':visible') ? parseInt($badge.text()) : 0;
-             currentCount += 1;
-             $badge.text(currentCount).show();
-             
-             // 2. 만약 알림센터 보관함 레이어가 열려있다면 화면 깜빡임 없이 즉시 리스트 새로고침
-             if($('#evNotiCenter').is(':visible')) {
-                 fn_load_notification_history();
-             }
-         } catch(e) {
-             console.error("실시간 푸시 연동 에러:", e);
-         }
-     });
-
-     eventSource.onerror = function() {
-         console.warn("실시간 알림 SNIPER 스트림 연결이 해제되어 재연결을 시도합니다.");
-     };
-
-     // [최초 로드] 로그인 유저의 안 읽은 알림 개수를 확인하여 정확한 숫자로 세팅
-     $.ajax({
-         url: "${pageContext.request.contextPath}/api/notification/unread-count",
-         type: "GET",
-         success: function(count) {
-             const unreadCount = parseInt(count);
-             if(unreadCount > 0) {
-                 // 변경: 안 읽은 알림이 1개 이상 존재할 때만 뱃지에 숫자를 박아 노출합니다.
-                 $('#globalBellCount').text(unreadCount).show();
-             } else {
-                 $('#globalBellCount').hide();
-             }
-         }
-     });
- }
-});
-
 //[토글 함수] 종 모양 버튼 클릭 시 알림센터 레이어를 열고 닫음
 function fn_toggle_notification_center() {
  const $centerBox = $('#evNotiCenter');
@@ -196,11 +144,11 @@ function fn_toggle_notification_center() {
      $centerBox.hide();
  } else {
      $centerBox.show();
-     fn_load_notification_history(); // 창이 열리는 즉시 역사 내역 로드
+     fn_load_notification_history(); 
  }
 }
 
-//[리스트 로드] DB 내역을 비동기로 호출하여 타임라인 카드로 빌드 (현재 코드 완벽 유지)
+// [리스트 로드] DB 내역을 비동기로 호출하여 타임라인 카드로 빌드 (현재 코드 완벽 유지)
 function fn_load_notification_history() {
  const $listArea = $('#evNotiListArea');
  
@@ -224,10 +172,12 @@ function fn_load_notification_history() {
              let iconSymbol = "🔔";
              if(item.type === "CHARGE_COMPLETE") iconSymbol = "⚡";
              if(item.type === "CHARGE_ERROR") iconSymbol = "⚠️";
+             if(item.type === "CHARGE_START") iconSymbol = "⚡";
+             if(item.type === "RESERVATION_BEFORE") iconSymbol = "🚗";
+             if(item.type === "INQUIRY_REPLIED") iconSymbol = "💬";
              
-             // 수정 구역: JSP EL식 가로채기 방지를 위해 백틱 문자열 내부 변수명 앞에 역슬래시(\)를 전부 추가했습니다.
              htmlStr += `
-                 <div class="ev-noti-item-card \${unreadClass}" onclick="fn_click_read_notification('\${item.id}', '\${item.referenceId}', '\${item.referenceType}')">
+                 <div class="ev-noti-item-card \${unreadClass}" onclick="fn_click_read_notification('\${item.id}', '\${item.referenceId}', '\${item.referenceType}', '\${item.type}')">
                      <div class="ev-noti-item-meta">
                          <span class="ev-noti-item-icon">\${iconSymbol}</span>
                          <span>\${item.title}</span>
@@ -241,8 +191,8 @@ function fn_load_notification_history() {
          
          $listArea.append(htmlStr);
          
-         // 리스트 드로잉이 끝난 후 전체 읽음 및 개수 뱃지 초기화 호출
-         fn_mark_all_notifications_as_read();
+         // 💡 비주얼 동기화: 사용자가 알림 팝업창을 직접 열어서 확인했으므로 화면상 숫자 배지만 즉시 숨김 처리
+         $('#globalBellCount').text('0').hide();
      },
      error: function() {
          $listArea.html('<div class="ev-noti-empty-state" style="color:var(--ev-destructive);">알림을 불러오지 못했습니다.</div>');
@@ -250,33 +200,33 @@ function fn_load_notification_history() {
  });
 }
 
-//[전체 읽음] 개수 뱃지를 끄고 서버 테이블의 모든 상태를 'Y'로 업데이트
+// [전체 읽음] 개수 뱃지를 끄고 서버 테이블의 모든 상태를 'Y'로 업데이트
 function fn_mark_all_notifications_as_read() {
- // 변경: 사용자가 목록을 확인했으므로 즉시 카운트를 0으로 밀고 비주얼을 은닉합니다.
- $('#globalBellCount').text('0').hide();
  $.ajax({
      url: "${pageContext.request.contextPath}/api/notification/read-all",
      type: "POST"
  });
 }
 
-//[개별 읽음 & 이동] 알림 카드 클릭 시 개별 읽음 처리 후 관련 비즈니스 페이지로 이동
+// [개별 읽음 & 이동] 알림 카드 클릭 시 개별 읽음 처리 후 관련 비즈니스 페이지로 이동
 function fn_click_read_notification(id, refId, refType, alarmType) {
- // [추가]: 충전 진행 중(CHARGE_START) 알림은 알람을 남겨두기 위해 DB 읽음 처리를 건너뛰고 마이페이지로 즉시 이동
+ // 💡 [시점 2 규격 보장]: 충전 진행 중(CHARGE_START) 알림은 알람을 창에 계속 남겨두기 위해 DB 완전 파기(DELETE)를 건너뛰고 마이페이지로 즉시 이동
  if (refType === "CHARGE" && alarmType === "CHARGE_START") {
      location.href = "${pageContext.request.contextPath}/mypage";
      return;
  }
 
+ // 💡 [시점 1, 4 및 공통 규격 보장]: 충전 중 알림이 아닌 경우, 클릭 즉시 DB에서 알림 데이터를 영구 삭제(DELETE) 처리하는 백엔드 API 작동
  $.ajax({
-     url: "${pageContext.request.contextPath}/api/notification/read/" + id,
+     url: "${pageContext.request.contextPath}/api/notification/delete/" + id, // 👈 기존 read에서 완전 삭제용 delete API 엔드포인트로 전환
      type: "POST",
      success: function() {
-         if (refType === "RESERVATION" && refId && refId !== "null" && refId !== "") {
-             location.href = "${pageContext.request.contextPath}/reservation/detail?id=" + refId;
+         // [수정]: 15분 전 차량 입고 안내를 포함한 모든 예약 알림은 마이페이지로 이동 처리
+         if (refType === "RESERVATION") {
+             location.href = "${pageContext.request.contextPath}/mypage";
              return;
          }
-         // [추가]: 충전 알림(시작/완료) 클릭 시 종합 통계 및 지난 내역 확인을 위해 마이페이지로 이동
+         // [추가]: 충전 완료(CHARGE_COMPLETE) 클릭 시 종합 통계 및 지난 내역 확인을 위해 마이페이지로 이동 (확인 즉시 소멸 완료)
          if (refType === "CHARGE") {
              location.href = "${pageContext.request.contextPath}/mypage";
              return;
@@ -288,16 +238,18 @@ function fn_click_read_notification(id, refId, refType, alarmType) {
          fn_load_notification_history();
      },
      error: function() {
-         console.error("알림 읽음 처리 중 통신 오류가 발생했습니다.");
-         if (refType === "RESERVATION") location.href = "${pageContext.request.contextPath}/reservation/detail?id=" + refId;
-         // [추가]: 네트워크 오류 발생 시에도 충전 알림은 마이페이지로 강제 이동 유도
+         console.error("알림 처리 중 통신 오류가 발생했습니다.");
+         // 💡 네트워크 일시적 예외 발생 시에도 유저 경험을 위해 원래 기획된 주소로의 리다이렉트는 강제 보장합니다.
+         if (refType === "RESERVATION") location.href = "${pageContext.request.contextPath}/mypage";
          if (refType === "CHARGE") location.href = "${pageContext.request.contextPath}/mypage";
-         if (refType === "INQUIRY") location.href = "${pageContext.request.contextPath}/user/inquiry/chat?roomId=" + refId;
+         if (refType === "INQUIRY" && refId && refId !== "null" && refId !== "") {
+             location.href = "${pageContext.request.contextPath}/user/inquiry/chat?roomId=" + refId;
+         }
      }
  });
 }
 
-//[바탕 클릭 예외] 알림창 외의 구역 누르면 자연스럽게 닫히도록 튜닝
+// [바탕 클릭 예외] 알림창 외의 구역 누르면 자연스럽게 닫히도록 튜닝
 $(document).mouseup(function (e) {
  const container = $(".ev-header-bell-wrap");
  if (!container.is(e.target) && container.has(e.target).length === 0) {

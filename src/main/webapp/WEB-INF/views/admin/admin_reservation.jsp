@@ -125,7 +125,7 @@
                                 </td>
                                 <td style="padding: 14px 10px; text-align: center;">
                                     <!-- [수정] 버튼 -->
-                                    <button type="button" class="ev-btn" style="padding: 5px 10px; font-size: 12px; background: #f1f3f5; border: 1px solid #ced4da; border-radius: 4px; cursor: pointer; margin-right: 2px;" onclick="fn_edit_reservation(${rsv.id})">수정</button>
+<%--                                     <button type="button" class="ev-btn" style="padding: 5px 10px; font-size: 12px; background: #f1f3f5; border: 1px solid #ced4da; border-radius: 4px; cursor: pointer; margin-right: 2px;" onclick="fn_edit_reservation(${rsv.id})">수정</button> --%>
                                     
                                     <!-- [삭제] 버튼 -->
                                     <button type="button" class="ev-btn" style="padding: 5px 10px; font-size: 12px; background: #fff5f5; border: 1px solid #ffa8a8; color: #e03131; border-radius: 4px; cursor: pointer;" onclick="fn_delete_reservation(${rsv.id})">삭제</button>

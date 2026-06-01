@@ -5,6 +5,7 @@ import com.boot.ev_charge.user.UserDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity; // 💡 신규 추가
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -111,5 +112,21 @@ public class NotificationController {
         }
         log.info("단일 알림 카드 클릭 읽음 처리 ➔ 알림 식별 번호(PK): {}", id);
         return notificationMapper.updateNotificationReadStatus(id) > 0;
+    }
+
+    /**
+     * 6. 🚨 [신설 - 조립 마감 완료] 사용자가 카드 클릭 시 DB에서 알림 행(Row) 자체를 완전 공중분해(파기)하는 API
+     * 명세 매칭: 프론트 자바스크립트의 /api/notification/delete/{id} 요청을 가로챕니다.
+     */
+    @PostMapping("/delete/{id}")
+    public boolean deleteNotification(@PathVariable("id") Long id, Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return false;
+        }
+        
+        log.info("▶ [Controller] 알림 개별 완전 삭제 파기 가동 ➔ 알림 식별 번호(PK): {}", id);
+        
+        // 4단계 마이바티스 XML에서 정밀 조립해 둔 deleteNotificationById 쿼리 엔진 발동!
+        return notificationMapper.deleteNotificationById(id) > 0;
     }
 }
