@@ -52,6 +52,7 @@
 	            <input type="hidden" name="endTime" id="endTime">
 	            <input type="hidden" id="userBatteryCapacity" value="${primaryVehicle.batteryCapacity != null ? primaryVehicle.batteryCapacity : 70.0}">
 				<input type="hidden" id="userConnectorType" value="${primaryVehicle.connectorType}">
+				<input type="hidden" id="carBatteryCapacity" value="${myVehicle.batteryCapacity}">
 	
 	            <div id="ev-page-1" class="ev-page">
                 

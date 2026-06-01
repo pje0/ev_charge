@@ -36,7 +36,7 @@
                 <input type="hidden" name="editStartTime" id="startTime" value="<fmt:formatDate value='${reservation.startTime}' pattern='yyyy-MM-dd HH:mm:00'/>">
                 <input type="hidden" name="editEndTime" id="endTime" value="<fmt:formatDate value='${reservation.endTime}' pattern='yyyy-MM-dd HH:mm:00'/>">
                 
-                <input type="hidden" id="carBatteryCapacity" value="${reservation.batteryCapacity != null ? reservation.batteryCapacity : 70.0}">
+                <input type="hidden" id="carBatteryCapacity" value="${not empty myVehicle.batteryCapacity ? myVehicle.batteryCapacity : reservation.batteryCapacity}">
                 
                 <input type="hidden" id="initialTargetPercent" value="<fmt:formatNumber value='${reservation.targetAmount != null && reservation.batteryCapacity != null ? (reservation.targetAmount * 100 / reservation.batteryCapacity) : 0}' maxFractionDigits='0'/>">
                 <input type="hidden" id="chargerKwHidden" value="${reservation.powerKw != null ? reservation.powerKw : 50.0}">

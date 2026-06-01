@@ -1478,8 +1478,17 @@ async function loadSigunguBySido(sido) {
 }
 
 // 🟢 페이지 완전 로드 직후 가장 처음으로 실행되는 스크립트 시발점 (Entry Point)
+// 🟢 페이지 시작 시 자동 실행 (초기화)
 window.addEventListener("DOMContentLoaded", async () => {
     console.log("🌟 [System Boot] EV 예약 시스템 부트스트랩 가동!");
-    await initRegionFilters(); // 상단 셀렉트 박스 렌더링을 기다림
-    fetchFilteredStations();   // 세팅 완료 후 전체 충전소 목록 싹 쓸어오기 강제 킥오프!
+    
+    // 🌟 [추가] JSP에 숨겨둔 내 차량 배터리 용량을 읽어와서 전역 변수에 덮어쓰기!
+    const batteryInput = document.getElementById("carBatteryCapacity");
+    if (batteryInput && batteryInput.value) {
+        userBatteryCapacity = Number(batteryInput.value);
+        console.log(`🔋 [Data] 내 차량 배터리 용량 인식 완료: ${userBatteryCapacity}kWh`);
+    }
+
+    await initRegionFilters(); // 셀렉트 박스 먼저 세팅
+    fetchFilteredStations();   // 세팅 완료 후 전체 충전소 목록 쫙 뿌려주기
 });

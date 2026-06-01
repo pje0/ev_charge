@@ -4,11 +4,12 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
 import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Slf4j
-public class VehicleService {
+public class VehicleService { // 💡 에러 원인이던 abstract 키워드 제거
 	
 	@Autowired
 	private VehicleMapper vehicleMapper;
@@ -51,4 +52,24 @@ public class VehicleService {
 		vehicleMapper.setPrimaryVehicle(vehicleId, userId);
 		log.info("## [VehicleService] 대표 차량 변경 완료 -> User: {}, NewPrimary: {}", userId, vehicleId);
 	}
+
+    // =====================================================================
+    // 🌟 [에러 해결된 메서드] 유저의 대표 차량 1대만 찾아서 반환
+    // =====================================================================
+    public VehicleDto getPrimaryVehicleByUserId(Long userId) { // default 대신 public 사용
+        // 상단에 이미 만들어둔 getUserVehicles() 메서드를 재사용합니다!
+        List<VehicleDto> allMyCars = getUserVehicles(userId);
+        
+        if (allMyCars != null && !allMyCars.isEmpty()) {
+            for (VehicleDto car : allMyCars) {
+                // 대표 차량 체크 (Boolean 타입 null 방지 연산)
+                if (Boolean.TRUE.equals(car.getIsPrimary())) {
+                    return car; // 대표 차량이면 즉시 리턴
+                }
+            }
+            // 만약 대표 차량 설정이 안 되어있다면, 그냥 등록된 첫 번째 차를 임시 대표차로 취급!
+            return allMyCars.get(0); 
+        }
+        return null; // 등록된 차가 아예 없으면 null 반환
+    }
 }
