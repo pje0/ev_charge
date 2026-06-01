@@ -242,9 +242,11 @@
         ORDER BY r.id DESC
     </select>
 
-    <delete id="deleteReservationById" parameterType="long">
-        DELETE FROM reservation WHERE id = #{reservationId}
-    </delete>
+    <update id="deleteReservationById" parameterType="long">
+        UPDATE reservation 
+        SET status = 'CANCELED' 
+        WHERE id = #{reservationId}
+    </update>
     
     <select id="getUserChargeStatistics" parameterType="long" resultType="map">
         SELECT 
