@@ -19,6 +19,12 @@
         WHERE id = #{userId}
     </update>
     
+    <update id="deleteReservation" parameterType="long">
+        UPDATE reservation 
+        SET status = 'CANCELED' 
+        WHERE id = #{reservationId}
+    </update>
+
     <select id="selectUpcomingReservations" parameterType="int" resultType="com.boot.ev_charge.mypage.MyPageDto">
         SELECT r.id AS reservationId, s.name AS stationName, r.reservation_type AS reservationType, 
                r.status, rt.start_time AS startTime, rt.end_time AS endTime, rtg.target_kwh AS targetAmount, 
@@ -31,7 +37,8 @@
         JOIN charger c ON r.charger_id = c.id
         JOIN station s ON c.station_id = s.id
         WHERE r.user_id = #{userId}
-          AND r.status = 'RESERVED'
+          /* 🌟 핵심: 예약 확정 상태이거나 현재 충전 중인 건만 예정 예약에 노출 */
+          AND r.status IN ('RESERVED', 'CHARGING')
           <![CDATA[ 
           AND rt.end_time >= NOW() 
           ]]>
@@ -51,17 +58,16 @@
         JOIN station s ON c.station_id = s.id
         WHERE r.user_id = #{userId} 
           AND (
-              r.status IN ('COMPLETED', 'CANCELED', 'EXPIRED')
+              /* 🌟 핵심: 취소 건과 완료 건만 지난 예약에 표시 (만료 제외) */
+              r.status IN ('COMPLETED', 'CANCELED')
+              
+              /* 🌟 RESERVED 상태였으나 오지 않아서 시간이 지나버린 건들도 지난 예약으로 이동 */
               <![CDATA[ 
               OR (r.status = 'RESERVED' AND rt.end_time < NOW()) 
               ]]>
           )
         ORDER BY rt.start_time DESC
     </select>
-
-    <delete id="deleteReservation" parameterType="long">
-        DELETE FROM reservation WHERE id = #{reservationId}
-    </delete>
 
     <update id="updateReservationMaster" parameterType="com.boot.ev_charge.mypage.MyPageDto">
         UPDATE reservation
