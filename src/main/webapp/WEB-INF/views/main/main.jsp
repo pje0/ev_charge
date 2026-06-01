@@ -23,7 +23,7 @@
 		<div class="ev-main-hero-overlay"></div>
 		<div class="ev-container">
 			<div class="ev-main-hero-content">
-				<div class="ev-main-hero-badge">⚡ 스마트 EV 충전 플랫폼</div>
+				<div class="ev-main-hero-badge">스마트 EV 충전 플랫폼</div>
 				<h1 class="ev-main-hero-title">
 					언제 어디서나<br> <span class="ev-main-hero-title-accent">스마트하게</span><br>
 					충전하세요
