@@ -1,8 +1,10 @@
 // =========================================================================
-// 🌐 EV 예약 시스템 클라이언트 코어 스크립트 (CSS 완벽 분리 및 시맨틱 클래스 연동본)
+// 🌐 EV 예약 시스템 클라이언트 코어 스크립트 (모듈화 및 단일 책임 원칙 적용본)
 // =========================================================================
 
-// 전역 상태 변수 안전 선언 및 디폴트 초기화
+// ==========================================
+// [전역 상태 변수]
+// ==========================================
 if (typeof selectedStationId === 'undefined') { var selectedStationId = null; }
 if (typeof selectedChargerId === 'undefined') { var selectedChargerId = null; }
 if (typeof reservationType === 'undefined') { var reservationType = "TIME"; }
@@ -17,13 +19,190 @@ if (typeof globalAlertLock === 'undefined') { var globalAlertLock = false; }
 let lastSafeTargetPercent = 0; 
 let isBookingInProgress = false; 
 
-// 🟢 [NEW] 유저 대표 차량 전역 변수
+// 예약 폼 제출 중복 방지 변수
+let isSubmittingForm = false; 
+
 let userBatteryCapacity = 70.0; 
 let userConnectorType = "";
 
-// ==========================================
-// 1. 단계 제어 (Step View Control)
-// ==========================================
+/**
+ * =========================================================================
+ * 🛠️ [공통 헬퍼 함수] 로직을 건드리지 않고 분리된 유틸리티 모음
+ * =========================================================================
+ */
+
+// 1. [유틸] 문자열 시간을 분(Minutes)으로 파싱하는 함수 (중복 제거)
+function parseTimeStringToMinutes(timeInput, targetDateStr) {
+    if (!timeInput) return null;
+    if (typeof timeInput === 'string' && (timeInput.includes('T') || timeInput.includes('Z'))) {
+        const d = new Date(timeInput);
+        let minutes = (d.getHours() * 60) + d.getMinutes();
+        return minutes === 0 && d.getDate() !== new Date(targetDateStr).getDate() ? 1440 : minutes;
+    }
+    if (typeof timeInput === 'string') {
+        let pureTime = timeInput.includes(' ') ? timeInput.split(' ')[1] : timeInput;
+        const match = pureTime.match(/^(\d{2}):(\d{2})/);
+        if (!match) return null;
+        let hh = parseInt(match[1], 10);
+        let mm = parseInt(match[2], 10);
+        if (hh === 24 && mm === 0) return 1440;
+        return (hh * 60) + mm;
+    }
+    return null;
+}
+
+// 2. [유틸] 충전기 필터링 로직 함수
+function filterChargersBySpeed(chargers, speedFilter) {
+    return chargers.filter(c => {
+        const isRapid = (c.powerKw >= 50 || c.connectorType === 'RAPID' || c.connectorType === 'DC_COMBO' || c.connectorType === 'CHAdemo' || c.connectorType === 'AC_3PHASE');
+        if (speedFilter === 'RAPID') return isRapid;
+        if (speedFilter === 'SLOW') return !isRapid;
+        return true;
+    });
+}
+
+// 3. [유틸] 충전소 카드 HTML 생성기
+function generateStationCardHTML(station, isActiveClass) {
+    return `
+        <div class="station-card ${isActiveClass}" onclick="loadChargers('${station.id}', this)">
+            <div class="station-card-body">
+                <h4 class="station-name" style="font-weight: 700; color: #111827; margin: 0; font-size: 1rem;">${station.name}</h4>
+                <p class="station-address" style="font-size: 0.875rem; color: #6b7280; margin: 0.25rem 0 0 0;">${station.address}</p>
+            </div>
+        </div>
+    `;
+}
+
+// 4. [유틸] 충전기 카드 HTML 생성기
+function generateChargerCardHTML(c, preserveSelection, selectedChargerId) {
+    const statusLower = c.status ? c.status.toLowerCase() : 'available';
+    
+    let connectorName = c.connectorType;
+    if (c.connectorType === 'DC_COMBO') connectorName = 'DC콤보 (7핀)';
+    else if (c.connectorType === 'CHAdemo') connectorName = '차데모 (10핀)';
+    else if (c.connectorType === 'AC_3PHASE') connectorName = 'AC 3상 (7핀)';
+    else if (c.connectorType === 'AC_5PIN') connectorName = '완속 (5핀)';
+    else if (c.connectorType === 'RAPID') connectorName = '급속 충전기';
+    else if (c.connectorType === 'SLOW') connectorName = '완속 충전기';
+
+    const isRapid = (c.powerKw >= 50 || c.connectorType === 'RAPID' || c.connectorType === 'DC_COMBO' || c.connectorType === 'CHAdemo' || c.connectorType === 'AC_3PHASE');
+    const speedLabel = isRapid ? '급속' : '완속';
+    const speedClass = isRapid ? 'rapid' : 'slow';
+
+    const isBroken = (statusLower === 'maintenance' || statusLower === 'out_of_service');
+    const isOccupied = (statusLower === 'charging' || statusLower === 'occupied' || statusLower === 'in_use');
+
+    let cardClass = 'available';
+    let badgeText = '사용 가능';
+
+    if (isBroken) {
+        cardClass = 'broken';
+        badgeText = '기기 점검 중';
+    } else if (isOccupied) {
+        cardClass = 'occupied';
+        badgeText = '사용 중 (예약 가능)';
+    }
+
+    if (preserveSelection && Number(c.id) === Number(selectedChargerId)) {
+        cardClass += ' active';
+    }
+
+    return `
+        <div class="charger-card ${cardClass}" 
+             id="charger-card-${c.id}" 
+             data-status="${statusLower}"
+             onclick="selectCharger(this, '${c.id}', '${connectorName}', ${c.powerKw}, '${c.connectorType}')"> 
+            <div class="charger-card-header">
+                <h3 class="charger-title">${connectorName}</h3>
+                <span class="charger-badge">${badgeText}</span>
+            </div>
+            <div class="charger-info-row">
+                <span class="speed-badge ${speedClass}">${speedLabel}</span>
+                <p class="power-text">${c.powerKw}kW 출력</p>
+            </div>
+        </div>`;
+}
+
+// 5. [유틸] 과거 시간대 버튼 비활성화 처리기
+function lockPastTimeSlots(date, todayStr, selectedDateObj, todayDateObj, now) {
+    document.querySelectorAll(".ev-time-btn").forEach(btn => {
+        const t = btn.dataset.time;
+        const [h, m] = t.split(":").map(Number);
+        
+        let isPast = false;
+        if (selectedDateObj < todayDateObj) {
+            isPast = true;
+        } else if (date === todayStr) {
+            if (h < now.getHours() || (h === now.getHours() && m <= now.getMinutes())) {
+                isPast = true;
+            }
+        }
+
+        if (isPast) {
+            btn.classList.add("disabled", "is-past-hour");
+        }
+    });
+}
+
+// 6. [유틸] 예약 폼 필수 값 검증기
+function validateReservationForm(type, date, todayStr, now) {
+    if (!date) {
+        alert("예약 날짜를 선택해 주세요.");
+        return false;
+    }
+
+    if (type === "TIME") {
+        if (startTime == null || endTime == null) {
+            alert("예약 시간을 선택하세요.");
+            return false;
+        }
+    } else if (type === "TARGET") {
+        if (!startTime || !endTime) {
+            alert("예약 가능한 시간대가 존재하지 않아 예약을 진행할 수 없습니다.");
+            return false;
+        }
+    }
+
+    if (date === todayStr && startTime) {
+        const [startH, startM] = startTime.split(":").map(Number);
+        if (startH < now.getHours() || (startH === now.getHours() && startM < now.getMinutes())) {
+            alert("현재 시간보다 이전의 시간대는 예약할 수 없습니다. 다른 시간대를 골라주세요.");
+            return false;
+        }
+    }
+    return true;
+}
+
+// 7. [유틸] 목표 충전량 히든 인풋 동적 생성기
+function appendTargetHiddenInputs(percentVal, calculatedKwh) {
+    let targetPctHidden = document.getElementById("targetPercentHiddenForm");
+    if (!targetPctHidden) {
+        targetPctHidden = document.createElement("input"); targetPctHidden.type = "hidden"; targetPctHidden.name = "targetPercent"; targetPctHidden.id = "targetPercentHiddenForm";
+        document.getElementById("reservationForm").appendChild(targetPctHidden);
+    }
+    targetPctHidden.value = percentVal;
+
+    let targetHidden = document.getElementById("targetKwhHidden");
+    if (!targetHidden) {
+        targetHidden = document.createElement("input"); targetHidden.type = "hidden"; targetHidden.name = "targetKwh"; targetHidden.id = "targetKwhHidden";
+        document.getElementById("reservationForm").appendChild(targetHidden);
+    }
+    targetHidden.value = calculatedKwh;
+
+    let minutesHidden = document.getElementById("maxMinutesHidden");
+    if (!minutesHidden) {
+        minutesHidden = document.createElement("input"); minutesHidden.type = "hidden"; minutesHidden.name = "maxMinutes"; minutesHidden.id = "maxMinutesHidden";
+        document.getElementById("reservationForm").appendChild(minutesHidden);
+    }
+    minutesHidden.value = calculateRequiredMinutes(percentVal);
+}
+
+/**
+ * =========================================================================
+ * 🎬 메인 비즈니스 로직 및 이벤트 핸들러
+ * =========================================================================
+ */
+
 function moveStep(step) {
     console.log(`🎬 [Step 전환] 목표 단계: ${step}`);
     if (step === 3) {
@@ -72,12 +251,11 @@ function clearAllReservationStyles() {
     const slider = document.getElementById("targetPercent");
     if (slider) {
         slider.value = 0; 
-        updateSliderBackground(0);
+        updateSliderVisuals(0); 
     }
     const textDisplay = document.getElementById("targetPercentText");
     if (textDisplay) textDisplay.innerText = "0%"; 
 
-    // CSS 분리를 통해 JS에서 인라인 스타일로 오버라이드하던 것을 전부 클래스 탈착으로 교체
     document.querySelectorAll(".ev-time-btn").forEach(btn => {
         btn.classList.remove("active", "in-range", "disabled", "is-past-hour", "is-reserved-locked", "my-reservation");
         if(btn.dataset.time) {
@@ -86,55 +264,46 @@ function clearAllReservationStyles() {
     });
 }
 
-/**
- * =========================================================================
- * [독립 함수] 특정 충전기 카드의 상태를 즉시 변조하는 UI 스위칭 엔진
- * =========================================================================
- */
 function applyChargerStatusUI(chargerId, isNotBookable) {
     const targetCard = document.getElementById(`charger-card-${chargerId}`);
-    if (!targetCard) {
-        console.warn(`⚠️ [applyChargerStatusUI] ID: ${chargerId} 카드를 찾을 수 없습니다.`);
-        return;
-    }
+    if (!targetCard) return;
 
     const statusLower = targetCard.getAttribute("data-status") || "available";
     const isBroken = (statusLower === 'maintenance' || statusLower === 'out_of_service');
     const isOccupied = (statusLower === 'charging' || statusLower === 'occupied' || statusLower === 'in_use');
-
     const badge = targetCard.querySelector(".charger-badge");
 
-    // 🛑 3단 분리: 고장(빨강), 오늘만 꽉 참(회색), 예약 가능(초록/노랑)
     if (isBroken) {
-        console.log(`🚨 [UI 변환] ID: ${chargerId} 카드는 기기 점검 상태입니다.`);
         targetCard.className = "charger-card broken"; 
         if (badge) badge.innerText = "기기 점검 중";
     } else if (isNotBookable) {
-        console.log(`🚨 [UI 변환] ID: ${chargerId} 카드를 '금일 예약 불가' 회색 레이아웃으로 설정합니다.`);
-        targetCard.className = "charger-card full"; // 회색 전용 full 클래스
+        targetCard.className = "charger-card full";
         if (badge) badge.innerText = "금일 예약 불가";
     } else {
-        console.log(`✅ [UI 유지/복구] ID: ${chargerId} 카드는 예약 가능 상태를 유지합니다.`);
         targetCard.className = `charger-card ${isOccupied ? 'occupied' : 'available'}`; 
         if (badge) badge.innerText = isOccupied ? "사용 중 (예약 가능)" : "사용 가능";
     }
 }
 
-/**
- * =========================================================================
- * [기능 정의] 충전기 목록 로드 및 기본 UI 렌더링
- * =========================================================================
- */
-async function loadChargers(stationId, element) {
+async function loadChargers(stationId, element, preserveSelection = false) {
     console.log(`🔌 [loadChargers] 충전기 목록 조회 프로세스 가동 -> stationId: ${stationId}`);
 
     if (!stationId) return;
     selectedStationId = Number(stationId);
     
     document.querySelectorAll('.station-card').forEach(el => el.classList.remove('active'));
-    if (element) element.classList.add('active');
     
-    clearAllReservationStyles();
+    if (element) {
+        element.classList.add('active');
+    } else {
+        const targetStationCard = document.querySelector(`.station-card[onclick*="'${stationId}'"]`) 
+                               || document.querySelector(`.station-card[onclick*="${stationId}"]`);
+        if (targetStationCard) targetStationCard.classList.add('active');
+    }
+    
+    if (!preserveSelection) {
+        clearAllReservationStyles();
+    }
     
     const rightNow = new Date();
     const todayStr = `${rightNow.getFullYear()}-${String(rightNow.getMonth() + 1).padStart(2, '0')}-${String(rightNow.getDate()).padStart(2, '0')}`;
@@ -142,53 +311,25 @@ async function loadChargers(stationId, element) {
     
     try {
         const res = await fetch(`/reservation/api/chargers?stationId=${stationId}&date=${selectedDateStr}`);
-        const chargers = await res.json();
+        if (!res.ok) throw new Error(`HTTP 요청 실패: ${res.status}`);
+        
+        let chargers = await res.json();
+        const speedFilter = document.getElementById("filterSpeed")?.value || "ALL";
+        
+        // 헬퍼 함수로 필터링 위임
+        chargers = filterChargersBySpeed(chargers, speedFilter);
+
+        const isCurrentChargerStillAvailable = chargers.some(c => Number(c.id) === Number(selectedChargerId));
+        if (preserveSelection && !isCurrentChargerStillAvailable && selectedChargerId !== null && selectedChargerId !== 0) {
+            clearAllReservationStyles();
+        }
+
         const container = document.getElementById("chargerListContainer");
+        if (!container) return;
         
         if (chargers.length > 0) {
-            container.innerHTML = chargers.map(c => {
-                const statusLower = c.status ? c.status.toLowerCase() : 'available';
-                
-                let connectorName = c.connectorType;
-                if (c.connectorType === 'DC_COMBO') connectorName = 'DC콤보 (7핀)';
-                else if (c.connectorType === 'CHAdemo') connectorName = '차데모 (10핀)';
-                else if (c.connectorType === 'AC_3PHASE') connectorName = 'AC 3상 (7핀)';
-                else if (c.connectorType === 'AC_5PIN') connectorName = '완속 (5핀)';
-                else if (c.connectorType === 'RAPID') connectorName = '급속 충전기';
-                else if (c.connectorType === 'SLOW') connectorName = '완속 충전기';
-
-                const isRapid = (c.powerKw >= 50 || c.connectorType === 'RAPID' || c.connectorType === 'DC_COMBO' || c.connectorType === 'CHAdemo' || c.connectorType === 'AC_3PHASE');
-                const speedLabel = isRapid ? '급속' : '완속';
-                const speedClass = isRapid ? 'rapid' : 'slow';
-
-                const isBroken = (statusLower === 'maintenance' || statusLower === 'out_of_service');
-                const isOccupied = (statusLower === 'charging' || statusLower === 'occupied' || statusLower === 'in_use');
-
-                let cardClass = 'available';
-                let badgeText = '사용 가능';
-
-                if (isBroken) {
-                    cardClass = 'broken';
-                    badgeText = '기기 점검 중';
-                } else if (isOccupied) {
-                    cardClass = 'occupied';
-                    badgeText = '사용 중 (예약 가능)';
-                }
-
-                return `
-                    <div class="charger-card ${cardClass}" 
-                         id="charger-card-${c.id}" 
-                         data-status="${statusLower}"
-                         onclick="selectCharger(this, '${c.id}', '${connectorName}', ${c.powerKw}, '${c.connectorType}')"> <div class="charger-card-header">
-                            <h3 class="charger-title">${connectorName}</h3>
-                            <span class="charger-badge">${badgeText}</span>
-                        </div>
-                        <div class="charger-info-row">
-                            <span class="speed-badge ${speedClass}">${speedLabel}</span>
-                            <p class="power-text">${c.powerKw}kW 출력</p>
-                        </div>
-                    </div>`;
-            }).join('');
+            // 헬퍼 함수로 HTML 조립 위임
+            container.innerHTML = chargers.map(c => generateChargerCardHTML(c, preserveSelection, selectedChargerId)).join('');
             
             if (selectedDateStr === todayStr) {
                 chargers.forEach(async (c) => {
@@ -197,31 +338,76 @@ async function loadChargers(stationId, element) {
             }
             
         } else {
-            container.innerHTML = '<div class="charger-empty">등록된 충전기가 없습니다.</div>';
+            container.innerHTML = '<div class="charger-empty">해당 속도의 충전기가 이 충전소에는 없습니다.</div>';
         }
 
-        if (selectedChargerId !== null && selectedChargerId !== 0) {
+        if (selectedChargerId !== null && selectedChargerId !== 0 && isCurrentChargerStillAvailable) {
             await loadReservedTimes();
         }
     } catch (error) {
-        console.error("❌ [loadChargers] 통신 예외 발생:", error);
+        console.error("❌ [loadChargers] 통신 및 렌더링 중 예외 발생:", error);
     }
 }
 
-// 🟢 규격 비교 로직이 추가된 selectCharger 함수
+async function fetchFilteredStations() {
+    const sido = document.getElementById("filterSido")?.value || ""; 
+    const sigungu = document.getElementById("filterSigungu")?.value || ""; 
+    const speed = document.getElementById("filterSpeed")?.value || "ALL"; 
+    
+    try {
+        const url = `/reservation/stations?sido=${encodeURIComponent(sido)}&sigungu=${encodeURIComponent(sigungu)}&speed=${speed}`;
+        const response = await fetch(url);
+        
+        if (!response.ok) throw new Error(`서버 에러: ${response.status}`);
+        
+        const stationList = await response.json(); 
+        
+        const container = document.getElementById("stationListContainer");
+        const chargerContainer = document.getElementById("chargerListContainer");
+
+        if (!container) return;
+
+        if (stationList.length === 0) {
+            container.innerHTML = '<div style="text-align:center; padding:3rem 1rem; color:#9ca3af; font-weight:500;">조건에 맞는 충전소가 없습니다.</div>';
+            if (chargerContainer) chargerContainer.innerHTML = '<div class="charger-empty">좌측에서 충전소를 선택해 주세요.</div>';
+            clearAllReservationStyles();
+            selectedStationId = null;
+            return;
+        }
+
+        // 헬퍼 함수로 HTML 조립 위임
+        container.innerHTML = stationList.map(s => {
+            const isActiveClass = (Number(s.id) === Number(selectedStationId)) ? "active" : "";
+            return generateStationCardHTML(s, isActiveClass);
+        }).join('');
+
+        if (selectedStationId) {
+            const isStationStillVisible = stationList.some(s => Number(s.id) === Number(selectedStationId));
+            if (isStationStillVisible) {
+                await loadChargers(selectedStationId, null, true);
+            } else {
+                selectedStationId = null;
+                if (chargerContainer) chargerContainer.innerHTML = '<div class="charger-empty">조건 변경으로 선택이 해제되었습니다. 다시 선택해 주세요.</div>';
+                clearAllReservationStyles();
+            }
+        } else {
+            if (chargerContainer) chargerContainer.innerHTML = '<div class="charger-empty">좌측에서 충전소를 선택해 주세요.</div>';
+        }
+
+    } catch (err) {
+        console.error("❌ [fetchFilteredStations] 실행 중 에러:", err);
+    }
+}
+
 function selectCharger(element, chargerId, chargerName, powerKw, rawConnectorType) {
     if (element.classList.contains("broken")) {
         alert("해당 기기는 현재 점검 중이므로 예약할 수 없습니다.");
         return;
     }
 
-    // 🟢 충전기 규격과 내 대표 차량 규격 비교 알럿
     if (userConnectorType && rawConnectorType && userConnectorType !== rawConnectorType) {
         const warnMsg = `[경고] 고객님 대표 차량의 충전 규격(${userConnectorType})과 선택하신 충전기의 규격(${rawConnectorType})이 다릅니다.\n\n그래도 예약을 계속 진행하시겠습니까?`;
-        if (!confirm(warnMsg)) {
-            console.log("🛑 [Select Cancel] 규격 불일치로 충전기 선택 취소");
-            return;
-        }
+        if (!confirm(warnMsg)) return;
     }
 
     isBookingInProgress = true; 
@@ -230,17 +416,11 @@ function selectCharger(element, chargerId, chargerName, powerKw, rawConnectorTyp
     selectedChargerKw = Number(powerKw || 50.0);
     document.getElementById("summaryCharger").innerText = chargerName;
     
-    console.log(`🔌 [충전기 선택 완료] 번호: ${selectedChargerId}, 출력: ${selectedChargerKw}kW, 규격: ${rawConnectorType}`);
     clearAllReservationStyles();
     moveStep(2);
     loadReservedTimes();
 }
 
-/**
- * =========================================================================
- * [기능 정의] 1단계 로딩 시점 개별 충전기 실시간 가용 시간 선행 검증
- * =========================================================================
- */
 async function checkChargerAvailabilityOnLoad(chargerId, targetDateStr) {
     const rightNow = new Date();
     const url = `/reservation/reserved-times?chargerId=${chargerId}&date=${targetDateStr}&stationId=${selectedStationId}`;
@@ -250,25 +430,6 @@ async function checkChargerAvailabilityOnLoad(chargerId, targetDateStr) {
         if (response.ok) {
             const reservedList = await response.json();
             
-            const parseToMinutes = (timeInput) => {
-                if (!timeInput) return null;
-                if (typeof timeInput === 'string' && (timeInput.includes('T') || timeInput.includes('Z'))) {
-                    const d = new Date(timeInput);
-                    let minutes = (d.getHours() * 60) + d.getMinutes();
-                    return minutes === 0 && d.getDate() !== new Date(targetDateStr).getDate() ? 1440 : minutes;
-                }
-                if (typeof timeInput === 'string') {
-                    let pureTime = timeInput.includes(' ') ? timeInput.split(' ')[1] : timeInput;
-                    const match = pureTime.match(/^(\d{2}):(\d{2})/);
-                    if (!match) return null;
-                    let hh = parseInt(match[1], 10);
-                    let mm = parseInt(match[2], 10);
-                    if (hh === 24 && mm === 0) return 1440;
-                    return (hh * 60) + mm;
-                }
-                return null;
-            };
-
             let testMaxInterval = 0;
             let currentInterval = 0;
 
@@ -286,8 +447,9 @@ async function checkChargerAvailabilityOnLoad(chargerId, targetDateStr) {
                         const rEndStr = rObj.endTime || rObj.end_time || rObj.END_TIME;
                         if(!rStartStr || !rEndStr) return false;
                         
-                        let startMin = parseToMinutes(rStartStr);
-                        let endMin = parseToMinutes(rEndStr);
+                        // 헬퍼 함수 호출로 대체
+                        let startMin = parseTimeStringToMinutes(rStartStr, targetDateStr);
+                        let endMin = parseTimeStringToMinutes(rEndStr, targetDateStr);
                         
                         if (startMin === null || endMin === null) return false;
 
@@ -296,8 +458,6 @@ async function checkChargerAvailabilityOnLoad(chargerId, targetDateStr) {
                             endMin = endMin % 1440;
                             if (endMin <= startMin) endMin += 1440;
                         }
-                        
-                        // 🚨 만악의 근원 (if (endMin === 1410) endMin = 1440;) 완전 삭제 🚨
                         
                         if (endMin === 1440) {
                             return (currentLoopMin >= startMin && currentLoopMin <= endMin);
@@ -315,8 +475,6 @@ async function checkChargerAvailabilityOnLoad(chargerId, targetDateStr) {
                 }
             }
 
-            console.log(`🔎 [선행 검증 로그] 충전기 ID: ${chargerId} | 최대 연속 가용 여유공간: ${testMaxInterval}분`);
-
             if (testMaxInterval <= 30) {
                 applyChargerStatusUI(chargerId, true);
             }
@@ -326,32 +484,6 @@ async function checkChargerAvailabilityOnLoad(chargerId, targetDateStr) {
     }
 }
 
-// ==========================================
-// 3. 충전기 선택 액션
-// ==========================================
-function selectCharger(element, chargerId, chargerName, powerKw) {
-    // 🛑 [입구컷 적용] 오직 '점검 중(broken)' 상태인 빨간색 카드만 클릭을 물리적으로 차단합니다.
-    // 회색의 '금일 예약 불가(full)' 카드는 내일 예약을 위해 정상적으로 통과됩니다!
-    if (element.classList.contains("broken")) {
-        alert("해당 기기는 현재 점검 중이므로 예약할 수 없습니다.");
-        return;
-    }
-
-    isBookingInProgress = true; 
-    document.getElementById("chargerId").value = chargerId;
-    selectedChargerId = Number(chargerId);
-    selectedChargerKw = Number(powerKw || 50.0);
-    document.getElementById("summaryCharger").innerText = chargerName;
-    
-    console.log(`🔌 [충전기 선택 완료] 번호: ${selectedChargerId}, 출력: ${selectedChargerKw}kW`);
-    clearAllReservationStyles();
-    moveStep(2);
-    loadReservedTimes();
-}
-
-// ==========================================
-// 4. 예약 설정 옵션 분기 제어
-// ==========================================
 function selectReservationType(type) {
     reservationType = type;
     document.getElementById("reservationType").value = type;
@@ -378,24 +510,30 @@ function selectReservationType(type) {
     }
 }
 
-// ==========================================
-// 5. 슬라이더 배경 색상 처리 함수
-// ==========================================
-function updateSliderBackground(value) {
+function updateSliderVisuals(value) {
     const slider = document.getElementById("targetPercent");
-    if (!slider) return;
+    const sliderText = document.getElementById("targetPercentText");
+    if (!slider || !sliderText) return;
 
-    const val = Number(value);
-    const min = Number(slider.min) || 0;
-    const max = Number(slider.max) || 100;
-    
-    const percentage = ((val - min) / (max - min)) * 100;
-    slider.style.background = `linear-gradient(to right, #2563eb 0%, #2563eb ${percentage}%, #e5e7eb ${percentage}%, #e5e7eb 100%)`;
+    slider.value = value;
+    sliderText.textContent = value + "%";
+    slider.style.background = `linear-gradient(to right, #2563eb ${value}%, #e5e7eb ${value}%)`;
 }
+
+document.addEventListener("DOMContentLoaded", () => {
+    const slider = document.getElementById("targetPercent");
+    if (slider) {
+        slider.addEventListener("input", (e) => {
+            const val = e.target.value;
+            updateSliderVisuals(val);
+            changeTargetPercent(val, true);
+        });
+        updateSliderVisuals(slider.value);
+    }
+});
 
 function calculateRequiredMinutes(targetVal) {
     const chargerKw = selectedChargerKw; 
-    // 🟢 하드코딩 제거, 유저의 실제 배터리 용량 대입
     const batteryCapacity = userBatteryCapacity; 
     const currentPercent = 0.0; 
 
@@ -408,14 +546,9 @@ function calculateRequiredMinutes(targetVal) {
     if (chargerKw > 20 && targetVal > 80) { 
         requiredMinutes += Math.ceil(((batteryCapacity * (targetVal - 80) / 100.0) / chargerKw) * 0.5 * 60);
     }
-    
-    console.log(`🧮 [소요 시간 연산] 목표: ${targetVal}%, 배터리: ${batteryCapacity}kWh, 충전기: ${chargerKw}kW -> ${requiredMinutes}분 예상`);
     return requiredMinutes;
 }
 
-// ==========================================
-// 6. 목표 충전량 실시간 변동 연산
-// ==========================================
 function isTodaySelected() {
     const today = new Date();
     const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
@@ -434,27 +567,19 @@ function changeTargetPercent(value, isUserAction = true) {
 
     if (isUserAction && isTodaySelected() && getActualMaxAvailableMinutes() < 30) {
         alert("오늘 예약 가능한 시간대가 부족하여 설정을 변경할 수 없습니다.");
-        if (slider) {
-            slider.value = lastSafeTargetPercent;
-            updateSliderBackground(lastSafeTargetPercent);
-            document.getElementById("targetPercentText").innerText = lastSafeTargetPercent + "%";
-        }
+        updateSliderVisuals(lastSafeTargetPercent); 
         return; 
     }
 
     if (targetVal <= currentPercent) {
-        if (slider) {
-            slider.value = currentPercent;
-            updateSliderBackground(currentPercent);
-            document.getElementById("targetPercentText").innerText = currentPercent + "%";
-            if (document.getElementById("summaryTarget")) document.getElementById("summaryTarget").innerText = currentPercent + "%";
-        }
+        updateSliderVisuals(currentPercent);
+        if (document.getElementById("summaryTarget")) document.getElementById("summaryTarget").innerText = currentPercent + "%";
         lastSafeTargetPercent = currentPercent;
         syncTimeButtonsByTarget();
         return;
     }
 
-    document.getElementById("targetPercentText").innerText = targetVal + "%";
+    updateSliderVisuals(targetVal);
     if (document.getElementById("summaryTarget")) {
         document.getElementById("summaryTarget").innerText = targetVal + "%";
     }
@@ -462,41 +587,25 @@ function changeTargetPercent(value, isUserAction = true) {
     const isSequenceValid = syncTimeButtonsByTarget();
     
     if (!isSequenceValid) {
-        if (startTime) {
-            if (slider) {
-                slider.value = lastSafeTargetPercent;
-                updateSliderBackground(lastSafeTargetPercent);
-                document.getElementById("targetPercentText").innerText = lastSafeTargetPercent + "%";
-                if (document.getElementById("summaryTarget")) {
-                    document.getElementById("summaryTarget").innerText = lastSafeTargetPercent + "%";
-                }
-                slider.blur(); 
-            }
-            syncTimeButtonsByTarget();
-            return;
+        updateSliderVisuals(lastSafeTargetPercent); 
+        if (document.getElementById("summaryTarget")) {
+            document.getElementById("summaryTarget").innerText = lastSafeTargetPercent + "%";
         }
+        if (slider) slider.blur(); 
+        syncTimeButtonsByTarget();
+        return; 
     }
 
-    if (slider) { slider.value = targetVal; }
-    updateSliderBackground(targetVal);
     lastSafeTargetPercent = targetVal; 
 }
 
-function quickTarget(value) {
-    const slider = document.getElementById("targetPercent");
-    if (slider) {
-        slider.value = value;
-        changeTargetPercent(value, true); 
-    }
-}
+window.quickTarget = function(value) {
+    updateSliderVisuals(value); 
+    changeTargetPercent(value, true); 
+};
 
-// ==========================================
-// 7. 타임 슬롯 클릭 제어
-// ==========================================
 function selectTime(element, time) {
-    if (element.classList.contains("disabled") || element.classList.contains("is-past-hour")) {
-        return; 
-    }
+    if (element.classList.contains("disabled") || element.classList.contains("is-past-hour")) return; 
 
     if (reservationType === "TIME") {
         if (startTime !== null && endTime !== null) {
@@ -607,9 +716,7 @@ function syncTimeButtonsByTarget() {
 
     let validStartTime = startTime;
     if (!validStartTime || !allButtons.some(btn => btn.dataset.time === validStartTime && !btn.classList.contains("disabled"))) {
-        const firstAvailableBtn = allButtons.find(btn => 
-            !btn.classList.contains("disabled")
-        );
+        const firstAvailableBtn = allButtons.find(btn => !btn.classList.contains("disabled"));
         validStartTime = firstAvailableBtn ? firstAvailableBtn.dataset.time : null;
     }
 
@@ -633,13 +740,6 @@ function syncTimeButtonsByTarget() {
 
     if (!isSequenceValid) {
         if (document.querySelector(".ev-time-btn.active") || startTime) {
-            startTime = null; 
-            endTime = null;
-            document.getElementById("startTime").value = "";
-            document.getElementById("endTime").value = "";
-            document.getElementById("summaryTime").innerText = "예약 가능 공간 부족";
-            cleanStyles();
-
             if (!globalAlertLock) {
                 globalAlertLock = true;
                 setTimeout(() => {
@@ -670,12 +770,6 @@ function syncTimeButtonsByTarget() {
     }
 
     if (targetStartIndex === -1 || (targetStartIndex + requiredSlots > allButtons.length)) {
-        startTime = null;
-        endTime = null;
-        document.getElementById("startTime").value = "";
-        document.getElementById("endTime").value = "";
-        document.getElementById("summaryTime").innerText = "예약 가능 공간 부족";
-        cleanStyles();
         return false;
     }
 
@@ -710,9 +804,9 @@ function syncTimeButtonsByTarget() {
     endTime = endTimeStr;
     
     const date = document.getElementById("reservationDate").value;
-    document.getElementById("startTime").value = date + " " + startTime + ":00";
-    document.getElementById("endTime").value = date + " " + endTime + ":00";
-    document.getElementById("summaryTime").innerText = `${startTime} ~ ${endTime} (${requiredMinutes}분 소요)`;
+    if (document.getElementById("startTime")) document.getElementById("startTime").value = date + " " + startTime + ":00";
+    if (document.getElementById("endTime")) document.getElementById("endTime").value = date + " " + endTime + ":00";
+    if (document.getElementById("summaryTime")) document.getElementById("summaryTime").innerText = `${startTime} ~ ${endTime} (${requiredMinutes}분 소요)`;
     
     return true;
 }
@@ -737,33 +831,18 @@ function calculateMaxAvailableInterval() {
     });
 
     maxContinuousMinutes = maxInterval;
-    console.log("@# [실시간 연산 확인] 현재 기준 최대 연속 가용 시간:", maxContinuousMinutes + "분");
 }
 
-/**
- * =========================================================================
- * [기능 정의] 실시간 예약 점유 시간 마스킹 및 과거 대역 물리적 차단 락 가동 
- * =========================================================================
- */
 async function loadReservedTimes() {
-    console.log("⏳ [loadReservedTimes] 2단계 타임 버튼 배열 마스킹 동기화 루틴 시작");
-
-    if (isFetchingReservedTimes) {
-        console.warn("⚠️ [loadReservedTimes] 연산 세션 락인이 설정되어 비동기 요청을 파기합니다.");
-        return;
-    }
+    if (isFetchingReservedTimes) return;
     
     const chargerId = document.getElementById("chargerId")?.value || selectedChargerId; 
     const date = document.getElementById("reservationDate")?.value;
     
-    if (!chargerId || Number(chargerId) === 0 || !date) {
-        console.warn("⚠️ [loadReservedTimes] 필수 파라미터 누락으로 마스킹을 스킵합니다.");
-        return;
-    }
+    if (!chargerId || Number(chargerId) === 0 || !date) return;
 
     isFetchingReservedTimes = true;
 
-    // 타임 버튼 리셋 클렌징
     document.querySelectorAll(".ev-time-btn").forEach(btn => {
         btn.classList.remove("disabled", "active", "in-range", "is-past-hour", "is-reserved-locked", "my-reservation");
         if(btn.dataset.time) {
@@ -776,64 +855,27 @@ async function loadReservedTimes() {
     const selectedDateObj = new Date(date + "T00:00:00");
     const todayDateObj = new Date(todayStr + "T00:00:00");
 
-    console.log("🔒 [loadReservedTimes] 오늘 기준 경과된 과거 시간 레이어 고대비 잠금 격벽 작동");
-    document.querySelectorAll(".ev-time-btn").forEach(btn => {
-        const t = btn.dataset.time;
-        const [h, m] = t.split(":").map(Number);
-        
-        let isPast = false;
-        if (selectedDateObj < todayDateObj) {
-            isPast = true;
-        } else if (date === todayStr) {
-            if (h < now.getHours() || (h === now.getHours() && m <= now.getMinutes())) {
-                isPast = true;
-            }
-        }
-
-        if (isPast) {
-            btn.classList.add("disabled", "is-past-hour");
-            return;
-        }
-    });
+    // 헬퍼 함수로 위임
+    lockPastTimeSlots(date, todayStr, selectedDateObj, todayDateObj, now);
 
     try {
         const sendChargerId = Number(chargerId);
         const sendStationId = selectedStationId ? selectedStationId : 0;
-        
         const url = `/reservation/reserved-times?chargerId=${sendChargerId}&date=${date}&stationId=${sendStationId}`;
-        
         const response = await fetch(url);
         
         if (response.ok) {
             const reservedList = await response.json();
             
-            const parseToMinutes = (timeInput) => {
-                if (!timeInput) return null;
-                if (typeof timeInput === 'string' && (timeInput.includes('T') || timeInput.includes('Z'))) {
-                    const d = new Date(timeInput);
-                    let minutes = (d.getHours() * 60) + d.getMinutes();
-                    return minutes === 0 && d.getDate() !== new Date(date).getDate() ? 1440 : minutes;
-                }
-                if (typeof timeInput === 'string') {
-                    let pureTime = timeInput.includes(' ') ? timeInput.split(' ')[1] : timeInput;
-                    const match = pureTime.match(/^(\d{2}):(\d{2})/);
-                    if (!match) return null;
-                    let hh = parseInt(match[1], 10);
-                    let mm = parseInt(match[2], 10);
-                    if (hh === 24 && mm === 0) return 1440;
-                    return (hh * 60) + mm;
-                }
-                return null;
-            };
-
             reservedList.forEach((r) => {
                 const rawStartTime = r.startTime || r.start_time || r.START_TIME;
                 const rawEndTime = r.endTime || r.end_time || r.END_TIME;
                 
                 if (!rawStartTime || !rawEndTime) return; 
 
-                let startMin = parseToMinutes(rawStartTime);
-                let endMin = parseToMinutes(rawEndTime);
+                // 헬퍼 함수 호출
+                let startMin = parseTimeStringToMinutes(rawStartTime, date);
+                let endMin = parseTimeStringToMinutes(rawEndTime, date);
                 
                 if (startMin === null || endMin === null) return;
 
@@ -843,15 +885,13 @@ async function loadReservedTimes() {
                     if (endMin <= startMin) endMin += 1440;
                 }
                 
-                // 🚨 만악의 근원 완전 삭제 🚨
-
                 const currentSessionUserId = 1; 
                 const resUserId = r.userId || r.user_id || r.USER_ID;
                 const isMyReservation = (Number(resUserId) === Number(currentSessionUserId));
 
                 document.querySelectorAll(".ev-time-btn").forEach(btn => {
                     const tStr = btn.dataset.time; 
-                    let btnMin = parseToMinutes(tStr);
+                    let btnMin = parseTimeStringToMinutes(tStr, date);
                     if (btnMin === null) return;
 
                     let isMatch = false;
@@ -878,7 +918,6 @@ async function loadReservedTimes() {
                 });
             });
 
-            console.log("📊 [loadReservedTimes] 최대 연속 가용 공간 재측정 헬퍼 기동");
             calculateMaxAvailableInterval();
             
             if (date === todayStr) {
@@ -896,24 +935,15 @@ async function loadReservedTimes() {
             }
         }
     } catch (error) { 
-        console.error("❌ [loadReservedTimes] 마스킹 동기화 주기 중 치명적 예외 발생:", error); 
+        console.error("❌ [loadReservedTimes] 에러:", error); 
     } finally {
         isFetchingReservedTimes = false;
-        console.log("🏁 [loadReservedTimes] 타임 라인 제어 렌더링 주기 완결");
     }
 }
 
-/**
- * =========================================================================
- * [기능 정의] 날짜별 24:00 슬롯 버튼 실시간 동기화 제어 
- * =========================================================================
- */
 function syncMidnightSlot() {
     const dateInput = document.getElementById("reservationDate")?.value;
-    if (!dateInput) {
-        console.warn("⚠️ [syncMidnightSlot] 날짜 데이터가 입력되지 않아 자정 슬롯 연산을 스킵합니다.");
-        return;
-    }
+    if (!dateInput) return;
 
     const now = new Date();
     const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -927,7 +957,6 @@ function syncMidnightSlot() {
         const isReserved = midnightBtn.classList.contains("is-reserved-locked");
 
         if (selectedDateObj < todayDateObj) {
-            console.log(`🔒 [syncMidnightSlot] 과거 날짜(${dateInput}) 확인 -> 24:00 버튼 진한 회색 과거 격벽 차단`);
             midnightBtn.classList.add("disabled", "is-past-hour");
             midnightBtn.innerText = "24:00";
         } 
@@ -936,117 +965,55 @@ function syncMidnightSlot() {
             const midnightTotalMin = 24 * 60; 
             
             if (isReserved) {
-                console.log(`🔒 [syncMidnightSlot] 오늘 날짜 - 이미 예약 선점됨 -> 마감 고정`);
                 midnightBtn.classList.remove("is-past-hour");
                 midnightBtn.classList.add("disabled");
                 midnightBtn.innerText = "마감";
             } 
             else if (nowTotalMin >= midnightTotalMin) {
-                console.log(`🔒 [syncMidnightSlot] 오늘 날짜 - 현재 시간이 자정을 경과함 -> 마감 차단`);
                 midnightBtn.classList.remove("is-past-hour");
                 midnightBtn.classList.add("disabled");
                 midnightBtn.innerText = "마감";
             } 
             else {
-                console.log(`🔓 [syncMidnightSlot] 오늘 날짜 - 아직 자정 전이며 예약 없음 -> 버튼 활성화 오픈`);
                 midnightBtn.classList.remove("disabled", "is-past-hour");
                 midnightBtn.innerText = "24:00";
             }
         } 
         else {
             if (!isReserved) {
-                console.log(`🔓 [syncMidnightSlot] 미래 날짜(${dateInput}) 확인 -> 24:00 버튼 일반 활성화 복구`);
                 midnightBtn.classList.remove("disabled", "is-past-hour");
                 midnightBtn.innerText = "24:00";
             }
         }
-    } else {
-        console.warn("⚠️ [syncMidnightSlot] 화면상에서 24:00 시간 지정 버튼 요소를 찾을 수 없습니다.");
     }
 }
 
-// ==========================================
-// 10. 예약 최종 제출 (reservation.js 전용)
-// ==========================================
-let isSubmittingForm = false; 
-
 function submitReservation() {
-    // 1. 중복 클릭 락 (따닥 방지)
-    if (isSubmittingForm) {
-        console.warn("⚠️ [submitReservation] 이미 예약 요청이 서버로 전송 중입니다.");
-        return;
-    }
+    if (isSubmittingForm) return;
 
     const type = document.getElementById("reservationType").value;
     const date = document.getElementById("reservationDate")?.value;
     const now = new Date();
     const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`; 
 
-    // 2. 시간대 지정 여부 검사
-    if (type === "TIME") {
-        if (startTime == null || endTime == null) {
-            alert("예약 시간을 선택하세요.");
-            return;
-        }
-    } else if (type === "TARGET") {
-        if (!startTime || !endTime) {
-            alert("예약 가능한 시간대가 존재하지 않아 예약을 진행할 수 없습니다.");
-            return;
-        }
-        
+    // 헬퍼 함수로 폼 검증 위임
+    if (!validateReservationForm(type, date, todayStr, now)) return;
+
+    if (type === "TARGET") {
         const percentVal = parseInt(document.getElementById("targetPercent")?.value) || 0;
         const calculatedKwh = Math.round(userBatteryCapacity * (percentVal / 100.0));
-        
-        let targetPctHidden = document.getElementById("targetPercentHiddenForm");
-        if (!targetPctHidden) {
-            targetPctHidden = document.createElement("input"); targetPctHidden.type = "hidden"; targetPctHidden.name = "targetPercent"; targetPctHidden.id = "targetPercentHiddenForm";
-            document.getElementById("reservationForm").appendChild(targetPctHidden);
-        }
-        targetPctHidden.value = percentVal;
-
-        let targetHidden = document.getElementById("targetKwhHidden");
-        if (!targetHidden) {
-            targetHidden = document.createElement("input"); targetHidden.type = "hidden"; targetHidden.name = "targetKwh"; targetHidden.id = "targetKwhHidden";
-            document.getElementById("reservationForm").appendChild(targetHidden);
-        }
-        targetHidden.value = calculatedKwh;
-
-        let minutesHidden = document.getElementById("maxMinutesHidden");
-        if (!minutesHidden) {
-            minutesHidden = document.createElement("input"); minutesHidden.type = "hidden"; minutesHidden.name = "maxMinutes"; minutesHidden.id = "maxMinutesHidden";
-            document.getElementById("reservationForm").appendChild(minutesHidden);
-        }
-        minutesHidden.value = calculateRequiredMinutes(percentVal);
+        // 헬퍼 함수로 동적 input 태그 생성 위임
+        appendTargetHiddenInputs(percentVal, calculatedKwh);
     }
     
-    // 3. 날짜 및 과거 시간 검사
-    if (!date) {
-        alert("예약 날짜를 선택해 주세요.");
-        return;
-    }
+    if (!confirm("예약을 이대로 확정하시겠습니까?")) return;
 
-    if (date === todayStr && startTime) {
-        const [startH, startM] = startTime.split(":").map(Number);
-        if (startH < now.getHours() || (startH === now.getHours() && startM < now.getMinutes())) {
-            alert("현재 시간보다 이전의 시간대는 예약할 수 없습니다. 다른 시간대를 골라주세요.");
-            return;
-        }
-    }
-
-    // 🟢 4. 최종 확정 알럿 띄우기 (reservation.js 전용)
-    if (!confirm("예약을 이대로 확정하시겠습니까?")) {
-        console.log("🛑 [Submit Cancel] 사용자가 예약 확정을 취소했습니다.");
-        return;
-    }
-
-    // 5. 날짜와 시간 조립 및 폼 전송
     const finalStartTimeStr = `${date} ${startTime.substring(0, 5)}:00`;
     const finalEndTimeStr = `${date} ${endTime.substring(0, 5)}:00`;
 
     document.getElementById("startTime").value = finalStartTimeStr;
     document.getElementById("endTime").value = finalEndTimeStr;
     
-    // 🟢 6. 폼 전송 직전에 이탈 방지 알럿(beforeunload) 강제 해제!
     isBookingInProgress = false; 
     
     isSubmittingForm = true;
@@ -1055,68 +1022,34 @@ function submitReservation() {
     setTimeout(() => { isSubmittingForm = false; }, 3000);
 }
 
-/**
- * =========================================================================
- * 11. DOM 이벤트 리스너 바인딩 (검색 필터 전역 데이터 정의 및 이벤트 리스너 초기화 바인딩)
- * =========================================================================
- */
-// 1. 행정구역 종속 관계 데이터 맵 선언 (실제 서비스 규격 맞춤 더미 데이터)
 const regionDataMap = {
     "서울특별시": ["강남구", "서초구", "송파구", "마포구", "영등포구"],
     "부산광역시": ["해운대구", "부산진구", "동래구", "수영구", "사하구"],
     "경기도": ["수원시", "성남시", "고양시", "용인시", "부천시"]
 };
 
-// 2. DOM 로드 완료 시점 필터 이벤트 바인딩
 window.addEventListener("DOMContentLoaded", () => {
-    console.log("🛠️ [Filter Init] 검색 필터 시스템 초기화 루틴 시작");
+    const sidoSelect = document.getElementById("filterSido");
+    const sigunguSelect = document.getElementById("filterSigungu");
+    const speedSelect = document.getElementById("filterSpeed");
 
-    const sidoSelect = document.getElementById("filterSido"); // 시/도 엘리먼트 취득
-    const sigunguSelect = document.getElementById("filterSigungu"); // 시/군/구 엘리먼트 취득
-    const speedSelect = document.getElementById("filterSpeed"); // 충전속도 엘리먼트 취득
-
-    // 3. 시/도 변경 이벤트 리스너 바인딩
     if (sidoSelect) {
         sidoSelect.addEventListener("change", (e) => {
-            const selectedSido = e.target.value; // 사용자가 선택한 시/도 텍스트 값
-            console.log(`📅 [Filter Event] 시/도 변경 감지 -> 선택값: ${selectedSido}`);
-            
-            // 시/도 변경에 따른 시/군/구 드롭다운 동적 재구성 호출
+            const selectedSido = e.target.value;
             updateSigunguOptions(selectedSido, sigunguSelect);
-            
-            // 조건이 바뀌었으므로 즉시 서버 통신 및 충전소 리스트 갱신 헬퍼 호출
             fetchFilteredStations();
         });
     }
 
-    // 4. 시/군/구 변경 이벤트 리스너 바인딩
     if (sigunguSelect) {
-        sigunguSelect.addEventListener("change", (e) => {
-            const selectedSigungu = e.target.value; // 사용자가 선택한 시/군/구 텍스트 값
-            console.log(`📅 [Filter Event] 시/군/구 변경 감지 -> 선택값: ${selectedSigungu}`);
-            
-            // 조건 변경에 따른 실시간 데이터 갱신 가동
-            fetchFilteredStations();
-        });
+        sigunguSelect.addEventListener("change", fetchFilteredStations);
     }
 
-    // 5. 충전속도 변경 이벤트 리스너 바인딩
     if (speedSelect) {
-        speedSelect.addEventListener("change", (e) => {
-            const selectedSpeed = e.target.value; // 사용자가 선택한 속도 코드 값
-            console.log(`📅 [Filter Event] 충전속도 변경 감지 -> 선택값: ${selectedSpeed}`);
-            
-            // 조건 변경에 따른 실시간 데이터 갱신 가동
-            fetchFilteredStations();
-        });
+        speedSelect.addEventListener("change", fetchFilteredStations);
     }
-
-    console.log("✅ [Filter Init] 모든 검색 필터 옵션 및 리스너 바인딩 프로세스 완결");
 });
 
-// ==========================================
-// 12. 예약 상태 전역 관리 (이탈 방지)
-// ==========================================
 window.addEventListener('beforeunload', handleUnload);
 
 function handleUnload(e) {
@@ -1152,71 +1085,41 @@ function handleReservationComplete() {
     window.location.href = '/reservation/success';
 }
 
-/**
- * =========================================================================
- * 🟢 [Block 3] 시/도 선택에 따른 시/군/구 드롭다운 동적 생성 가공 엔진
- * =========================================================================
- */
 function updateSigunguOptions(sidoValue, sigunguElement) {
-    console.log(`⚙️ [UI Engine] 시/군/구 옵션 가공 프로세스 가동 (기준 시/도: ${sidoValue})`);
-    
-    if (!sigunguElement) {
-        console.error("❌ [UI Engine Error] 시/군/구 셀렉터 요소를 찾을 수 없어 가공을 파기합니다.");
-        return;
-    }
+    if (!sigunguElement) return;
 
-    // 1. 초기 기본 상태 리셋 처리
-    sigunguElement.innerHTML = ""; // 기존 옵션 문자열 제거 정리
+    sigunguElement.innerHTML = "";
     
-    // 2. 시/도 선택 값이 비어있는 경우 (전체 조회 상태)
     if (!sidoValue || sidoValue === "") {
-        console.log("🔒 [UI Engine] 선택된 시/도가 없으므로 시/군/구 드롭다운을 비활성화 잠금 처리합니다.");
+        const defaultOption = document.createElement("option");
+        defaultOption.value = "";
+        defaultOption.innerText = "시/도를 먼저 선택하세요";
         
-        const defaultOption = document.createElement("option"); // 옵션 노드 생성
-        defaultOption.value = ""; // 빈 값 세팅
-        defaultOption.innerText = "시/도를 먼저 선택하세요"; // 안내 가이드용 텍스트
-        
-        sigunguElement.appendChild(defaultOption); // 노드 이식
-        sigunguElement.disabled = true; // 비활성화
-        sigunguElement.style.backgroundColor = "#f3f4f6"; // 배경색 회색으로 변조
+        sigunguElement.appendChild(defaultOption);
+        sigunguElement.disabled = true;
+        sigunguElement.style.backgroundColor = "#f3f4f6";
         return;
     }
 
-    // 3. 정상 구역 데이터 매핑 바인딩 실행
-    const sigunguList = regionDataMap[sidoValue]; // 매핑 데이터에서 배열 취득
-    console.log(`🔍 [Data Mapping] 데이터 원장 매핑 성공 -> 하위 행정구역 리스트: [${sigunguList.join(", ")}]`);
-
-    // 4. "전체 구역" 선택용 디폴트 옵션 최상단 삽입
+    const sigunguList = regionDataMap[sidoValue];
     const allOption = document.createElement("option");
     allOption.value = "";
     allOption.innerText = "전체 시/군/구";
     sigunguElement.appendChild(allOption);
 
-    // 5. 루프 연산을 통해 하위 행정구역 드롭다운 옵션 태그 동적 주입
     sigunguList.forEach(sigunguName => {
-        const optionNode = document.createElement("option"); // 태그 객체 인스턴스화
-        optionNode.value = sigunguName; // 백엔드로 넘겨줄 텍스트 매핑
-        optionNode.innerText = sigunguName; // 사용자 노출용 문자열 지정
-        sigunguElement.appendChild(optionNode); // 부모 셀렉트 박스에 추가 완료
+        const optionNode = document.createElement("option");
+        optionNode.value = sigunguName;
+        optionNode.innerText = sigunguName;
+        sigunguElement.appendChild(optionNode);
     });
 
-    // 6. 비활성화 락 해제 및 스타일 복구
-    sigunguElement.disabled = false; // 활성화 전환
-    sigunguElement.style.backgroundColor = "white"; // 배경색 백색 환원
-    console.log(`✨ [UI Engine] 시/군/구 드롭다운 락 해제 및 동적 렌더링 세팅 완료`);
+    sigunguElement.disabled = false;
+    sigunguElement.style.backgroundColor = "white";
 }
 
-/**
- * =========================================================================
- * 🟢 [Block: Dynamic Region Data] DB 연동형 지역 데이터 로더 (URL 수정본)
- * =========================================================================
- */
-
-// 1. 페이지 로드 시 시/도 목록 초기화
 async function initRegionFilters() {
-    console.log("🛠️ [Init] DB로부터 시/도 목록을 불러옵니다.");
     try {
-        // 🚨 수정됨: 실제 컨트롤러 매핑 주소인 '/reservation/regions/sido'로 요청
         const response = await fetch('/reservation/regions/sido');
         if (!response.ok) throw new Error(`HTTP 에러: ${response.status}`);
         
@@ -1229,18 +1132,14 @@ async function initRegionFilters() {
             opt.textContent = sido;
             sidoSelect.appendChild(opt);
         });
-        console.log("✅ [Init] 시/도 목록 로드 완료");
     } catch (err) {
-        console.error("❌ [Init Error] 시/도 데이터 로딩 실패. 서버나 주소를 확인하세요:", err);
+        console.error("❌ [Init Error] 시/도 데이터 로딩 실패:", err);
     }
 }
 
-// 2. 시/도 변경 시 시/군/구 목록 동적 갱신
 async function loadSigunguBySido(sido) {
-    console.log(`🔍 [Data Fetch] 선택된 시/도(${sido})에 해당하는 시/군/구 조회 시작`);
-    
     const sigunguSelect = document.getElementById("filterSigungu");
-    sigunguSelect.innerHTML = '<option value="">전체 시/군/구</option>'; // 초기화
+    sigunguSelect.innerHTML = '<option value="">전체 시/군/구</option>';
     
     if (!sido) {
         sigunguSelect.disabled = true;
@@ -1248,7 +1147,6 @@ async function loadSigunguBySido(sido) {
     }
 
     try {
-        // 🚨 수정됨: 실제 컨트롤러 매핑 주소인 '/reservation/regions/sigungu'로 요청
         const response = await fetch(`/reservation/regions/sigungu?metro=${encodeURIComponent(sido)}`);
         if (!response.ok) throw new Error(`HTTP 에러: ${response.status}`);
 
@@ -1262,7 +1160,6 @@ async function loadSigunguBySido(sido) {
         });
 
         sigunguSelect.disabled = false;
-        console.log(`✨ [Data Fetch] 시/군/구 갱신 완료: ${sigungus.length}건`);
     } catch (err) {
         console.error("❌ [Data Fetch Error] 시/군/구 데이터 로딩 실패:", err);
     }
@@ -1348,6 +1245,6 @@ document.getElementById("filterSpeed").addEventListener("change", fetchFilteredS
 
 // 5. 🟢 페이지 시작 시 자동 실행 (초기화)
 window.addEventListener("DOMContentLoaded", async () => {
-    await initRegionFilters(); // 셀렉트 박스 먼저 세팅
-    fetchFilteredStations();   // 🌟 세팅 끝나자마자 '전체 충전소' 목록 쫙 뿌려주기 강제 실행!
+    await initRegionFilters(); 
+    fetchFilteredStations();   
 });
