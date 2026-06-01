@@ -76,11 +76,11 @@
                     </div>
                 </div>
 
-				<div class="ev-mypage-content-area">
+                <div class="ev-mypage-content-area">
                     
                     <div class="ev-mypage-tab-header">
                         
-						<div class="ev-mypage-tab-bar">
+                        <div class="ev-mypage-tab-bar">
                             <a href="${pageContext.request.contextPath}/mypage?tab=upcoming" class="ev-mypage-tab-link ${param.tab eq 'vehicle' || currentTab eq 'past' ? 'ev-mypage-tab-inactive' : 'ev-mypage-tab-active'}">
                                 예정 예약 
                                 <c:if test="${upcomingCount > 0}">
@@ -99,9 +99,11 @@
                             <button type="button" class="ev-btn ev-btn-primary ev-vehicle-top-btn" onclick="openVehicleModal()">+ 새 차량 등록</button>
                         </c:if>
                         
-                    </div> <div class="ev-mypage-dynamic-body">
+                    </div> 
+                    
+                    <div class="ev-mypage-dynamic-body">
                         <c:choose>
-                            <%-- 🟢 1. 차량 관리 탭 활성화 시 (이제 하단 버튼은 없고 리스트만 남습니다) --%>
+                            <%-- 🟢 1. 차량 관리 탭 --%>
                             <c:when test="${param.tab eq 'vehicle'}">
                                 <div id="vehicleListContainer" class="ev-vehicle-grid">
                                     <div class="ev-mypage-empty-box" style="grid-column: 1 / -1;">
@@ -111,20 +113,32 @@
                                 </div>
                             </c:when>
 
-                            <%-- 🟢 2. 예약 내역 탭 활성화 시 (기존 코드와 동일) --%>
+                            <%-- 🟢 2. 예약 내역 탭 --%>
                             <c:otherwise>
                                 <div class="ev-mypage-history-list">
                                     <c:choose>
                                         <c:when test="${not empty reservationList}">
                                             <c:forEach var="res" items="${reservationList}">
                                                 <div class="ev-mypage-history-card">
+                                                    
                                                     <div class="ev-mypage-card-header">
                                                         <div>
                                                             <h4 class="ev-mypage-station-name">${res.stationName}</h4>
                                                             <p class="ev-mypage-res-number">예약번호: R${res.reservationId}</p>
                                                         </div>
+                                                        
                                                         <span class="ev-mypage-status-badge">
-                                                            ${res.status eq 'RESERVED' ? '예약 확정' : res.status}
+                                                            <c:choose>
+                                                                <c:when test="${res.status eq 'RESERVED' and currentTab eq 'past'}">
+                                                                    <span style="color: #ef4444;">기간 만료</span>
+                                                                </c:when>
+                                                                <c:when test="${res.status eq 'RESERVED'}">
+                                                                    예약 확정
+                                                                </c:when>
+                                                                <c:otherwise>
+                                                                    ${res.status}
+                                                                </c:otherwise>
+                                                            </c:choose>
                                                         </span>
                                                     </div>
                                                     
@@ -135,25 +149,25 @@
                                                             </c:when>
                                                             <c:otherwise>
                                                                 <p>목표 충전량: ${res.targetAmount} kWh</p>
+                                                                <p>예상 일시: <fmt:formatDate value="${res.startTime}" pattern="yyyy-MM-dd HH:mm"/> ~ <fmt:formatDate value="${res.endTime}" pattern="HH:mm"/></p>
                                                             </c:otherwise>
                                                         </c:choose>
-														<p class="ev-mypage-charger-type" style="display: flex; align-items: center; margin-top: 4px;">
-														    <span style="margin-right: 6px;">🔌 충전기 기종:</span>
-														    
-														    <c:choose>
-														        <c:when test="${res.connectorType == 'DC_COMBO' || res.connectorType == 'CHAdemo' || res.connectorType == 'AC_3PHASE' || res.connectorType == 'RAPID'}">
-														            <span style="background-color: #dbeafe; color: #1d4ed8; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 700; margin-right: 6px;">급속</span>
-														        </c:when>
-														        <c:otherwise>
-														            <span style="background-color: #f3e8ff; color: #7e22ce; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 700; margin-right: 6px;">완속</span>
-														        </c:otherwise>
-														    </c:choose>
-														    
-														    <span style="font-weight: 500;">${res.connectorType}</span>
-														</p>
+                                                        
+                                                        <p class="ev-mypage-charger-type" style="display: flex; align-items: center; margin-top: 4px;">
+                                                            <span style="margin-right: 6px;">🔌 충전기 기종:</span>
+                                                            <c:choose>
+                                                                <c:when test="${res.connectorType == 'DC_COMBO' || res.connectorType == 'CHAdemo' || res.connectorType == 'AC_3PHASE' || res.connectorType == 'RAPID'}">
+                                                                    <span style="background-color: #dbeafe; color: #1d4ed8; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 700; margin-right: 6px;">급속</span>
+                                                                </c:when>
+                                                                <c:otherwise>
+                                                                    <span style="background-color: #f3e8ff; color: #7e22ce; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 700; margin-right: 6px;">완속</span>
+                                                                </c:otherwise>
+                                                            </c:choose>
+                                                            <span style="font-weight: 500;">${res.connectorType}</span>
+                                                        </p>
                                                     </div>
                                                     
-                                                    <c:if test="${res.status eq 'RESERVED'}">
+                                                    <c:if test="${res.status eq 'RESERVED' and currentTab ne 'past'}">
                                                         <div class="ev-mypage-action-btns">
                                                             <a href="${pageContext.request.contextPath}/mypage/reservation/edit?id=${res.reservationId}" 
                                                                class="ev-mypage-action-btn ev-mypage-btn-edit">예약 수정</a>
@@ -165,6 +179,7 @@
                                                             </form>
                                                         </div>
                                                     </c:if>
+                                                    
                                                 </div>
                                             </c:forEach>
                                         </c:when>
@@ -182,7 +197,8 @@
                             </c:otherwise>
                         </c:choose>
                     </div>
-                </div> </div>
+                </div> 
+            </div>
         </div>
     </main>
 
@@ -222,7 +238,7 @@
         </div>
     </div>
 
-	<script>
+    <script>
         window.onload = function() {
             // 알림 메시지 처리
             <c:if test="${not empty message}">alert("${message}");</c:if>

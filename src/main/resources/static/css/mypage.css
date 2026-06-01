@@ -78,53 +78,81 @@
 .ev-mypage-dynamic-body { display: block; }
 .ev-mypage-history-list { display: flex; flex-direction: column; gap: 1rem; }
 
-/* 🟢 예약 히스토리 카드: 높이를 12rem으로 고정하여 좌측 박스 높이 계산의 기준점이 되도록 함 */
+/* 🟢 1. 예약 히스토리 카드: 높이를 다시 12rem으로 '완벽 고정'하여 좌우 정렬 복구 */
 .ev-mypage-history-card { 
-    height: 12rem; 
+    height: 12rem; /* auto 삭제, 다시 12rem으로 고정! */
     box-sizing: border-box; 
     display: flex; 
     flex-direction: column; 
-    background: white; border-radius: 1rem; border: 1px solid #e5e7eb; padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.02); 
+    background: white; border-radius: 1rem; border: 1px solid #e5e7eb; 
+    padding: 1.25rem 1.5rem; /* 위아래 패딩을 살짝 줄여서 내부 공간 확보 (기존 1.5rem -> 1.25rem) */
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02); 
 }
-.ev-mypage-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; }
+
+/* 🟢 2. 내부 여백 다이어트 (버튼이 들어갈 자리 만들기) */
+.ev-mypage-card-header { 
+    display: flex; justify-content: space-between; align-items: flex-start; 
+    margin-bottom: 0.75rem; /* 텍스트 사이 간격 축소 */
+}
 .ev-mypage-station-name { font-weight: 700; color: #111827; margin: 0; font-size: 1rem; }
 .ev-mypage-res-number { font-size: 0.75rem; color: #9ca3af; margin: 0.25rem 0 0 0; }
 .ev-mypage-status-badge { font-size: 0.75rem; padding: 0.125rem 0.5rem; background-color: rgba(67, 56, 202, 0.08); color: #4f46e5; border: 1px solid rgba(67, 56, 202, 0.2); border-radius: 0.375rem; font-weight: 600; }
-.ev-mypage-card-details { font-size: 0.875rem; color: #4b5563; margin-bottom: 1rem; flex-grow: 1; }
+
+.ev-mypage-card-details { 
+    font-size: 0.875rem; color: #4b5563; 
+    margin-bottom: 0; /* 하단 여백 완전 제거 */
+    flex-grow: 1; 
+}
 .ev-mypage-card-details p { margin: 0 0 0.25rem 0; }
 .ev-mypage-charger-type { font-size: 0.75rem; color: #9ca3af; margin-top: 0.25rem !important; }
-.ev-mypage-action-btns { display: flex; gap: 0.5rem; margin-top: auto; }
 
-/* 폼 안의 버튼이나 a태그 모두에 디자인이 먹히도록 덮어쓰기 적용 */
-.ev-mypage-action-btns button,
-.ev-mypage-action-btns a,
-.ev-mypage-action-btn { 
-    font-size: 0.75rem !important; 
-    padding: 0.375rem 0.75rem !important; 
-    border-radius: 0.375rem !important; 
-    text-decoration: none !important; 
-    font-weight: 600 !important; 
-    cursor: pointer !important; 
-    transition: background-color 0.2s !important; 
-    display: inline-block !important; 
-    border: 1px solid transparent !important; 
+/* 🟢 3. 버튼 부모 컨테이너 (오른쪽 정렬 🌟) */
+.ev-mypage-action-btns {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end; /* 🌟 버튼들을 컨테이너의 오른쪽 끝으로 쭉 밀어버림 */
+    gap: 0.5rem;
+    margin-top: auto; /* 카드의 맨 바닥에 붙임 */
 }
 
-/* 예약 수정 버튼 (파란색) */
-.ev-mypage-btn-edit { 
-    background-color: #eff6ff !important; 
-    color: #2563eb !important; 
-    border-color: #bfdbfe !important; 
+.ev-mypage-cancel-form {
+    margin: 0;
+    padding: 0;
+    display: flex; 
 }
-.ev-mypage-btn-edit:hover { background-color: #dbeafe !important; }
 
-/* 예약 취소 버튼 (빨간색) */
-.ev-mypage-btn-cancel { 
-    background-color: #fef2f2 !important; 
-    color: #dc2626 !important; 
-    border-color: #fecaca !important; 
+/* 🟢 4. 개별 액션 버튼 (원래 원하셨던 적당한 크기로 복구) */
+.ev-mypage-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.375rem 0.875rem; 
+    font-size: 0.8125rem; 
+    font-weight: 600;
+    border-radius: 0.375rem;
+    text-decoration: none;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s ease-in-out;
 }
-.ev-mypage-btn-cancel:hover { background-color: #fee2e2 !important; }
+
+/* 예약 수정 버튼 색상 */
+.ev-mypage-btn-edit {
+    background-color: #eff6ff;
+    color: #2563eb;
+}
+.ev-mypage-btn-edit:hover {
+    background-color: #dbeafe;
+}
+
+/* 예약 취소 버튼 색상 */
+.ev-mypage-btn-cancel {
+    background-color: #fef2f2;
+    color: #dc2626;
+}
+.ev-mypage-btn-cancel:hover {
+    background-color: #fee2e2;
+}
 
 /* 빈 공간 박스 */
 .ev-mypage-empty-box { background-color: white; border-radius: 0.75rem; border: 1px solid #e5e7eb; box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 5rem 2rem; }
