@@ -11,7 +11,7 @@ import lombok.extern.slf4j.Slf4j;
  * 규칙: 30분 단위 예약 시스템 스펙에 맞추어 5분 주기로 정밀 기동하며 장부 정리 및 알림 라이프사이클을 집행합니다.
  */
 @Component
-@Slf4j
+@Slf4j 
 public class ReservationScheduler {
 
     @Autowired
