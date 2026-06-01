@@ -39,13 +39,13 @@ public class ReservationController {
     @Autowired
     private UserService userService;
 
-    // 1. 예약 페이지 로드 (충전소 목록 포함)
+    // 🌟 [추가] 차량 배터리 정보를 가져오기 위해 차량 서비스 주입
+    @Autowired
+    private com.boot.ev_charge.vehicle.VehicleService vehicleService; 
+
+    // 1. 예약 페이지 로드 (충전소 목록 및 내 차량 정보 포함)
     @GetMapping("")
-    public String reservationPage(
-    		@RequestParam(value = "stationId", required = false) Long stationId,
-            @RequestParam(value = "metro", required = false) String metro,
-            @RequestParam(value = "city", required = false) String city,
-            Model model) {
+    public String reservationPage(Model model, @AuthenticationPrincipal UserDetails userDetails) {
         log.info("@# @# [GET] /reservation -> reservationPage() 호출");
 
         String today = LocalDate.now().toString();
@@ -54,10 +54,15 @@ public class ReservationController {
         Map<String, Object> emptyParams = new HashMap<>();
         List<StationDto> stationList = reservationService.getStationList(emptyParams);
         model.addAttribute("stationList", stationList);
-        model.addAttribute("selectedStationId", stationId);
-        model.addAttribute("selectedMetro", metro);
-        model.addAttribute("selectedCity", city);
-        
+
+        // 🌟 [추가] 내 대표 차량 정보(배터리 용량 등)를 DB에서 가져와 Model에 담기!
+        if (userDetails != null) {
+            UserDto user = userService.findByLoginId(userDetails.getUsername());
+            // VehicleService에서 대표 차량 가져오기 (방금 만든 그 메서드!)
+            com.boot.ev_charge.vehicle.VehicleDto myCar = vehicleService.getPrimaryVehicleByUserId(user.getId()); 
+            model.addAttribute("myVehicle", myCar); 
+        }
+
         log.info("@# 리턴할 뷰 경로: reservation/reservation");
         return "reservation/reservation";
     }
@@ -65,7 +70,7 @@ public class ReservationController {
     // 2. 특정 충전소의 충전기 목록 조회 API
     @GetMapping("/api/chargers")
     @ResponseBody
-    public List<ChargerDto> getChargers(@RequestParam("stationId") Long stationId) { // 🌟 @RequestParam("stationId") 로 이름 명시!
+    public List<ChargerDto> getChargers(@RequestParam("stationId") Long stationId) {
         log.info("@# [API] 충전기 목록 요청 stationId: {}", stationId);
         return reservationService.getChargersByStationId(stationId);
     }
@@ -164,12 +169,12 @@ public class ReservationController {
         return "예약 취소 완료";
     }
     
-    // 10. 충전기별 비활성화된 시간 Ajax 조회 (🌟 건너뛰기 공백 파라미터 제어 추가)
+    // 10. 충전기별 비활성화된 시간 Ajax 조회
     @GetMapping("/reserved-times")
     @ResponseBody
     public List<ReservationDto> getReservedTimes(
             @RequestParam(value = "chargerId", required = false) Long chargerId,
-            @RequestParam(value = "stationId", required = false) Long stationId, // 🌟 충전소 ID 수신 파라미터 추가
+            @RequestParam(value = "stationId", required = false) Long stationId, 
             @RequestParam("date") String date,
             @RequestParam(value = "targetPercent", required = false) Integer targetPercent) {
 
@@ -187,36 +192,14 @@ public class ReservationController {
         }
 
         try {
-            List<ReservationDto> reservedTimes = reservationService.getReservedTimes(chargerId, stationId, date);
             return reservationService.getReservedTimes(chargerId, stationId, date);
         } catch (Exception e) {
             log.error("@# [오류 발생] 예약 시간 조회 중 에러 발생: {}", e.getMessage(), e);
             return java.util.Collections.emptyList(); 
         }
     }
-    
-    // =====================================================
-    // 🟢 예약 수정 페이지 이동 (마이페이지 -> 수정 페이지)
-    // =====================================================
-    @GetMapping("/mypage/reservation/edit")
-    public String editReservationFromMyPage(@RequestParam("id") Long id, 
-                                            Model model, 
-                                            @AuthenticationPrincipal UserDetails userDetails) {
-        if (userDetails == null) return "redirect:/login";
-        
-        // 예약 상세 정보 조회
-        ReservationDto res = reservationService.getReservationDetail(id);
-        model.addAttribute("res", res);
-        model.addAttribute("today", LocalDate.now().toString());
-        
-        // 🚨 파일 경로와 일치하게 뷰 이름을 반환하세요! 
-        // 예: /WEB-INF/views/reservation/reservationEdit.jsp 라면 아래와 같이
-        return "reservation/reservationEdit"; 
-    }
 
-    // =====================================================
-    // 🟢 예약 수정 폼 제출 처리 (Fetch API 대응)
-    // =====================================================
+    // 11. 예약 수정 폼 제출 처리 (Fetch API 대응)
     @PostMapping("/update")
     @ResponseBody
     public String updateReservationAction(ReservationDto reservationDto, 
@@ -228,7 +211,6 @@ public class ReservationController {
         }
 
         try {
-            // Service를 통해 데이터 덮어쓰기
             reservationService.updateReservation(reservationDto);
             return "SUCCESS";
         } catch (Exception e) {
@@ -237,36 +219,30 @@ public class ReservationController {
         }
     }
     
- // =========================================================================
-    // 🟢 1. 시/도 목록 제공 API
+    // =========================================================================
+    // 12. 시/도 목록 제공 API
     // =========================================================================
     @GetMapping("/regions/sido")
     public ResponseEntity<List<String>> getSidoList() {
         log.info("🌐 [API Call] 클라이언트로부터 전체 시/도(metro) 목록 조회 요청이 인입되었습니다.");
-        
-        // Mapper를 통해 DB에서 시/도 리스트 추출
         List<String> sidoList = reservationMapper.getSidoList();
-        
         log.info("✅ [API Response] DB 조회 완료. 총 {}개의 시/도 데이터를 프론트엔드로 반환합니다.", sidoList.size());
-        return ResponseEntity.ok(sidoList); // HTTP 200 OK와 함께 JSON 데이터 반환
+        return ResponseEntity.ok(sidoList);
     }
 
     // =========================================================================
-    // 🟢 2. 시/군/구 목록 제공 API (시/도 파라미터 필수)
+    // 13. 시/군/구 목록 제공 API 
     // =========================================================================
     @GetMapping("/regions/sigungu")
     public ResponseEntity<List<String>> getSigunguList(@RequestParam("metro") String metro) {
         log.info("🌐 [API Call] 클라이언트로부터 특정 시/도의 시/군/구 조회 요청 인입 -> 대상 시/도: {}", metro);
-        
-        // Mapper에 선택된 시/도 값을 넘겨 종속된 시/군/구 리스트 추출
         List<String> sigunguList = reservationMapper.getSigunguList(metro);
-        
         log.info("✅ [API Response] DB 조회 완료. '{}' 지역 내 총 {}개의 시/군/구 데이터를 반환합니다.", metro, sigunguList.size());
-        return ResponseEntity.ok(sigunguList); // HTTP 200 OK와 함께 JSON 데이터 반환
+        return ResponseEntity.ok(sigunguList); 
     }
 
     // =========================================================================
-    // 🟢 3. 조건부 필터링 충전소 목록 제공 API
+    // 14. 조건부 필터링 충전소 목록 제공 API
     // =========================================================================
     @GetMapping("/stations")
     public ResponseEntity<List<StationDto>> getFilteredStations(
@@ -276,16 +252,14 @@ public class ReservationController {
         
         log.info("🌐 [API Call] 충전소 목록 필터링 검색 요청 인입 -> 조건 [시/도: {}, 시/군/구: {}, 충전속도: {}]", sido, sigungu, speed);
         
-        // MyBatis Mapper로 넘길 파라미터 Map 생성 및 데이터 바인딩
         Map<String, Object> filterParams = new HashMap<>();
-        filterParams.put("metro", sido); // DB 컬럼명에 맞게 매핑
-        filterParams.put("city", sigungu); // DB 컬럼명에 맞게 매핑
-        filterParams.put("speed", speed); // RAPID, SLOW, ALL 속도 구분 매핑
+        filterParams.put("metro", sido); 
+        filterParams.put("city", sigungu); 
+        filterParams.put("speed", speed); 
         
-        // 동적 쿼리가 적용된 Mapper 메서드 호출
         List<StationDto> stationList = reservationMapper.getStationList(filterParams);
         
-        log.info("✅ [API Response] 필터링 DB 조회 완료. 총 {}개의 충전소 검색 결과를 프론트엔드로 반환합니다.", stationList.size());
-        return ResponseEntity.ok(stationList); // HTTP 200 OK와 함께 JSON 데이터 반환
+        log.info("✅ [API Response] 필터링 DB 조회 완료. 총 {}개의 충전소 검색 결과를 반환합니다.", stationList.size());
+        return ResponseEntity.ok(stationList); 
     }
 }

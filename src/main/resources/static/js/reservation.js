@@ -1333,13 +1333,15 @@ const regionDataMap = {
  * [중요도] ★★★★★ (진입점)
  */
 window.addEventListener("DOMContentLoaded", () => {
-    console.log("🛠️ [Filter Init] 검색 필터 시스템 초기화 및 이벤트 리스너 이식 시작");
+    console.log("🛠️ [Filter Init] 검색 필터 및 폼 입력 시스템 초기화 루틴 시작");
 
     const sidoSelect = document.getElementById("filterSido");
     const sigunguSelect = document.getElementById("filterSigungu");
     const speedSelect = document.getElementById("filterSpeed");
+    
+    // 🟢 [핵심 추가] 날짜 변경 감지 센서 (Date Picker Listener)
+    const dateInput = document.getElementById("reservationDate");
 
-    // 시/도 변경 -> 하위 행정구역 드롭다운 재생성 -> 충전소 다시 찾기
     if (sidoSelect) {
         sidoSelect.addEventListener("change", (e) => {
             const selectedSido = e.target.value;
@@ -1349,15 +1351,31 @@ window.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // 시/군/구 변경 -> 충전소 다시 찾기
     if (sigunguSelect) {
         sigunguSelect.addEventListener("change", fetchFilteredStations);
     }
 
-    // 충전속도 변경 -> 충전소 다시 찾기
     if (speedSelect) {
         speedSelect.addEventListener("change", fetchFilteredStations);
     }
+
+    // 🌟 [추가된 센서] 예약 날짜를 달력에서 변경하는 즉시 가동되는 로직
+    if (dateInput) {
+        dateInput.addEventListener("change", (e) => {
+            console.log(`📆 [Form Event] 예약 날짜 변경 감지 -> 선택된 날짜: ${e.target.value}`);
+            
+            // 1. 날짜가 바뀌었으므로 기존에 찍어둔 시간이나 슬라이더 퍼센트를 0으로 싹 다 초기화
+            clearAllReservationStyles();
+            
+            // 2. 충전기가 이미 선택된 상태(2단계 화면)라면, 바뀐 날짜의 데이터를 서버에서 즉시 로드
+            if (selectedChargerId !== null && selectedChargerId !== 0) {
+                console.log("🔄 [Form Event] 충전기가 선택된 상태이므로 타임라인 동기화 헬퍼를 즉시 가동합니다.");
+                loadReservedTimes();
+            }
+        });
+    }
+    
+    console.log("✅ [Filter Init] 모든 검색 필터 및 날짜 감지 리스너 바인딩 완결");
 });
 
 /**
@@ -1459,87 +1477,18 @@ async function loadSigunguBySido(sido) {
     }
 }
 
-/**
- * =========================================================================
- * 🟢 [Block] 조건별 충전소 검색 및 동적 화면 렌더링 엔진 (ReferenceError 수정본)
- * =========================================================================
- */
-async function fetchFilteredStations() {
-    // 1. 현재 화면의 필터 엘리먼트들로부터 실시간 선택값 추출
-    const sido = document.getElementById("filterSido")?.value || ""; // 선택된 시/도 값
-    const sigungu = document.getElementById("filterSigungu")?.value || ""; // 선택된 시/군/구 값
-    const speed = document.getElementById("filterSpeed")?.value || "ALL"; // 선택된 충전속도 값
-    
-    console.log(`📡 [API Request] 필터 검색 가동 -> 시/도: '${sido}', 시/군/구: '${sigungu}', 속도: '${speed}'`);
-
-    // 2. 예외 발생 시 'Uncaught'로 터지지 않도록 전체 로직을 try-catch로 안전하게 감싸기
-    try {
-        // 백엔드 컨트롤러 주소 맵에 맞춰서 요청 URL 주소 조립
-        const url = `/reservation/stations?sido=${encodeURIComponent(sido)}&sigungu=${encodeURIComponent(sigungu)}&speed=${speed}`;
-        
-        console.log(`🚀 [API Fetch] 서버로 비동기 요청을 전송합니다. URL: ${url}`);
-        const response = await fetch(url);
-        
-        // HTTP 응답 상태가 정상(200)이 아닐 경우 즉시 예외 처리 파이프라인으로 이송
-        if (!response.ok) {
-            throw new Error(`서버가 에러를 반환했습니다. 상태코드: ${response.status}`);
-        }
-        
-        // 🚨 [핵심 수정] 변수 선언(const)을 확실하게 보장하여 ReferenceError 원천 차단
-        const stationList = await response.json(); 
-        
-        // 디버깅을 위해 콘솔창에 수신된 데이터 배열의 길이와 실제 배열 데이터 정밀 출력
-        console.log(`📥 [API Response] 서버 통신 완료! 수신된 충전소 개수: ${stationList.length}건`, stationList);
-
-        // 충전소 카드가 그려질 부모 HTML 컨테이너 탐색
-        const container = document.getElementById("stationListContainer");
-        if (!container) {
-            console.error("❌ [Render Error] 'stationListContainer' 엘리먼트를 화면에서 찾을 수 없습니다.");
-            return;
-        }
-
-        // 3. 수신된 데이터가 0건일 때의 예외 UI 처리
-        if (stationList.length === 0) {
-            console.warn("⚠️ [Render Display] 조건에 부합하는 충전소 데이터가 단 1건도 없습니다.");
-            container.innerHTML = '<div style="text-align:center; padding:3rem 1rem; color:#9ca3af; font-weight:500;">조건에 맞는 충전소가 없습니다.</div>';
-            return;
-        }
-
-        // 4. 정상 데이터 존재 시 맵 루프 연산을 가동하여 HTML 코드 동적 생성 및 화면 주입
-        container.innerHTML = stationList.map(s => {
-            // 콘솔 로그가 너무 많이 찍혀 스크롤이 터지는 것을 막기 위해 가공 로그는 생략하고 최종 조립 진행
-            return `
-                <div class="station-card" onclick="loadChargers('${s.id}', this)">
-                    <div class="station-card-body">
-                        <h4 class="station-name" style="font-weight: 700; color: #111827; margin: 0; font-size: 1rem;">${s.name}</h4>
-                        <p class="station-address" style="font-size: 0.875rem; color: #6b7280; margin: 0.25rem 0 0 0;">${s.address}</p>
-                    </div>
-                </div>
-            `;
-        }).join('');
-        
-        console.log("✨ [Render Complete] 충전소 목록 585건 화면 드로잉 완료!");
-		
-		var autoSelectId = /*[[${selectedStationId}]]*/ null;
-
-    } catch (err) {
-        // 5. 통신 혹은 자바스크립트 연산 중 터진 모든 에러를 안전하게 포획하여 로깅 처리
-        console.error("❌ [Critical Error] fetchFilteredStations 로직 실행 중 런타임 에러 발생:", err);
-    }
-}
-
-// 4. 기존 이벤트 리스너 연결
-document.getElementById("filterSido").addEventListener("change", (e) => {
-    loadSigunguBySido(e.target.value);
-    fetchFilteredStations(); // 시/도가 바뀌면 즉시 검색
-});
-
-document.getElementById("filterSigungu").addEventListener("change", fetchFilteredStations);
-document.getElementById("filterSpeed").addEventListener("change", fetchFilteredStations);
-
-// 5. 🟢 페이지 시작 시 자동 실행 (초기화)
+// 🟢 페이지 완전 로드 직후 가장 처음으로 실행되는 스크립트 시발점 (Entry Point)
+// 🟢 페이지 시작 시 자동 실행 (초기화)
 window.addEventListener("DOMContentLoaded", async () => {
     console.log("🌟 [System Boot] EV 예약 시스템 부트스트랩 가동!");
-    await initRegionFilters(); // 상단 셀렉트 박스 렌더링을 기다림
-    fetchFilteredStations();   // 세팅 완료 후 전체 충전소 목록 싹 쓸어오기 강제 킥오프!
+    
+    // 🌟 [추가] JSP에 숨겨둔 내 차량 배터리 용량을 읽어와서 전역 변수에 덮어쓰기!
+    const batteryInput = document.getElementById("carBatteryCapacity");
+    if (batteryInput && batteryInput.value) {
+        userBatteryCapacity = Number(batteryInput.value);
+        console.log(`🔋 [Data] 내 차량 배터리 용량 인식 완료: ${userBatteryCapacity}kWh`);
+    }
+
+    await initRegionFilters(); // 셀렉트 박스 먼저 세팅
+    fetchFilteredStations();   // 세팅 완료 후 전체 충전소 목록 쫙 뿌려주기
 });

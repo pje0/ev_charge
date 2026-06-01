@@ -24,4 +24,7 @@ public interface VehicleMapper {
     
     // 6. DB에 등록된 전기차 제원 마스터 목록 전체 조회
     List<VehicleDto> getAllEvModels();
+    
+    // 유저의 전체 등록 차량 목록 가져오기
+    List<VehicleDto> getVehicleListByUserId(Long userId);
 }
