@@ -134,9 +134,56 @@
           </choose>
     </select>
 
-    <select id="getStationList" resultType="com.boot.ev_charge.station.StationDto">
-        select id, name, address, metro, city, rapid_cnt as rapidCnt, slow_cnt as slowCnt, car_type as carType, latitude, longitude
-        from station order by name asc
+	<select id="getSidoList" resultType="string">
+        /* ReservationMapper.getSidoList : DB에서 실제 등록된 시/도 목록 추출 */
+        SELECT DISTINCT metro 
+        FROM station 
+        WHERE metro IS NOT NULL AND metro != '' 
+        ORDER BY metro ASC
+    </select>
+
+    <select id="getSigunguList" parameterType="string" resultType="string">
+        /* ReservationMapper.getSigunguList : 선택된 시/도에 종속된 시/군/구 추출 */
+        SELECT DISTINCT city 
+        FROM station 
+        WHERE metro = #{metro} 
+          AND city IS NOT NULL AND city != '' 
+        ORDER BY city ASC
+    </select>
+
+    <select id="getStationList" parameterType="map" resultType="com.boot.ev_charge.station.StationDto">
+        /* ReservationMapper.getStationList : 동적 필터링이 적용된 충전소 리스트 조회 */
+        SELECT 
+            id, 
+            name, 
+            address, 
+            metro, 
+            city, 
+            rapid_cnt AS rapidCnt, 
+            slow_cnt AS slowCnt, 
+            car_type AS carType, 
+            latitude, 
+            longitude
+        FROM station
+        <where>
+            <if test="metro != null and metro != ''">
+                AND metro = #{metro}
+            </if>
+            
+            <if test="city != null and city != ''">
+                AND city = #{city}
+            </if>
+            
+            <choose>
+                <when test="speed == 'RAPID'">
+                    AND rapid_cnt > 0
+                </when>
+                <when test="speed == 'SLOW'">
+                    AND slow_cnt > 0
+                </when>
+            </choose>
+        </where>
+        ORDER BY name ASC
     </select>
     
     <select id="getChargersByStationId" parameterType="long" resultType="com.boot.ev_charge.station.ChargerDto">

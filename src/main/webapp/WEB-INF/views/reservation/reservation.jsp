@@ -53,27 +53,53 @@
 	            <input type="hidden" id="userBatteryCapacity" value="${primaryVehicle.batteryCapacity != null ? primaryVehicle.batteryCapacity : 70.0}">
 				<input type="hidden" id="userConnectorType" value="${primaryVehicle.connectorType}">
 	
-	            <div id="ev-page-1" class="ev-page ev-panel-layout">
-	                <div class="ev-panel ev-panel-side">
-	                    <h2 class="ev-panel-title">충전소 선택</h2>
-	                    <div class="ev-station-list">
-	                        <c:forEach var="station" items="${stationList}">
-	                            <div class="station-card" onclick="loadChargers('${station.id}', this)">
-	                                <h3>${station.name}</h3>
-	                                <p>${station.address}</p>
-	                            </div>
-	                        </c:forEach>
-	                    </div>
-	                </div>
-	                
-	                <div class="ev-panel ev-panel-main">
-	                    <h2 class="ev-panel-title">충전기 선택</h2>
-	                    <div id="chargerListContainer" class="ev-charger-grid">
-	                        <div class="charger-empty">충전소를 선택해주세요.</div>
-	                    </div>
-	                </div>
-	            </div>
-	
+	            <div id="ev-page-1" class="ev-page">
+                
+                <div class="ev-reservation-filter-box" style="background: white; border-radius: 1rem; border: 1px solid #e5e7eb; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+                    <div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end;">
+                        <div style="flex: 1; min-width: 140px;">
+                            <label for="filterSido" style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">시/도</label>
+                            <select id="filterSido" class="ev-input" style="width: 100%; cursor: pointer;">
+                                <option value="">전체 시/도</option>
+                            </select>
+                        </div>
+                        
+                        <div style="flex: 1; min-width: 140px;">
+                            <label for="filterSigungu" style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">시/군/구</label>
+                            <select id="filterSigungu" class="ev-input" disabled style="width: 100%; cursor: pointer;">
+                                <option value="">시/도를 먼저 선택</option>
+                            </select>
+                        </div>
+                        
+                        <div style="flex: 1; min-width: 140px;">
+                            <label for="filterSpeed" style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">충전속도</label>
+                            <select id="filterSpeed" class="ev-input" style="width: 100%; cursor: pointer;">
+                                <option value="ALL">전체 (급속 + 완속)</option>
+                                <option value="RAPID">급속</option>
+                                <option value="SLOW">완속</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ev-panel-layout">
+                    <div class="ev-panel ev-panel-side">
+                        <h2 class="ev-panel-title">충전소 선택</h2>
+                        <div class="ev-station-list" id="stationListContainer">
+                            <div style="text-align: center; padding: 3rem 1rem; color: #9ca3af; font-weight: 500;">필터를 선택하여 충전소를 조회하세요.</div>
+                        </div>
+                    </div>
+                    
+                    <div class="ev-panel ev-panel-main">
+                        <h2 class="ev-panel-title">충전기 선택</h2>
+                        <div id="chargerListContainer" class="ev-charger-grid">
+                            <div class="charger-empty">충전소를 선택해주세요.</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
 	            <div id="ev-page-2" class="ev-page hidden ev-page-wrapper">
 	                <h2 class="ev-section-title">예약 세부 설정</h2>
 	                

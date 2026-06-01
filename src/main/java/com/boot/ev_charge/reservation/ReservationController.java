@@ -1,9 +1,12 @@
 package com.boot.ev_charge.reservation;
 
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Controller;
@@ -31,6 +34,9 @@ public class ReservationController {
     private ReservationService reservationService;
     
     @Autowired
+    private ReservationMapper reservationMapper;
+    
+    @Autowired
     private UserService userService;
 
     // 1. 예약 페이지 로드 (충전소 목록 포함)
@@ -42,8 +48,11 @@ public class ReservationController {
         String today = LocalDate.now().toString();
         model.addAttribute("today", today);
 
-        // 충전소 목록 조회 (건너뛰기 기능을 위해 필수 추가)
-        List<StationDto> stationList = reservationService.getStationList();
+        // 🟢 [에러 해결] 파라미터 불일치 오류 수정
+        // 필터 조건이 없는 초기 화면이므로, 텅 빈 HashMap을 넘겨 전체 충전소 목록을 가져옵니다.
+        Map<String, Object> emptyParams = new HashMap<>();
+        List<StationDto> stationList = reservationService.getStationList(emptyParams);
+        
         model.addAttribute("stationList", stationList);
 
         log.info("@# 리턴할 뷰 경로: reservation/reservation");
@@ -223,5 +232,57 @@ public class ReservationController {
             log.error("@# [예약 수정 에러] {}", e.getMessage());
             return "FAIL:ERROR";
         }
+    }
+    
+ // =========================================================================
+    // 🟢 1. 시/도 목록 제공 API
+    // =========================================================================
+    @GetMapping("/regions/sido")
+    public ResponseEntity<List<String>> getSidoList() {
+        log.info("🌐 [API Call] 클라이언트로부터 전체 시/도(metro) 목록 조회 요청이 인입되었습니다.");
+        
+        // Mapper를 통해 DB에서 시/도 리스트 추출
+        List<String> sidoList = reservationMapper.getSidoList();
+        
+        log.info("✅ [API Response] DB 조회 완료. 총 {}개의 시/도 데이터를 프론트엔드로 반환합니다.", sidoList.size());
+        return ResponseEntity.ok(sidoList); // HTTP 200 OK와 함께 JSON 데이터 반환
+    }
+
+    // =========================================================================
+    // 🟢 2. 시/군/구 목록 제공 API (시/도 파라미터 필수)
+    // =========================================================================
+    @GetMapping("/regions/sigungu")
+    public ResponseEntity<List<String>> getSigunguList(@RequestParam("metro") String metro) {
+        log.info("🌐 [API Call] 클라이언트로부터 특정 시/도의 시/군/구 조회 요청 인입 -> 대상 시/도: {}", metro);
+        
+        // Mapper에 선택된 시/도 값을 넘겨 종속된 시/군/구 리스트 추출
+        List<String> sigunguList = reservationMapper.getSigunguList(metro);
+        
+        log.info("✅ [API Response] DB 조회 완료. '{}' 지역 내 총 {}개의 시/군/구 데이터를 반환합니다.", metro, sigunguList.size());
+        return ResponseEntity.ok(sigunguList); // HTTP 200 OK와 함께 JSON 데이터 반환
+    }
+
+    // =========================================================================
+    // 🟢 3. 조건부 필터링 충전소 목록 제공 API
+    // =========================================================================
+    @GetMapping("/stations")
+    public ResponseEntity<List<StationDto>> getFilteredStations(
+            @RequestParam(value = "sido", required = false, defaultValue = "") String sido,
+            @RequestParam(value = "sigungu", required = false, defaultValue = "") String sigungu,
+            @RequestParam(value = "speed", required = false, defaultValue = "ALL") String speed) {
+        
+        log.info("🌐 [API Call] 충전소 목록 필터링 검색 요청 인입 -> 조건 [시/도: {}, 시/군/구: {}, 충전속도: {}]", sido, sigungu, speed);
+        
+        // MyBatis Mapper로 넘길 파라미터 Map 생성 및 데이터 바인딩
+        Map<String, Object> filterParams = new HashMap<>();
+        filterParams.put("metro", sido); // DB 컬럼명에 맞게 매핑
+        filterParams.put("city", sigungu); // DB 컬럼명에 맞게 매핑
+        filterParams.put("speed", speed); // RAPID, SLOW, ALL 속도 구분 매핑
+        
+        // 동적 쿼리가 적용된 Mapper 메서드 호출
+        List<StationDto> stationList = reservationMapper.getStationList(filterParams);
+        
+        log.info("✅ [API Response] 필터링 DB 조회 완료. 총 {}개의 충전소 검색 결과를 프론트엔드로 반환합니다.", stationList.size());
+        return ResponseEntity.ok(stationList); // HTTP 200 OK와 함께 JSON 데이터 반환
     }
 }

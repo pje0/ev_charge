@@ -1,6 +1,7 @@
 package com.boot.ev_charge.reservation;
 
 import java.sql.Timestamp;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -114,9 +115,62 @@ public class ReservationService {
         }
     }
     
-    // 10. 충전소 목록 조회
-    public List<StationDto> getStationList() {
-        return reservationMapper.getStationList();
+    // =========================================================================
+    // 🟢 1. 시/도 목록 조회 서비스 비즈니스 로직
+    // =========================================================================
+    public List<String> getSidoList() {
+        log.info("⚙️ [Service] getSidoList() 호출: DB에서 중복 없는 시/도(metro) 목록 조회를 시작합니다.");
+        
+        // Mapper를 호출하여 시/도 목록 데이터 질의 및 추출
+        List<String> sidoList = reservationMapper.getSidoList();
+        
+        log.info("✅ [Service] getSidoList() 완료: 총 {} 건의 시/도 데이터 추출 성공", sidoList.size());
+        
+        // 컨트롤러로 최종 추출된 데이터 리스트 반환
+        return sidoList;
+    }
+
+    // =========================================================================
+    // 🟢 2. 특정 시/도에 종속된 시/군/구 목록 조회 서비스 비즈니스 로직
+    // =========================================================================
+    public List<String> getSigunguList(String metro) {
+        log.info("⚙️ [Service] getSigunguList() 호출: 파라미터 [metro: {}] 기준으로 시/군/구 조회를 시작합니다.", metro);
+        
+        // 🛑 파라미터 유효성 검증 1차 방어 로직 (null 또는 공백 체크)
+        if (metro == null || metro.trim().isEmpty()) {
+            log.warn("⚠️ [Service Warning] 파라미터 누락: 시/도(metro) 값이 존재하지 않아 조회를 취소하고 빈 리스트를 반환합니다.");
+            // 비정상적인 접근 시 NullPointerException 방지를 위해 안전한 빈 리스트 반환
+            return Collections.emptyList();
+        }
+
+        // Mapper를 호출하여 조건에 맞는 시/군/구 목록 데이터 질의 및 추출
+        List<String> sigunguList = reservationMapper.getSigunguList(metro);
+        
+        log.info("✅ [Service] getSigunguList() 완료: '{}' 지역 내 총 {} 건의 시/군/구 데이터 추출 성공", metro, sigunguList.size());
+        
+        // 컨트롤러로 추출된 데이터 리스트 반환
+        return sigunguList;
+    }
+
+    // =========================================================================
+    // 🟢 3. 동적 필터링 조건에 맞춘 충전소 목록 조회 서비스 비즈니스 로직
+    // =========================================================================
+    public List<StationDto> getStationList(Map<String, Object> params) {
+        log.info("⚙️ [Service] getStationList() 호출: 전달받은 필터 파라미터 {} 기준으로 충전소 목록 조회를 시작합니다.", params);
+        
+        // 🛑 파라미터 객체 널 체크 방어 로직
+        if (params == null) {
+            log.error("❌ [Service Error] 필터 파라미터(Map) 객체가 null입니다. 빈 리스트를 반환합니다.");
+            return Collections.emptyList();
+        }
+
+        // Mapper를 호출하여 필터(시/도, 시/군/구, 충전속도) 조건이 완벽히 적용된 충전소 리스트 질의 및 추출
+        List<StationDto> stationList = reservationMapper.getStationList(params);
+        
+        log.info("✅ [Service] getStationList() 완료: 조건에 부합하는 총 {} 건의 충전소 데이터 추출 성공", stationList.size());
+        
+        // 컨트롤러로 추출된 충전소 DTO 리스트 반환
+        return stationList;
     }
 
     // 11. 충전소별 충전기 목록 조회
