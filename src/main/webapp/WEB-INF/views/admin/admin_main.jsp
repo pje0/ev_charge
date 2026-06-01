@@ -15,7 +15,7 @@
 <jsp:include page="/WEB-INF/views/layout/header.jsp" />
 <jsp:include page="admin_dashboard.jsp" />
 
-    <div class="ev-admin-main ev-container" style="padding: 104px 1.5rem 60px 1.5rem; box-sizing: border-box; min-height: 100vh;">
+    <div class="ev-admin-main ev-container" style="padding: 30px 1.5rem 60px 1.5rem; box-sizing: border-box; min-height: 100vh;">
         
         <!-- 1. 부모 레벨의 메인 탭 메뉴 -->
         <div class="ev-filter-tabs" style="margin-bottom: 25px;">

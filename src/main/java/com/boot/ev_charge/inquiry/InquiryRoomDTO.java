@@ -22,4 +22,5 @@ public class InquiryRoomDTO {
     private String userName;      // 문의자 이름 (user 테이블 join)
     private String lastMessage;   // 목록에 표시할 마지막 메시지
     private int unreadCount;      // 관리자가 읽지 않은 메시지 수
+    private String loginId;       // ⭕ [추가]: 문의자 로그인 ID (user 테이블 join)
 }

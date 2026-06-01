@@ -209,9 +209,9 @@
 						style="display: none; width: 100%; padding: 10px 14px; font-size: 14px; color: #374151; background: #f8fafc; border-radius: 8px; margin-bottom: 8px;">
 						<span>거리 <strong id="routeDistance" style="color: #1d4ed8;"></strong></span>
 						&nbsp;&nbsp; <span>소요시간 <strong id="routeDuration"
-							style="color: #1d4ed8;"></strong></span> &nbsp;&nbsp; 
-							<a id="kakaoMapLink" href="#" target="_blank"
-							style="font-size: 12px; color: #9ca3af; text-decoration: underline; float:right;">
+							style="color: #1d4ed8;"></strong></span> &nbsp;&nbsp; <a
+							id="kakaoMapLink" href="#" target="_blank"
+							style="font-size: 12px; color: #9ca3af; text-decoration: underline; float: right;">
 							카카오맵에서 보기</a>
 					</div>
 
@@ -401,6 +401,8 @@
 
     // 상세 패널
     function showDetail(station) {
+    	console.log('station.metro:', station.metro, 'station.city:', station.city); // 임시
+    	
       document.getElementById('detailName').textContent = station.stnPlace || station.name || '-';
       document.getElementById('detailAddr').textContent = station.stnAddr || station.address || '-';
       document.getElementById('detailRapid').textContent = (station.rapidCnt || 0) + '대';
@@ -441,6 +443,15 @@
                   stationName + ',' + station.lat + ',' + station.lng;
           }
       }
+      
+      var reserveBtn = document.querySelector('.ev-map-reserve-btn');
+      if (reserveBtn && station.id) {
+          reserveBtn.href = '/reservation?stationId=' + station.id 
+              + '&metro=' + encodeURIComponent(station.metro || '')
+              + '&city=' + encodeURIComponent(station.city || '');
+      }
+
+      document.getElementById('detailPanel').style.display = 'flex';
 
       document.getElementById('detailPanel').style.display = 'flex';
     }
@@ -697,6 +708,8 @@
           stations = data.map(function(s) {
             s.stnPlace = s.name;
             s.stnAddr = s.address;
+            s.metro = s.metro || '';  // 추가
+            s.city = s.city || '';    // 추가
             s.lat = parseFloat(s.latitude);
             s.lng = parseFloat(s.longitude);
             s.availableCnt = s.availableCnt || 0;

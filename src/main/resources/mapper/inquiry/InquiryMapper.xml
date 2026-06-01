@@ -70,5 +70,20 @@
         SET is_read = 'Y' 
         WHERE room_id = #{roomId} AND sender_role = 'USER' AND is_read = 'N'
     </update>
+ <!-- ⭕ [신설] 9. 알림 처리용 단건 방 상세 조회 (User 정보 Join 연동) -->
+    <select id="findRoomById" resultType="com.boot.ev_charge.inquiry.InquiryRoomDTO">
+        SELECT 
+            r.id,
+            r.user_id AS userId,
+            r.admin_id AS adminId,
+            r.status,
+            r.created_at AS createdAt,
+            r.updated_at AS updatedAt,
+            u.name AS userName,
+            u.login_id AS loginId
+        FROM inquiry_room r
+        JOIN user u ON r.user_id = u.id
+        WHERE r.id = #{roomId}
+    </select>
 
 </mapper>

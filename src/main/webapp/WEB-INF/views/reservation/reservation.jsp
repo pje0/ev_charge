@@ -12,6 +12,63 @@
 <link rel="stylesheet" href="${pageContext.request.contextPath}/css/reservation.css">
 <script src="${pageContext.request.contextPath}/js/reservation.js" defer></script>
 </head>
+
+<c:if test="${selectedStationId != null}">
+<script>
+window.addEventListener("DOMContentLoaded", async function() {
+    var targetStationId = '${selectedStationId}';
+    var targetMetro = '${selectedMetro}';
+    var targetCity = '${selectedCity}';
+
+    // initRegionFilters 완료 대기
+    await initRegionFilters();
+
+    // 시/도 세팅
+    if (targetMetro) {
+        var sidoSelect = document.getElementById('filterSido');
+        if (sidoSelect) {
+            sidoSelect.value = targetMetro;
+
+            // 시/군/구 로드 완료 후 세팅
+            await loadSigunguBySido(targetMetro);
+            if (targetCity) {
+                var sigunguSelect = document.getElementById('filterSigungu');
+                if (sigunguSelect) {
+                    sigunguSelect.value = targetCity;
+                }
+            }
+
+            // 필터 적용해서 충전소 목록 갱신
+            await fetchFilteredStations();
+        }
+    }
+
+    var observer = new MutationObserver(function() {
+        var cards = document.querySelectorAll('#stationListContainer .station-card');
+        if (cards.length > 0) {
+            setTimeout(function() {
+                var cards2 = document.querySelectorAll('#stationListContainer .station-card');
+                cards2.forEach(function(card) {
+                    var onclick = card.getAttribute('onclick') || '';
+                    if (onclick.includes("'" + targetStationId + "'")) {
+                        card.classList.add('active');
+                        loadChargers(targetStationId, card);
+                        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        observer.disconnect();
+                    }
+                });
+            }, 500);
+        }
+    });
+
+    observer.observe(document.getElementById('stationListContainer'), { childList: true });
+});
+</script>
+</c:if>
+
+</head>
+
+<body> 
 <body> 
 <jsp:include page="/WEB-INF/views/layout/header.jsp" />
     <main class="ev-reservation-wrapper">

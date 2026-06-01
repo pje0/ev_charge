@@ -55,6 +55,27 @@
 			<!-- 로그인 상태 -->
 			<sec:authorize access="isAuthenticated()">
 
+				<!-- 추가: 알림 벨 및 알림센터 (유저 메뉴 왼쪽에 클래스 기반 배치) -->
+				<div class="ev-header-bell-wrap">
+				<button type="button" class="ev-header-bell" onclick="fn_toggle_notification_center()">
+					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+						<path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+					</svg>
+					<!-- 🔴 수정: 단순 점(Dot)에서 안 읽은 실시간 알림 개수 숫자가 찍히는 카운트 뱃지로 변경 -->
+					<span id="globalBellCount" class="ev-header-bell-badge">0</span>
+				</button>
+				
+				<div id="evNotiCenter" class="ev-noti-center-box">
+					<div class="ev-noti-center-header">
+						<span class="ev-noti-center-title">알림센터</span>
+					</div>
+					<div id="evNotiListArea" class="ev-noti-scroll-area">
+						<div class="ev-noti-empty-state">알림 내역을 가져오는 중입니다...</div>
+					</div>
+				</div>
+			</div>
+
 				<div class="ev-header-user-menu">
 
 					<button class="ev-header-user-btn">
@@ -115,79 +136,159 @@
 	</div>
 	<div id="globalToastContainer"></div>
 </header>
-<!-- 실시간 푸시 수신 및 토스트 핸들러 스크립트 -->
 <script>
+// 🔔 알림센터(보관함) 실시간 수신 및 UI 제어 공통 JavaScript
+
 $(document).ready(function() {
-    // 1. Spring Security 인증 여부를 체크하고 로그인 아이디를 안전하게 자바스크립트 변수로 바인딩합니다.
-    let currentLoginId = "";
-    
-    <sec:authorize access="isAuthenticated()">
-        // 시큐리티에 인증된 Principal의 고유 Name(보통 로그인 ID 또는 회원 PK)을 가져옵니다.
-        currentLoginId = "<sec:authentication property='principal.username' />";
-    </sec:authorize>
-    
-    // 2. 사용자가 로그인한 상태일 때만 SSE 스트림 연결 파이프라인을 가동합니다.
-    if (currentLoginId && currentLoginId.trim() !== "") {
-        // 백엔드 Spring Boot 구독 Controller API 호출 (인코딩 처리 포함)
-        const sseUrl = "${pageContext.request.contextPath}/api/notification/subscribe/" + encodeURIComponent(currentLoginId);
-        const eventSource = new EventSource(sseUrl);
+ let currentLoginId = "";
+ 
+ <sec:authorize access="isAuthenticated()">
+     currentLoginId = "<sec:authentication property='principal.username' />";
+ </sec:authorize>
+ 
+ if (currentLoginId && currentLoginId.trim() !== "") {
+     const sseUrl = "${pageContext.request.contextPath}/api/notification/subscribe/" + encodeURIComponent(currentLoginId);
+     const eventSource = new EventSource(sseUrl);
 
-        // 3. 백엔드 전송 스레드가 'alarm' 채널로 실시간 객체를 밀어내면 수신
-        eventSource.addEventListener("alarm", function(event) {
-            try {
-                const notiData = JSON.parse(event.data);
-                // 공통 팝업 함수 실행
-                fn_trigger_global_toast(notiData.title, notiData.content);
-            } catch(e) {
-                console.error("실시간 알림 데이터 분석 실패:", e);
-            }
-        });
+     // [실시간 수신] 백엔드에서 실시간 알림이 도달하면 실행
+     eventSource.addEventListener("alarm", function(event) {
+         try {
+             // 변경: 실시간 푸시 유입 시 현재 숫자를 가산(+1)하여 뱃지를 갱신 및 표시합니다.
+             const $badge = $('#globalBellCount');
+             let currentCount = $badge.is(':visible') ? parseInt($badge.text()) : 0;
+             currentCount += 1;
+             $badge.text(currentCount).show();
+             
+             // 2. 만약 알림센터 보관함 레이어가 열려있다면 화면 깜빡임 없이 즉시 리스트 새로고침
+             if($('#evNotiCenter').is(':visible')) {
+                 fn_load_notification_history();
+             }
+         } catch(e) {
+             console.error("실시간 푸시 연동 에러:", e);
+         }
+     });
 
-        // 예기치 않은 네트워크 해제 발생 시 브라우저 내장 자동 복구 백오프 기동
-        eventSource.onerror = function() {
-            console.warn("실시간 알림 서버 채널과의 스트림 연결이 해제되었습니다. 원격 재연결 프로세스를 가동합니다.");
-        };
-    }
+     eventSource.onerror = function() {
+         console.warn("실시간 알림 SNIPER 스트림 연결이 해제되어 재연결을 시도합니다.");
+     };
+
+     // [최초 로드] 로그인 유저의 안 읽은 알림 개수를 확인하여 정확한 숫자로 세팅
+     $.ajax({
+         url: "${pageContext.request.contextPath}/api/notification/unread-count",
+         type: "GET",
+         success: function(count) {
+             const unreadCount = parseInt(count);
+             if(unreadCount > 0) {
+                 // 변경: 안 읽은 알림이 1개 이상 존재할 때만 뱃지에 숫자를 박아 노출합니다.
+                 $('#globalBellCount').text(unreadCount).show();
+             } else {
+                 $('#globalBellCount').hide();
+             }
+         }
+     });
+ }
 });
 
-// 동적으로 알림 모듈을 생성하여 우측 하단 컨테이너에 사출하는 공통 자바스크립트
-function fn_trigger_global_toast(title, content) {
-    // 다중 푸시 유입 시 HTML 엘리먼트 ID 중복을 철저하게 방지하기 위한 랜덤 타임스탬프 결합 키
-    const uniqueElementId = 'toast_' + new Date().getTime() + Math.floor(Math.random() * 1000);
-    
-    const toastTemplateHtml = `
-        <div id="${uniqueElementId}" class="ev-global-toast">
-            <div class="ev-global-toast-header">
-                <span>⚡ ${title}</span>
-                <button class="ev-global-toast-close" onclick="fn_remove_global_toast('${uniqueElementId}')">&times;</button>
-            </div>
-            <div class="ev-global-toast-body">
-                ${content}
-            </div>
-        </div>
-    `;
-    
-    // 글로벌 컨테이너 하단에 주입
-    $('#globalToastContainer').append(toastTemplateHtml);
-    
-    // 리액트처럼 3.5초 라이프사이클 유지 후 자동 디졸브 처리
-    setTimeout(function() {
-        fn_remove_global_toast(uniqueElementId);
-    }, 3500);
+//[토글 함수] 종 모양 버튼 클릭 시 알림센터 레이어를 열고 닫음
+function fn_toggle_notification_center() {
+ const $centerBox = $('#evNotiCenter');
+ if($centerBox.is(':visible')) {
+     $centerBox.hide();
+ } else {
+     $centerBox.show();
+     fn_load_notification_history(); // 창이 열리는 즉시 역사 내역 로드
+ }
 }
 
-// 부드러운 애니메이션 스케일링 후 노드(DOM)를 완벽하게 파괴하는 삭제 로직
-function fn_remove_global_toast(targetNodeId) {
-    const $targetNode = $('#' + targetNodeId);
-    
-    if($targetNode.length === 0 || $targetNode.hasClass('fade-out')) return;
-    
-    // common.css에 정의된 퇴출 애니메이션 기동
-    $targetNode.addClass('fade-out');
-    
-    // 애니메이션 프레임 타임 확보 후 영구 소멸
-    setTimeout(function() {
-        $targetNode.remove();
-    }, 300);
+//[리스트 로드] DB 내역을 비동기로 호출하여 타임라인 카드로 빌드 (현재 코드 완벽 유지)
+function fn_load_notification_history() {
+ const $listArea = $('#evNotiListArea');
+ 
+ $.ajax({
+     url: "${pageContext.request.contextPath}/api/notification/list",
+     type: "GET",
+     dataType: "json",
+     success: function(list) {
+         $listArea.empty();
+         
+         if(!list || list.length === 0) {
+             $listArea.append('<div class="ev-noti-empty-state">받은 알림이 없습니다.</div>');
+             return;
+         }
+         
+         let htmlStr = '<div class="ev-noti-section-title">최근 받은 알림</div>';
+         
+         $.each(list, function(idx, item) {
+             const unreadClass = item.isRead === 'N' ? 'unread' : '';
+             
+             let iconSymbol = "🔔";
+             if(item.type === "CHARGE_COMPLETE") iconSymbol = "⚡";
+             if(item.type === "CHARGE_ERROR") iconSymbol = "⚠️";
+             
+             // 수정 구역: JSP EL식 가로채기 방지를 위해 백틱 문자열 내부 변수명 앞에 역슬래시(\)를 전부 추가했습니다.
+             htmlStr += `
+                 <div class="ev-noti-item-card \${unreadClass}" onclick="fn_click_read_notification('\${item.id}', '\${item.referenceId}', '\${item.referenceType}')">
+                     <div class="ev-noti-item-meta">
+                         <span class="ev-noti-item-icon">\${iconSymbol}</span>
+                         <span>\${item.title}</span>
+                     </div>
+                     <div class="ev-noti-item-body">
+                         \${item.content}
+                     </div>
+                 </div>
+             `;
+         });
+         
+         $listArea.append(htmlStr);
+         
+         // 리스트 드로잉이 끝난 후 전체 읽음 및 개수 뱃지 초기화 호출
+         fn_mark_all_notifications_as_read();
+     },
+     error: function() {
+         $listArea.html('<div class="ev-noti-empty-state" style="color:var(--ev-destructive);">알림을 불러오지 못했습니다.</div>');
+     }
+ });
 }
+
+//[전체 읽음] 개수 뱃지를 끄고 서버 테이블의 모든 상태를 'Y'로 업데이트
+function fn_mark_all_notifications_as_read() {
+ // 변경: 사용자가 목록을 확인했으므로 즉시 카운트를 0으로 밀고 비주얼을 은닉합니다.
+ $('#globalBellCount').text('0').hide();
+ $.ajax({
+     url: "${pageContext.request.contextPath}/api/notification/read-all",
+     type: "POST"
+ });
+}
+
+//[개별 읽음 & 이동] 알림 카드 클릭 시 개별 읽음 처리 후 관련 비즈니스 페이지로 이동
+function fn_click_read_notification(id, refId, refType) {
+ $.ajax({
+     url: "${pageContext.request.contextPath}/api/notification/read/" + id,
+     type: "POST",
+     success: function() {
+         if (refType === "RESERVATION" && refId && refId !== "null" && refId !== "") {
+             location.href = "${pageContext.request.contextPath}/reservation/detail?id=" + refId;
+             return;
+         }
+         if (refType === "INQUIRY" && refId && refId !== "null" && refId !== "") {
+             location.href = "${pageContext.request.contextPath}/user/inquiry/chat?roomId=" + refId;
+             return;
+         }
+         fn_load_notification_history();
+     },
+     error: function() {
+         console.error("알림 읽음 처리 중 통신 오류가 발생했습니다.");
+         if (refType === "RESERVATION") location.href = "${pageContext.request.contextPath}/reservation/detail?id=" + refId;
+         if (refType === "INQUIRY") location.href = "${pageContext.request.contextPath}/user/inquiry/chat?roomId=" + refId;
+     }
+ });
+}
+
+//[바탕 클릭 예외] 알림창 외의 구역 누르면 자연스럽게 닫히도록 튜닝
+$(document).mouseup(function (e) {
+ const container = $(".ev-header-bell-wrap");
+ if (!container.is(e.target) && container.has(e.target).length === 0) {
+     $("#evNotiCenter").hide();
+ }
+});
 </script>
