@@ -47,4 +47,14 @@ public class MyPageDto {
     private String connectorType;   
     private Integer powerKw;      
     private Integer maxMinutes;
+    
+    // 🟢 400 에러 우회용 (문자열로 먼저 받고 서비스에서 Timestamp로 변환)
+    private String editStartTime; 
+    private String editEndTime;
+    
+    // 🟢 차량 충전 규격 검증용
+    private String carConnectorType;
+    
+    // 🟢 차량별 배터리 최대 용량
+    private Double batteryCapacity;
 }

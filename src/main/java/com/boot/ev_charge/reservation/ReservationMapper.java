@@ -27,7 +27,14 @@ public interface ReservationMapper {
             @Param("stationId") Long stationId, 
             @Param("date") String date
         );
-    List<StationDto> getStationList();   
+    // 🟢 1. 중복 없는 시/도 목록 조회
+    // DB의 station 테이블에서 고유한 metro 값을 List<String> 형태로 반환합니다.
+    List<String> getSidoList();
+
+    // 🟢 2. 특정 시/도에 속한 시/군/구 목록 조회
+    // 파라미터로 받은 metro 문자열을 기준으로 고유한 city 값을 List<String> 형태로 반환합니다.
+    List<String> getSigunguList(String metro);
+    List<StationDto> getStationList(Map<String, Object> params);   
     List<ChargerDto> getChargersByStationId(@Param("stationId") Long stationId);
     // [관리자 전용] 검색 조건부 전체 예약 데이터 가져오기
     List<ReservationDto> getAdminReservationList(
@@ -36,7 +43,7 @@ public interface ReservationMapper {
             @Param("searchKeyword") String searchKeyword
     );
 
-    // [관리자 전용] 리스트 즉시 삭제를 위한 메서드
+    // [관리자 전용] 리스트 즉시tStationList 삭제를 위한 메서드
     int deleteReservationById(@Param("reservationId") Long reservationId);
     
     // 예약 수정

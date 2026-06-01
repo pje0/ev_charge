@@ -137,7 +137,20 @@
                                                                 <p>목표 충전량: ${res.targetAmount} kWh</p>
                                                             </c:otherwise>
                                                         </c:choose>
-                                                        <p class="ev-mypage-charger-type">🔌 충전기 기종: ${res.connectorType}</p>
+														<p class="ev-mypage-charger-type" style="display: flex; align-items: center; margin-top: 4px;">
+														    <span style="margin-right: 6px;">🔌 충전기 기종:</span>
+														    
+														    <c:choose>
+														        <c:when test="${res.connectorType == 'DC_COMBO' || res.connectorType == 'CHAdemo' || res.connectorType == 'AC_3PHASE' || res.connectorType == 'RAPID'}">
+														            <span style="background-color: #dbeafe; color: #1d4ed8; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 700; margin-right: 6px;">급속</span>
+														        </c:when>
+														        <c:otherwise>
+														            <span style="background-color: #f3e8ff; color: #7e22ce; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 700; margin-right: 6px;">완속</span>
+														        </c:otherwise>
+														    </c:choose>
+														    
+														    <span style="font-weight: 500;">${res.connectorType}</span>
+														</p>
                                                     </div>
                                                     
                                                     <c:if test="${res.status eq 'RESERVED'}">

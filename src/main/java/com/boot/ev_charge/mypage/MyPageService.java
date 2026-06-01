@@ -121,13 +121,21 @@ public class MyPageService {
     @Transactional
     public boolean modifyReservation(MyPageDto dto) {
         try {
+            // 🟢 400 에러 방어: String으로 안전하게 받은 날짜를 Timestamp로 수동 변환
+            if (dto.getEditStartTime() != null && !dto.getEditStartTime().isEmpty()) {
+                dto.setStartTime(java.sql.Timestamp.valueOf(dto.getEditStartTime()));
+            }
+            if (dto.getEditEndTime() != null && !dto.getEditEndTime().isEmpty()) {
+                dto.setEndTime(java.sql.Timestamp.valueOf(dto.getEditEndTime()));
+            }
+
             // 1. 예약 마스터(타입) 업데이트
             myPageMapper.updateReservationMaster(dto);
             
             // 2. 시간 슬롯 업데이트
             myPageMapper.updateReservationTime(dto);
             
-            // 3. TARGET(목표 충전량) 모드일 경우에만 타겟 테이블 업데이트
+            // 3. TARGET 모드일 경우 타겟 테이블 UPSERT
             if ("TARGET".equals(dto.getReservationType())) {
                 myPageMapper.upsertReservationTarget(dto);
             }

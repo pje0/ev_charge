@@ -17,6 +17,10 @@ if (typeof globalAlertLock === 'undefined') { var globalAlertLock = false; }
 let lastSafeTargetPercent = 0; 
 let isBookingInProgress = false; 
 
+// 🟢 [NEW] 유저 대표 차량 전역 변수
+let userBatteryCapacity = 70.0; 
+let userConnectorType = "";
+
 // ==========================================
 // 1. 단계 제어 (Step View Control)
 // ==========================================
@@ -122,20 +126,13 @@ function applyChargerStatusUI(chargerId, isNotBookable) {
  * =========================================================================
  */
 async function loadChargers(stationId, element) {
-    console.log(`🔌 [loadChargers CSS 분리본] 충전기 목록 조회 프로세스 가동 -> stationId: ${stationId}`);
+    console.log(`🔌 [loadChargers] 충전기 목록 조회 프로세스 가동 -> stationId: ${stationId}`);
 
-    if (!stationId) {
-        console.warn("⚠️ [loadChargers] stationId 파라미터 누락으로 조회를 파기합니다.");
-        return;
-    }
+    if (!stationId) return;
     selectedStationId = Number(stationId);
     
-    document.querySelectorAll('.station-card').forEach(el => {
-        el.classList.remove('active');
-    });
-    if (element) {
-        element.classList.add('active');
-    }
+    document.querySelectorAll('.station-card').forEach(el => el.classList.remove('active'));
+    if (element) element.classList.add('active');
     
     clearAllReservationStyles();
     
@@ -167,7 +164,6 @@ async function loadChargers(stationId, element) {
                 const isBroken = (statusLower === 'maintenance' || statusLower === 'out_of_service');
                 const isOccupied = (statusLower === 'charging' || statusLower === 'occupied' || statusLower === 'in_use');
 
-                // 🛑 초기 클래스 셋팅 (점검 중은 빨간색, 나머지는 상태에 맞게)
                 let cardClass = 'available';
                 let badgeText = '사용 가능';
 
@@ -183,8 +179,7 @@ async function loadChargers(stationId, element) {
                     <div class="charger-card ${cardClass}" 
                          id="charger-card-${c.id}" 
                          data-status="${statusLower}"
-                         onclick="selectCharger(this, '${c.id}', '${connectorName}', ${c.powerKw})">
-                        <div class="charger-card-header">
+                         onclick="selectCharger(this, '${c.id}', '${connectorName}', ${c.powerKw}, '${c.connectorType}')"> <div class="charger-card-header">
                             <h3 class="charger-title">${connectorName}</h3>
                             <span class="charger-badge">${badgeText}</span>
                         </div>
@@ -194,8 +189,6 @@ async function loadChargers(stationId, element) {
                         </div>
                     </div>`;
             }).join('');
-            
-            console.log("🏁 [loadChargers] 순수 마크업 드로잉 종료. 각 충전기별 예약 슬롯 전수 검증을 시작합니다.");
             
             if (selectedDateStr === todayStr) {
                 chargers.forEach(async (c) => {
@@ -213,6 +206,34 @@ async function loadChargers(stationId, element) {
     } catch (error) {
         console.error("❌ [loadChargers] 통신 예외 발생:", error);
     }
+}
+
+// 🟢 규격 비교 로직이 추가된 selectCharger 함수
+function selectCharger(element, chargerId, chargerName, powerKw, rawConnectorType) {
+    if (element.classList.contains("broken")) {
+        alert("해당 기기는 현재 점검 중이므로 예약할 수 없습니다.");
+        return;
+    }
+
+    // 🟢 충전기 규격과 내 대표 차량 규격 비교 알럿
+    if (userConnectorType && rawConnectorType && userConnectorType !== rawConnectorType) {
+        const warnMsg = `[경고] 고객님 대표 차량의 충전 규격(${userConnectorType})과 선택하신 충전기의 규격(${rawConnectorType})이 다릅니다.\n\n그래도 예약을 계속 진행하시겠습니까?`;
+        if (!confirm(warnMsg)) {
+            console.log("🛑 [Select Cancel] 규격 불일치로 충전기 선택 취소");
+            return;
+        }
+    }
+
+    isBookingInProgress = true; 
+    document.getElementById("chargerId").value = chargerId;
+    selectedChargerId = Number(chargerId);
+    selectedChargerKw = Number(powerKw || 50.0);
+    document.getElementById("summaryCharger").innerText = chargerName;
+    
+    console.log(`🔌 [충전기 선택 완료] 번호: ${selectedChargerId}, 출력: ${selectedChargerKw}kW, 규격: ${rawConnectorType}`);
+    clearAllReservationStyles();
+    moveStep(2);
+    loadReservedTimes();
 }
 
 /**
@@ -374,7 +395,8 @@ function updateSliderBackground(value) {
 
 function calculateRequiredMinutes(targetVal) {
     const chargerKw = selectedChargerKw; 
-    const batteryCapacity = 70.0; 
+    // 🟢 하드코딩 제거, 유저의 실제 배터리 용량 대입
+    const batteryCapacity = userBatteryCapacity; 
     const currentPercent = 0.0; 
 
     if (targetVal <= currentPercent) return 0;
@@ -386,6 +408,8 @@ function calculateRequiredMinutes(targetVal) {
     if (chargerKw > 20 && targetVal > 80) { 
         requiredMinutes += Math.ceil(((batteryCapacity * (targetVal - 80) / 100.0) / chargerKw) * 0.5 * 60);
     }
+    
+    console.log(`🧮 [소요 시간 연산] 목표: ${targetVal}%, 배터리: ${batteryCapacity}kWh, 충전기: ${chargerKw}kW -> ${requiredMinutes}분 예상`);
     return requiredMinutes;
 }
 
@@ -942,13 +966,14 @@ function syncMidnightSlot() {
 }
 
 // ==========================================
-// 10. 예약 최종 제출
+// 10. 예약 최종 제출 (reservation.js 전용)
 // ==========================================
 let isSubmittingForm = false; 
 
 function submitReservation() {
+    // 1. 중복 클릭 락 (따닥 방지)
     if (isSubmittingForm) {
-        console.warn("⚠️ [submitReservation] 이미 예약 요청이 서버로 전송 중입니다. 중복 제출을 차단합니다.");
+        console.warn("⚠️ [submitReservation] 이미 예약 요청이 서버로 전송 중입니다.");
         return;
     }
 
@@ -957,6 +982,7 @@ function submitReservation() {
     const now = new Date();
     const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`; 
 
+    // 2. 시간대 지정 여부 검사
     if (type === "TIME") {
         if (startTime == null || endTime == null) {
             alert("예약 시간을 선택하세요.");
@@ -969,39 +995,31 @@ function submitReservation() {
         }
         
         const percentVal = parseInt(document.getElementById("targetPercent")?.value) || 0;
-        const calculatedKwh = Math.round(70.0 * (percentVal / 100.0));
+        const calculatedKwh = Math.round(userBatteryCapacity * (percentVal / 100.0));
         
         let targetPctHidden = document.getElementById("targetPercentHiddenForm");
         if (!targetPctHidden) {
-            targetPctHidden = document.createElement("input");
-            targetPctHidden.type = "hidden";
-            targetPctHidden.name = "targetPercent"; 
-            targetPctHidden.id = "targetPercentHiddenForm";
+            targetPctHidden = document.createElement("input"); targetPctHidden.type = "hidden"; targetPctHidden.name = "targetPercent"; targetPctHidden.id = "targetPercentHiddenForm";
             document.getElementById("reservationForm").appendChild(targetPctHidden);
         }
         targetPctHidden.value = percentVal;
 
         let targetHidden = document.getElementById("targetKwhHidden");
         if (!targetHidden) {
-            targetHidden = document.createElement("input");
-            targetHidden.type = "hidden";
-            targetHidden.name = "targetKwh"; 
-            targetHidden.id = "targetKwhHidden";
+            targetHidden = document.createElement("input"); targetHidden.type = "hidden"; targetHidden.name = "targetKwh"; targetHidden.id = "targetKwhHidden";
             document.getElementById("reservationForm").appendChild(targetHidden);
         }
         targetHidden.value = calculatedKwh;
 
         let minutesHidden = document.getElementById("maxMinutesHidden");
         if (!minutesHidden) {
-            minutesHidden = document.createElement("input");
-            minutesHidden.type = "hidden";
-            minutesHidden.name = "maxMinutes"; 
-            minutesHidden.id = "maxMinutesHidden";
+            minutesHidden = document.createElement("input"); minutesHidden.type = "hidden"; minutesHidden.name = "maxMinutes"; minutesHidden.id = "maxMinutesHidden";
             document.getElementById("reservationForm").appendChild(minutesHidden);
         }
         minutesHidden.value = calculateRequiredMinutes(percentVal);
     }
     
+    // 3. 날짜 및 과거 시간 검사
     if (!date) {
         alert("예약 날짜를 선택해 주세요.");
         return;
@@ -1015,42 +1033,85 @@ function submitReservation() {
         }
     }
 
+    // 🟢 4. 최종 확정 알럿 띄우기 (reservation.js 전용)
+    if (!confirm("예약을 이대로 확정하시겠습니까?")) {
+        console.log("🛑 [Submit Cancel] 사용자가 예약 확정을 취소했습니다.");
+        return;
+    }
+
+    // 5. 날짜와 시간 조립 및 폼 전송
     const finalStartTimeStr = `${date} ${startTime.substring(0, 5)}:00`;
     const finalEndTimeStr = `${date} ${endTime.substring(0, 5)}:00`;
 
     document.getElementById("startTime").value = finalStartTimeStr;
     document.getElementById("endTime").value = finalEndTimeStr;
     
+    // 🟢 6. 폼 전송 직전에 이탈 방지 알럿(beforeunload) 강제 해제!
+    isBookingInProgress = false; 
+    
     isSubmittingForm = true;
     document.getElementById("reservationForm").submit();
 
-    setTimeout(() => {
-        isSubmittingForm = false;
-    }, 3000);
+    setTimeout(() => { isSubmittingForm = false; }, 3000);
 }
 
-// ==========================================
-// 11. DOM 이벤트 리스너 바인딩
-// ==========================================
+/**
+ * =========================================================================
+ * 11. DOM 이벤트 리스너 바인딩 (검색 필터 전역 데이터 정의 및 이벤트 리스너 초기화 바인딩)
+ * =========================================================================
+ */
+// 1. 행정구역 종속 관계 데이터 맵 선언 (실제 서비스 규격 맞춤 더미 데이터)
+const regionDataMap = {
+    "서울특별시": ["강남구", "서초구", "송파구", "마포구", "영등포구"],
+    "부산광역시": ["해운대구", "부산진구", "동래구", "수영구", "사하구"],
+    "경기도": ["수원시", "성남시", "고양시", "용인시", "부천시"]
+};
+
+// 2. DOM 로드 완료 시점 필터 이벤트 바인딩
 window.addEventListener("DOMContentLoaded", () => {
-    document.getElementById("reservationDate")?.addEventListener("change", () => {
-        loadReservedTimes();
-        syncMidnightSlot(); 
-    });
-    
-    const slider = document.getElementById("targetPercent");
-    if (slider) {
-        slider.value = 0; 
-        updateSliderBackground(0);
-        slider.addEventListener("input", (e) => {
-            changeTargetPercent(e.target.value, true); 
+    console.log("🛠️ [Filter Init] 검색 필터 시스템 초기화 루틴 시작");
+
+    const sidoSelect = document.getElementById("filterSido"); // 시/도 엘리먼트 취득
+    const sigunguSelect = document.getElementById("filterSigungu"); // 시/군/구 엘리먼트 취득
+    const speedSelect = document.getElementById("filterSpeed"); // 충전속도 엘리먼트 취득
+
+    // 3. 시/도 변경 이벤트 리스너 바인딩
+    if (sidoSelect) {
+        sidoSelect.addEventListener("change", (e) => {
+            const selectedSido = e.target.value; // 사용자가 선택한 시/도 텍스트 값
+            console.log(`📅 [Filter Event] 시/도 변경 감지 -> 선택값: ${selectedSido}`);
+            
+            // 시/도 변경에 따른 시/군/구 드롭다운 동적 재구성 호출
+            updateSigunguOptions(selectedSido, sigunguSelect);
+            
+            // 조건이 바뀌었으므로 즉시 서버 통신 및 충전소 리스트 갱신 헬퍼 호출
+            fetchFilteredStations();
         });
-    } 
-    
-    const textDisplay = document.getElementById("chargeValueText") || document.getElementById("targetPercentText");
-    if (textDisplay) {
-        textDisplay.innerText = "0%";
     }
+
+    // 4. 시/군/구 변경 이벤트 리스너 바인딩
+    if (sigunguSelect) {
+        sigunguSelect.addEventListener("change", (e) => {
+            const selectedSigungu = e.target.value; // 사용자가 선택한 시/군/구 텍스트 값
+            console.log(`📅 [Filter Event] 시/군/구 변경 감지 -> 선택값: ${selectedSigungu}`);
+            
+            // 조건 변경에 따른 실시간 데이터 갱신 가동
+            fetchFilteredStations();
+        });
+    }
+
+    // 5. 충전속도 변경 이벤트 리스너 바인딩
+    if (speedSelect) {
+        speedSelect.addEventListener("change", (e) => {
+            const selectedSpeed = e.target.value; // 사용자가 선택한 속도 코드 값
+            console.log(`📅 [Filter Event] 충전속도 변경 감지 -> 선택값: ${selectedSpeed}`);
+            
+            // 조건 변경에 따른 실시간 데이터 갱신 가동
+            fetchFilteredStations();
+        });
+    }
+
+    console.log("✅ [Filter Init] 모든 검색 필터 옵션 및 리스너 바인딩 프로세스 완결");
 });
 
 // ==========================================
@@ -1090,3 +1151,201 @@ function handleReservationComplete() {
     window.history.replaceState(null, '', '/reservation/success');
     window.location.href = '/reservation/success';
 }
+
+/**
+ * =========================================================================
+ * 🟢 [Block 3] 시/도 선택에 따른 시/군/구 드롭다운 동적 생성 가공 엔진
+ * =========================================================================
+ */
+function updateSigunguOptions(sidoValue, sigunguElement) {
+    console.log(`⚙️ [UI Engine] 시/군/구 옵션 가공 프로세스 가동 (기준 시/도: ${sidoValue})`);
+    
+    if (!sigunguElement) {
+        console.error("❌ [UI Engine Error] 시/군/구 셀렉터 요소를 찾을 수 없어 가공을 파기합니다.");
+        return;
+    }
+
+    // 1. 초기 기본 상태 리셋 처리
+    sigunguElement.innerHTML = ""; // 기존 옵션 문자열 제거 정리
+    
+    // 2. 시/도 선택 값이 비어있는 경우 (전체 조회 상태)
+    if (!sidoValue || sidoValue === "") {
+        console.log("🔒 [UI Engine] 선택된 시/도가 없으므로 시/군/구 드롭다운을 비활성화 잠금 처리합니다.");
+        
+        const defaultOption = document.createElement("option"); // 옵션 노드 생성
+        defaultOption.value = ""; // 빈 값 세팅
+        defaultOption.innerText = "시/도를 먼저 선택하세요"; // 안내 가이드용 텍스트
+        
+        sigunguElement.appendChild(defaultOption); // 노드 이식
+        sigunguElement.disabled = true; // 비활성화
+        sigunguElement.style.backgroundColor = "#f3f4f6"; // 배경색 회색으로 변조
+        return;
+    }
+
+    // 3. 정상 구역 데이터 매핑 바인딩 실행
+    const sigunguList = regionDataMap[sidoValue]; // 매핑 데이터에서 배열 취득
+    console.log(`🔍 [Data Mapping] 데이터 원장 매핑 성공 -> 하위 행정구역 리스트: [${sigunguList.join(", ")}]`);
+
+    // 4. "전체 구역" 선택용 디폴트 옵션 최상단 삽입
+    const allOption = document.createElement("option");
+    allOption.value = "";
+    allOption.innerText = "전체 시/군/구";
+    sigunguElement.appendChild(allOption);
+
+    // 5. 루프 연산을 통해 하위 행정구역 드롭다운 옵션 태그 동적 주입
+    sigunguList.forEach(sigunguName => {
+        const optionNode = document.createElement("option"); // 태그 객체 인스턴스화
+        optionNode.value = sigunguName; // 백엔드로 넘겨줄 텍스트 매핑
+        optionNode.innerText = sigunguName; // 사용자 노출용 문자열 지정
+        sigunguElement.appendChild(optionNode); // 부모 셀렉트 박스에 추가 완료
+    });
+
+    // 6. 비활성화 락 해제 및 스타일 복구
+    sigunguElement.disabled = false; // 활성화 전환
+    sigunguElement.style.backgroundColor = "white"; // 배경색 백색 환원
+    console.log(`✨ [UI Engine] 시/군/구 드롭다운 락 해제 및 동적 렌더링 세팅 완료`);
+}
+
+/**
+ * =========================================================================
+ * 🟢 [Block: Dynamic Region Data] DB 연동형 지역 데이터 로더 (URL 수정본)
+ * =========================================================================
+ */
+
+// 1. 페이지 로드 시 시/도 목록 초기화
+async function initRegionFilters() {
+    console.log("🛠️ [Init] DB로부터 시/도 목록을 불러옵니다.");
+    try {
+        // 🚨 수정됨: 실제 컨트롤러 매핑 주소인 '/reservation/regions/sido'로 요청
+        const response = await fetch('/reservation/regions/sido');
+        if (!response.ok) throw new Error(`HTTP 에러: ${response.status}`);
+        
+        const sidos = await response.json();
+        const sidoSelect = document.getElementById("filterSido");
+
+        sidos.forEach(sido => {
+            const opt = document.createElement("option");
+            opt.value = sido;
+            opt.textContent = sido;
+            sidoSelect.appendChild(opt);
+        });
+        console.log("✅ [Init] 시/도 목록 로드 완료");
+    } catch (err) {
+        console.error("❌ [Init Error] 시/도 데이터 로딩 실패. 서버나 주소를 확인하세요:", err);
+    }
+}
+
+// 2. 시/도 변경 시 시/군/구 목록 동적 갱신
+async function loadSigunguBySido(sido) {
+    console.log(`🔍 [Data Fetch] 선택된 시/도(${sido})에 해당하는 시/군/구 조회 시작`);
+    
+    const sigunguSelect = document.getElementById("filterSigungu");
+    sigunguSelect.innerHTML = '<option value="">전체 시/군/구</option>'; // 초기화
+    
+    if (!sido) {
+        sigunguSelect.disabled = true;
+        return;
+    }
+
+    try {
+        // 🚨 수정됨: 실제 컨트롤러 매핑 주소인 '/reservation/regions/sigungu'로 요청
+        const response = await fetch(`/reservation/regions/sigungu?metro=${encodeURIComponent(sido)}`);
+        if (!response.ok) throw new Error(`HTTP 에러: ${response.status}`);
+
+        const sigungus = await response.json();
+
+        sigungus.forEach(gu => {
+            const opt = document.createElement("option");
+            opt.value = gu;
+            opt.textContent = gu;
+            sigunguSelect.appendChild(opt);
+        });
+
+        sigunguSelect.disabled = false;
+        console.log(`✨ [Data Fetch] 시/군/구 갱신 완료: ${sigungus.length}건`);
+    } catch (err) {
+        console.error("❌ [Data Fetch Error] 시/군/구 데이터 로딩 실패:", err);
+    }
+}
+
+/**
+ * =========================================================================
+ * 🟢 [Block] 조건별 충전소 검색 및 동적 화면 렌더링 엔진 (ReferenceError 수정본)
+ * =========================================================================
+ */
+async function fetchFilteredStations() {
+    // 1. 현재 화면의 필터 엘리먼트들로부터 실시간 선택값 추출
+    const sido = document.getElementById("filterSido")?.value || ""; // 선택된 시/도 값
+    const sigungu = document.getElementById("filterSigungu")?.value || ""; // 선택된 시/군/구 값
+    const speed = document.getElementById("filterSpeed")?.value || "ALL"; // 선택된 충전속도 값
+    
+    console.log(`📡 [API Request] 필터 검색 가동 -> 시/도: '${sido}', 시/군/구: '${sigungu}', 속도: '${speed}'`);
+
+    // 2. 예외 발생 시 'Uncaught'로 터지지 않도록 전체 로직을 try-catch로 안전하게 감싸기
+    try {
+        // 백엔드 컨트롤러 주소 맵에 맞춰서 요청 URL 주소 조립
+        const url = `/reservation/stations?sido=${encodeURIComponent(sido)}&sigungu=${encodeURIComponent(sigungu)}&speed=${speed}`;
+        
+        console.log(`🚀 [API Fetch] 서버로 비동기 요청을 전송합니다. URL: ${url}`);
+        const response = await fetch(url);
+        
+        // HTTP 응답 상태가 정상(200)이 아닐 경우 즉시 예외 처리 파이프라인으로 이송
+        if (!response.ok) {
+            throw new Error(`서버가 에러를 반환했습니다. 상태코드: ${response.status}`);
+        }
+        
+        // 🚨 [핵심 수정] 변수 선언(const)을 확실하게 보장하여 ReferenceError 원천 차단
+        const stationList = await response.json(); 
+        
+        // 디버깅을 위해 콘솔창에 수신된 데이터 배열의 길이와 실제 배열 데이터 정밀 출력
+        console.log(`📥 [API Response] 서버 통신 완료! 수신된 충전소 개수: ${stationList.length}건`, stationList);
+
+        // 충전소 카드가 그려질 부모 HTML 컨테이너 탐색
+        const container = document.getElementById("stationListContainer");
+        if (!container) {
+            console.error("❌ [Render Error] 'stationListContainer' 엘리먼트를 화면에서 찾을 수 없습니다.");
+            return;
+        }
+
+        // 3. 수신된 데이터가 0건일 때의 예외 UI 처리
+        if (stationList.length === 0) {
+            console.warn("⚠️ [Render Display] 조건에 부합하는 충전소 데이터가 단 1건도 없습니다.");
+            container.innerHTML = '<div style="text-align:center; padding:3rem 1rem; color:#9ca3af; font-weight:500;">조건에 맞는 충전소가 없습니다.</div>';
+            return;
+        }
+
+        // 4. 정상 데이터 존재 시 맵 루프 연산을 가동하여 HTML 코드 동적 생성 및 화면 주입
+        container.innerHTML = stationList.map(s => {
+            // 콘솔 로그가 너무 많이 찍혀 스크롤이 터지는 것을 막기 위해 가공 로그는 생략하고 최종 조립 진행
+            return `
+                <div class="station-card" onclick="loadChargers('${s.id}', this)">
+                    <div class="station-card-body">
+                        <h4 class="station-name" style="font-weight: 700; color: #111827; margin: 0; font-size: 1rem;">${s.name}</h4>
+                        <p class="station-address" style="font-size: 0.875rem; color: #6b7280; margin: 0.25rem 0 0 0;">${s.address}</p>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        console.log("✨ [Render Complete] 충전소 목록 585건 화면 드로잉 완료!");
+
+    } catch (err) {
+        // 5. 통신 혹은 자바스크립트 연산 중 터진 모든 에러를 안전하게 포획하여 로깅 처리
+        console.error("❌ [Critical Error] fetchFilteredStations 로직 실행 중 런타임 에러 발생:", err);
+    }
+}
+
+// 4. 기존 이벤트 리스너 연결
+document.getElementById("filterSido").addEventListener("change", (e) => {
+    loadSigunguBySido(e.target.value);
+    fetchFilteredStations(); // 시/도가 바뀌면 즉시 검색
+});
+
+document.getElementById("filterSigungu").addEventListener("change", fetchFilteredStations);
+document.getElementById("filterSpeed").addEventListener("change", fetchFilteredStations);
+
+// 5. 🟢 페이지 시작 시 자동 실행 (초기화)
+window.addEventListener("DOMContentLoaded", async () => {
+    await initRegionFilters(); // 셀렉트 박스 먼저 세팅
+    fetchFilteredStations();   // 🌟 세팅 끝나자마자 '전체 충전소' 목록 쫙 뿌려주기 강제 실행!
+});

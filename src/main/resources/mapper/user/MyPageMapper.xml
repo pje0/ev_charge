@@ -73,7 +73,7 @@
     </insert>
     
 	<select id="getReservationById" parameterType="long" resultType="com.boot.ev_charge.mypage.MyPageDto">
-        SELECT 
+		SELECT 
             r.id AS reservationId,
             r.charger_id AS chargerId,
             c.station_id AS stationId,
@@ -85,8 +85,9 @@
             rt.end_time AS endTime,
             rtg.target_kwh AS targetAmount,
             s.name AS stationName,
-            em.model_name AS carType
-        FROM reservation r
+            em.model_name AS carType,
+            em.connector_type AS carConnectorType,
+            em.battery_capacity AS batteryCapacity FROM reservation r
         LEFT JOIN reservation_time rt ON r.id = rt.reservation_id
         LEFT JOIN reservation_target rtg ON r.id = rtg.reservation_id
         LEFT JOIN user_vehicle uv ON r.user_vehicle_id = uv.id
