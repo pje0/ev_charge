@@ -282,16 +282,29 @@ body {
     background: var(--ev-muted);
 }
 
-/* 🔴 새로운 알림 유입 시 우측 상단에 표시되는 빨간 배지 */
-.ev-header-bell-dot {
-    display: none; /* 기본 숨김 상태 - js에서 필요시 show() 제어 */
+/* 🔴 수정: 단순 점(Dot)에서 실시간 알림 개수 숫자가 찍히는 완벽한 원형 카운트 뱃지로 변경 */
+.ev-header-bell-badge {
     position: absolute;
-    top: 6px;
-    right: 6px;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--ev-destructive);
+    top: 2px;                   /* 기존보다 위치를 살짝 위로 올려 자연스럽게 매칭 */
+    right: 2px;                 /* 기존보다 위치를 우측으로 옮겨 종 모양 위에 안착 */
+    background-color: var(--ev-destructive); /* 시스템 공통 크림슨 레드 칼라 바인딩 */
+    color: #ffffff;             /* 글자색 흰색 고정 */
+    font-size: 11px;            /* 숫자 가독성을 고려한 최적의 폰트 크기 */
+    font-weight: 700;           /* 숫자가 한눈에 띄도록 굵게 처리 */
+    
+    /* 💡 숫자가 1자릴 때 가로세로 비율이 무너지거나 찌그러지지 않도록 정원 형태로 규격 제한 */
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;         /* 50% 반경으로 정확한 써클 원 구현 */
+    
+    /* 💡 숫자가 동그라미 영역의 완벽한 상하좌우 정중앙에 꽂히도록 고정 */
+    display: none;              /* 초기 구동 전에는 숨김 (스크립트가 개수 인지 시 flex로 동적 전환) */
+    align-items: center;        /* 상하 정중앙 */
+    justify-content: center;    /* 좌우 정중앙 */
+    
+    box-shadow: 0 1px 3px rgba(0,0,0,0.25); /* 살짝 그림자를 주어 입체감 및 시인성 확보 */
+    box-sizing: border-box;
+    pointer-events: none;       /* 배지 표면을 터치해도 뒤에 숨은 종 버튼이 정상 클릭되도록 스킵 */
 }
 
 /* 2. 알림센터 전체 드롭다운 타임라인 팝업 컨테이너 상자 */

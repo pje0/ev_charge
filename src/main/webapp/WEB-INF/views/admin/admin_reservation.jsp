@@ -61,7 +61,7 @@
                     <th style="padding: 12px 10px; text-align: center; width: 60px;">ID</th>
                     <th style="padding: 12px 10px; width: 150px;">예약자 (ID)</th>
                     <th style="padding: 12px 10px;">충전소 / 충전기 유형</th>
-                    <th style="padding: 12px 10px; width: 130px;">예약 종류 / 차종</th>
+                    <th style="padding: 12px 10px; width: 130px;">예약 종류</th>
                     <th style="padding: 12px 10px; width: 180px;">예약 시간 (시작~종료)</th>
                     <th style="padding: 12px 10px; text-align: center; width: 110px;">목표량 / 제한시간</th>
                     <th style="padding: 12px 10px; text-align: center; width: 100px;">상태</th>
