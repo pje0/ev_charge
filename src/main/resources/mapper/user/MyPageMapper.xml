@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper
     PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
@@ -17,11 +18,11 @@
         </if>
         WHERE id = #{userId}
     </update>
-
+    
     <select id="selectUpcomingReservations" parameterType="int" resultType="com.boot.ev_charge.mypage.MyPageDto">
         SELECT r.id AS reservationId, s.name AS stationName, r.reservation_type AS reservationType, 
-               r.status, rt.start_time AS startTime, rt.end_time AS endTime, rtg.target_kwh AS targetAmount, c.connector_type AS connectorType,
-               em.model_name AS carType
+               r.status, rt.start_time AS startTime, rt.end_time AS endTime, rtg.target_kwh AS targetAmount, 
+               c.connector_type AS connectorType, em.model_name AS carType
         FROM reservation r
         LEFT JOIN reservation_time rt ON r.id = rt.reservation_id
         LEFT JOIN reservation_target rtg ON r.id = rtg.reservation_id
@@ -29,14 +30,18 @@
         LEFT JOIN ev_model em ON uv.model_id = em.id
         JOIN charger c ON r.charger_id = c.id
         JOIN station s ON c.station_id = s.id
-        WHERE r.user_id = #{userId} AND r.status IN ('RESERVED', 'CHARGING')
+        WHERE r.user_id = #{userId}
+          AND r.status = 'RESERVED'
+          <![CDATA[ 
+          AND rt.end_time >= NOW() 
+          ]]>
         ORDER BY rt.start_time ASC
     </select>
 
     <select id="selectPastReservations" parameterType="int" resultType="com.boot.ev_charge.mypage.MyPageDto">
         SELECT r.id AS reservationId, s.name AS stationName, r.reservation_type AS reservationType, 
-               r.status, rt.start_time AS startTime, rt.end_time AS endTime, rtg.target_kwh AS targetAmount, c.connector_type AS connectorType,
-               em.model_name AS carType
+               r.status, rt.start_time AS startTime, rt.end_time AS endTime, rtg.target_kwh AS targetAmount, 
+               c.connector_type AS connectorType, em.model_name AS carType
         FROM reservation r
         LEFT JOIN reservation_time rt ON r.id = rt.reservation_id
         LEFT JOIN reservation_target rtg ON r.id = rtg.reservation_id
@@ -44,7 +49,13 @@
         LEFT JOIN ev_model em ON uv.model_id = em.id
         JOIN charger c ON r.charger_id = c.id
         JOIN station s ON c.station_id = s.id
-        WHERE r.user_id = #{userId} AND r.status IN ('COMPLETED', 'CANCELED', 'EXPIRED')
+        WHERE r.user_id = #{userId} 
+          AND (
+              r.status IN ('COMPLETED', 'CANCELED', 'EXPIRED')
+              <![CDATA[ 
+              OR (r.status = 'RESERVED' AND rt.end_time < NOW()) 
+              ]]>
+          )
         ORDER BY rt.start_time DESC
     </select>
 
@@ -72,8 +83,8 @@
             max_minutes = #{maxMinutes}
     </insert>
     
-	<select id="getReservationById" parameterType="long" resultType="com.boot.ev_charge.mypage.MyPageDto">
-		SELECT 
+    <select id="getReservationById" parameterType="long" resultType="com.boot.ev_charge.mypage.MyPageDto">
+        SELECT 
             r.id AS reservationId,
             r.charger_id AS chargerId,
             c.station_id AS stationId,
@@ -87,7 +98,8 @@
             s.name AS stationName,
             em.model_name AS carType,
             em.connector_type AS carConnectorType,
-            em.battery_capacity AS batteryCapacity FROM reservation r
+            em.battery_capacity AS batteryCapacity 
+        FROM reservation r
         LEFT JOIN reservation_time rt ON r.id = rt.reservation_id
         LEFT JOIN reservation_target rtg ON r.id = rtg.reservation_id
         LEFT JOIN user_vehicle uv ON r.user_vehicle_id = uv.id
