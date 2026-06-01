@@ -151,39 +151,48 @@
         ORDER BY city ASC
     </select>
 
-    <select id="getStationList" parameterType="map" resultType="com.boot.ev_charge.station.StationDto">
-        /* ReservationMapper.getStationList : 동적 필터링이 적용된 충전소 리스트 조회 */
+	<select id="getStationList" parameterType="map" resultType="com.boot.ev_charge.station.StationDto">
         SELECT 
-            id, 
-            name, 
-            address, 
-            metro, 
-            city, 
-            rapid_cnt AS rapidCnt, 
-            slow_cnt AS slowCnt, 
-            car_type AS carType, 
-            latitude, 
-            longitude
-        FROM station
+            s.id, 
+            s.name, 
+            s.address, 
+            s.metro, 
+            s.city, 
+            s.rapid_cnt AS rapidCnt, 
+            s.slow_cnt AS slowCnt, 
+            s.car_type AS carType, 
+            s.latitude, 
+            s.longitude
+        FROM station s
         <where>
             <if test="metro != null and metro != ''">
-                AND metro = #{metro}
+                AND s.metro = #{metro}
             </if>
             
             <if test="city != null and city != ''">
-                AND city = #{city}
+                AND s.city = #{city}
             </if>
             
             <choose>
                 <when test="speed == 'RAPID'">
-                    AND rapid_cnt > 0
+                    AND EXISTS (
+                        SELECT 1 FROM charger c 
+                        WHERE c.station_id = s.id 
+                          AND (c.power_kw >= 50 OR c.connector_type IN ('RAPID', 'DC_COMBO', 'CHAdemo', 'AC_3PHASE'))
+                    )
                 </when>
+                
                 <when test="speed == 'SLOW'">
-                    AND slow_cnt > 0
-                </when>
+                    AND EXISTS (
+                        SELECT 1 FROM charger c 
+                        WHERE c.station_id = s.id 
+                <![CDATA[
+                          AND (c.power_kw < 50 OR c.connector_type IN ('SLOW', 'AC_5PIN', 'AC_SINGLE'))
+                ]]>
+                    ) </when>
             </choose>
         </where>
-        ORDER BY name ASC
+        ORDER BY s.name ASC
     </select>
     
     <select id="getChargersByStationId" parameterType="long" resultType="com.boot.ev_charge.station.ChargerDto">
