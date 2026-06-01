@@ -10,6 +10,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.boot.ev_charge.notification.NotificationDTO;
+import com.boot.ev_charge.notification.NotificationService;
 import com.boot.ev_charge.station.ChargerDto;
 import com.boot.ev_charge.station.StationDto;
 
@@ -19,8 +21,14 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class ReservationService {
 
+    private final NotificationService notificationService;
+
     @Autowired
     private ReservationMapper reservationMapper;
+
+    ReservationService(NotificationService notificationService) {
+        this.notificationService = notificationService;
+    }
 
     // 1. 예약 생성
     @Transactional
@@ -262,5 +270,124 @@ public class ReservationService {
                  statsMap.get("totalChargeCount"), statsMap.get("totalChargeKw"), statsMap.get("savedCarbon"));
                  
         return statsMap;
+    }
+    // 🚨 [완성] 1. 충전 시작 및 만료 자동 상태 변경 배치 비즈니스 집행부 (5분 주기 가동)
+    @Transactional
+    public void processChargingTimeout() {
+        log.info("⚙️ [Service 배치] processChargingTimeout() 가동: 시작/종료 시간 도래 건 장부 정리 및 알림 처리를 시작합니다.");
+        
+        // ---------------------------------------------------------------------
+        // 파트 A: [충전 시작 시간 도래] RESERVED -> CHARGING 자동 상태 전환
+        // ---------------------------------------------------------------------
+        try {
+            // 매퍼 인터페이스에 추가할 신규 메서드 (시작 시간이 되었거나 지난 RESERVED 목록 조회)
+            List<ReservationDto> startTargets = reservationMapper.findChargingStartList();
+            
+            if (startTargets != null && !startTargets.isEmpty()) {
+                log.info("▶ [배치-시작] 현재 시점 충전 시작 대상 건수: {}건", startTargets.size());
+                for (ReservationDto target : startTargets) {
+                    try {
+                        // 1. 단건 상태 변경 (status='CHARGING', actual_start_time=now())
+                        reservationMapper.startCharging(target.getId());
+                        
+                        // 2. 로그인 상태인 유저에게 실시간 웹 알림 발송 (문자열 계정 ID 검증)
+                        if (target.getLoginId() != null && !target.getLoginId().trim().isEmpty()) {
+                            NotificationDTO startAlarm = NotificationDTO.builder()
+                                    .userId(target.getUserId())
+                                    .type("CHARGE_START") // 💡 프론트엔드 약속 규격
+                                    .title("⚡ 충전 시작 안내")
+                                    .content(String.format("[%s] 에서 차량 충전이 정상적으로 시작되었습니다.", target.getStationName()))
+                                    .referenceId(target.getId())
+                                    .referenceType("CHARGE")
+                                    .isRead("N")
+                                    .build();
+                            
+                            notificationService.sendRealtimeNotice(target.getLoginId(), startAlarm);
+                        }
+                    } catch (Exception e) {
+                        // 개별 유저의 알림 전송 실패(웹브라우저 닫음 등) 시 로그만 남기고 다음 루프로 안전하게 토스
+                        log.warn("⚠️ [배치-시작 건별 예외] 예약 ID {}번 알림 전송 스킵 (사용자 오프라인 상태): {}", target.getId(), e.getMessage());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("❌ [배치-시작 파트 에러] 충전 시작 프로세스 중 예외 발생: {}", e.getMessage(), e);
+        }
+
+        // ---------------------------------------------------------------------
+        // 파트 B: [충전 종료 시간 도래] CHARGING -> COMPLETED 자동 만료 전환
+        // ---------------------------------------------------------------------
+        try {
+            // 아까 매퍼 인터페이스에 추가하기로 선언한 만료 타겟 조회 메서드 호출
+            List<ReservationDto> endTargets = reservationMapper.findChargingTimeoutList();
+            
+            if (endTargets != null && !endTargets.isEmpty()) {
+                log.info("▶ [배치-종료] 현재 시점 충전 종료 대상 건수: {}건", endTargets.size());
+                for (ReservationDto target : endTargets) {
+                    try {
+                        // 1. 단건 상태 변경 및 차선책 종료 도장 (status='COMPLETED', actual_end_time=now())
+                        // 기존 컨트롤러 버튼과 공용으로 쓰던 메서드를 그대로 영리하게 재사용합니다.
+                        reservationMapper.completeCharging(target.getId());
+                        
+                        // 2. 로그인 상태인 유저에게 실시간 웹 알림 발송
+                        if (target.getLoginId() != null && !target.getLoginId().trim().isEmpty()) {
+                            NotificationDTO completeAlarm = NotificationDTO.builder()
+                                    .userId(target.getUserId())
+                                    .type("CHARGE_COMPLETE") // 💡 프론트엔드 번개 기호(⚡) 연동
+                                    .title("⚡ 충전 완료 안내")
+                                    .content(String.format("[%s] 차량 충전이 완료되었습니다. 다음 이용자를 위해 이동해 주세요.", target.getStationName()))
+                                    .referenceId(target.getId())
+                                    .referenceType("CHARGE")
+                                    .isRead("N")
+                                    .build();
+                            
+                            notificationService.sendRealtimeNotice(target.getLoginId(), completeAlarm);
+                        }
+                    } catch (Exception e) {
+                        log.warn("⚠️ [배치-종료 건별 예외] 예약 ID {}번 알림 전송 스킵 (사용자 오프라인 상태): {}", target.getId(), e.getMessage());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("❌ [배치-종료 파트 에러] 충전 종료 프로세스 중 예외 발생: {}", e.getMessage(), e);
+        }
+    }
+
+    // =========================================================================
+    // 🚨 [완성] 2. 예약 15분 전 차량 입고 사전 안내 배치 비즈니스 집행부 (5분 주기 가동)
+    // =========================================================================
+    public void processEntryNotice15MinsBefore() {
+        log.info("⚙️ [Service 배치] processEntryNotice15MinsBefore() 가동: 15분 전 입고 안내 대상 탐색을 시작합니다.");
+        
+        try {
+            // 5분 배치 주기와 30분 단위 예약 스펙이 만나 '현재시간 + 15분' 정밀 타격 쿼리 호출
+            List<ReservationDto> noticeTargets = reservationMapper.findReservationsStartingIn15Minutes();
+            
+            if (noticeTargets != null && !noticeTargets.isEmpty()) {
+                log.info("▶ [배치-15분전] 사전 차량 입고 안내 대상 건수: {}건", noticeTargets.size());
+                for (ReservationDto target : noticeTargets) {
+                    try {
+                        // 단순 안내 푸시이므로 DB 상태 변경 없이 오직 실시간 알림만 가동
+                        if (target.getLoginId() != null && !target.getLoginId().trim().isEmpty()) {
+                            NotificationDTO entryAlarm = NotificationDTO.builder()
+                                    .userId(target.getUserId())
+                                    .type("RESERVATION_BEFORE") // 💡 프론트엔드 자동차 기호(🚗) 연동
+                                    .title("🚗 차량 입고 안내")
+                                    .content(String.format("예약 시간 15분 전입니다. 원활한 이용을 위해 [%s] 구역에 입고해 주세요.", target.getStationName()))
+                                    .referenceId(target.getId())
+                                    .referenceType("RESERVATION")
+                                    .isRead("N")
+                                    .build();
+                            
+                            notificationService.sendRealtimeNotice(target.getLoginId(), entryAlarm);
+                        }
+                    } catch (Exception e) {
+                        log.warn("⚠️ [배치-15분전 건별 예외] 예약 ID {}번 15분 전 알림 전송 실패: {}", target.getId(), e.getMessage());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("❌ [배치-15분전 에러] 15분 전 차량 입고 안내 프로세스 중 시스템 예외 발생: {}", e.getMessage(), e);
+        }
     }
 }

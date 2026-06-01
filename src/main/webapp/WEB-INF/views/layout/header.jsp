@@ -261,13 +261,24 @@ function fn_mark_all_notifications_as_read() {
 }
 
 //[개별 읽음 & 이동] 알림 카드 클릭 시 개별 읽음 처리 후 관련 비즈니스 페이지로 이동
-function fn_click_read_notification(id, refId, refType) {
+function fn_click_read_notification(id, refId, refType, alarmType) {
+ // [추가]: 충전 진행 중(CHARGE_START) 알림은 알람을 남겨두기 위해 DB 읽음 처리를 건너뛰고 마이페이지로 즉시 이동
+ if (refType === "CHARGE" && alarmType === "CHARGE_START") {
+     location.href = "${pageContext.request.contextPath}/mypage";
+     return;
+ }
+
  $.ajax({
      url: "${pageContext.request.contextPath}/api/notification/read/" + id,
      type: "POST",
      success: function() {
          if (refType === "RESERVATION" && refId && refId !== "null" && refId !== "") {
              location.href = "${pageContext.request.contextPath}/reservation/detail?id=" + refId;
+             return;
+         }
+         // [추가]: 충전 알림(시작/완료) 클릭 시 종합 통계 및 지난 내역 확인을 위해 마이페이지로 이동
+         if (refType === "CHARGE") {
+             location.href = "${pageContext.request.contextPath}/mypage";
              return;
          }
          if (refType === "INQUIRY" && refId && refId !== "null" && refId !== "") {
@@ -279,6 +290,8 @@ function fn_click_read_notification(id, refId, refType) {
      error: function() {
          console.error("알림 읽음 처리 중 통신 오류가 발생했습니다.");
          if (refType === "RESERVATION") location.href = "${pageContext.request.contextPath}/reservation/detail?id=" + refId;
+         // [추가]: 네트워크 오류 발생 시에도 충전 알림은 마이페이지로 강제 이동 유도
+         if (refType === "CHARGE") location.href = "${pageContext.request.contextPath}/mypage";
          if (refType === "INQUIRY") location.href = "${pageContext.request.contextPath}/user/inquiry/chat?roomId=" + refId;
      }
  });
