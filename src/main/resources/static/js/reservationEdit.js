@@ -129,17 +129,20 @@ window.addEventListener("DOMContentLoaded", () => {
     initialState.endTime = endTime;
     initialState.targetPercent = Number(initTargetVal);
 
-    // 날짜 변경 이벤트 감지망
-    document.getElementById("reservationDate")?.addEventListener("change", (e) => {
-        console.log("📅 [Event] 사용자 날짜 변경 감지");
-        markAsDirty();
-        startTime = null; 
-        endTime = null;
-        document.getElementById("startTime").value = "";
-        document.getElementById("endTime").value = "";
-        loadReservedTimes();
-        syncMidnightSlot(); 
-    });
+	// 날짜 변경 이벤트 감지망
+	    document.getElementById("reservationDate")?.addEventListener("change", (e) => {
+	        console.log(`📆 [Event] 사용자 날짜 변경 감지 -> 선택값: ${e.target.value}`);
+	        markAsDirty(); // 💡 이탈 방지용 Dirty 플래그 가동
+	        
+	        // 1. 날짜가 바뀌었으므로 기존 시간 슬롯 및 목표 충전량 슬라이더를 완벽하게 포맷
+	        clearAllReservationStyles();
+	        
+	        // 2. 변경된 날짜에 맞추어 과거 시간 차단 및 타임라인 동기화 즉각 가동
+	        if (selectedChargerId !== null && selectedChargerId !== 0) {
+	            console.log("🔄 [Event] 타임라인 동기화 및 24:00 슬롯 락인 제어기 가동");
+	            loadReservedTimes();
+	        }
+	    });
     
     // 🌟 [핵심 변경] 예약 생성 페이지와 동일하게 슬라이더 실시간 연동 (input 이벤트) 탑재
     const slider = document.getElementById("targetPercent");

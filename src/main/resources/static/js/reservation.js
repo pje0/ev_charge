@@ -1333,13 +1333,15 @@ const regionDataMap = {
  * [중요도] ★★★★★ (진입점)
  */
 window.addEventListener("DOMContentLoaded", () => {
-    console.log("🛠️ [Filter Init] 검색 필터 시스템 초기화 및 이벤트 리스너 이식 시작");
+    console.log("🛠️ [Filter Init] 검색 필터 및 폼 입력 시스템 초기화 루틴 시작");
 
     const sidoSelect = document.getElementById("filterSido");
     const sigunguSelect = document.getElementById("filterSigungu");
     const speedSelect = document.getElementById("filterSpeed");
+    
+    // 🟢 [핵심 추가] 날짜 변경 감지 센서 (Date Picker Listener)
+    const dateInput = document.getElementById("reservationDate");
 
-    // 시/도 변경 -> 하위 행정구역 드롭다운 재생성 -> 충전소 다시 찾기
     if (sidoSelect) {
         sidoSelect.addEventListener("change", (e) => {
             const selectedSido = e.target.value;
@@ -1349,15 +1351,31 @@ window.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // 시/군/구 변경 -> 충전소 다시 찾기
     if (sigunguSelect) {
         sigunguSelect.addEventListener("change", fetchFilteredStations);
     }
 
-    // 충전속도 변경 -> 충전소 다시 찾기
     if (speedSelect) {
         speedSelect.addEventListener("change", fetchFilteredStations);
     }
+
+    // 🌟 [추가된 센서] 예약 날짜를 달력에서 변경하는 즉시 가동되는 로직
+    if (dateInput) {
+        dateInput.addEventListener("change", (e) => {
+            console.log(`📆 [Form Event] 예약 날짜 변경 감지 -> 선택된 날짜: ${e.target.value}`);
+            
+            // 1. 날짜가 바뀌었으므로 기존에 찍어둔 시간이나 슬라이더 퍼센트를 0으로 싹 다 초기화
+            clearAllReservationStyles();
+            
+            // 2. 충전기가 이미 선택된 상태(2단계 화면)라면, 바뀐 날짜의 데이터를 서버에서 즉시 로드
+            if (selectedChargerId !== null && selectedChargerId !== 0) {
+                console.log("🔄 [Form Event] 충전기가 선택된 상태이므로 타임라인 동기화 헬퍼를 즉시 가동합니다.");
+                loadReservedTimes();
+            }
+        });
+    }
+    
+    console.log("✅ [Filter Init] 모든 검색 필터 및 날짜 감지 리스너 바인딩 완결");
 });
 
 /**
