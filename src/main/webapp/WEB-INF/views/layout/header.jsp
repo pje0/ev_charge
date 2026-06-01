@@ -137,18 +137,66 @@
 	<div id="globalToastContainer"></div>
 </header>
 <script>
-//[토글 함수] 종 모양 버튼 클릭 시 알림센터 레이어를 열고 닫음
+// =================================================================
+// [추가] 페이지 로드 완료 시 초기 구동 및 10초 주기 실시간 자동 갱신
+// =================================================================
+$(document).ready(function() {
+    // 1. 페이지가 처음 켜졌을 때 안 읽은 개수를 즉시 가져와 배지에 반영
+    fn_update_notification_count();
+    
+    // 2. 가만히 있어도 10초마다 백엔드를 감시해 새 알림이 오면 숫자를 실시간으로 올림 (10000ms = 10초)
+    setInterval(fn_update_notification_count, 10000);
+});
+
+// =================================================================
+// [추가] 실시간으로 안 읽은 알림 개수를 받아와 배지에 동기화하는 함수
+// =================================================================
+function fn_update_notification_count() {
+    // 유저가 현재 알림창(레이어)을 열어서 확인 중인 상태라면 실시간 개수 갱신을 잠시 건너뜁니다.
+    if($('#evNotiCenter').is(':visible')) {
+        return;
+    }
+
+    $.ajax({
+        url: "${pageContext.request.contextPath}/api/notification/list",
+        type: "GET",
+        dataType: "json",
+        success: function(list) {
+            if(!list || list.length === 0) {
+                $('#globalBellCount').text('0').hide();
+                return;
+            }
+            
+            // 전체 알림 리스트 중에서 아직 안 읽은(isRead === 'N') 알림의 개수만 필터링하여 계산
+            const unreadCount = list.filter(item => item.isRead === 'N').length;
+            
+            const $badge = $('#globalBellCount');
+            if(unreadCount > 0) {
+                $badge.text(unreadCount).show(); // 💡 드디어 숫자가 실시간으로 올라감!
+            } else {
+                $badge.text('0').hide();
+            }
+        },
+        error: function() {
+            console.error("실시간 알림 개수 갱신 실패");
+        }
+    });
+}
+
+// [토글 함수] 종 모양 버튼 클릭 시 알림센터 레이어를 열고 닫음
 function fn_toggle_notification_center() {
  const $centerBox = $('#evNotiCenter');
  if($centerBox.is(':visible')) {
      $centerBox.hide();
+     // 창을 닫을 때 다시 실시간 개수 배지를 최신화하여 동기화
+     fn_update_notification_count();
  } else {
      $centerBox.show();
      fn_load_notification_history(); 
  }
 }
 
-// [리스트 로드] DB 내역을 비동기로 호출하여 타임라인 카드로 빌드 (현재 코드 완벽 유지)
+// [리스트 로드] DB 내역을 비동기로 호출하여 타임라인 카드로 빌드
 function fn_load_notification_history() {
  const $listArea = $('#evNotiListArea');
  
@@ -161,6 +209,7 @@ function fn_load_notification_history() {
          
          if(!list || list.length === 0) {
              $listArea.append('<div class="ev-noti-empty-state">받은 알림이 없습니다.</div>');
+             $('#globalBellCount').text('0').hide();
              return;
          }
          
@@ -191,7 +240,8 @@ function fn_load_notification_history() {
          
          $listArea.append(htmlStr);
          
-         // 💡 비주얼 동기화: 사용자가 알림 팝업창을 직접 열어서 확인했으므로 화면상 숫자 배지만 즉시 숨김 처리
+         // 💡 [수정] 무작정 숫자를 0으로 지우는 대신, 목록을 확인했으므로 서버에 전체 읽음 신호를 보내 동기화합니다.
+         fn_mark_all_notifications_as_read(); 
          $('#globalBellCount').text('0').hide();
      },
      error: function() {
@@ -210,23 +260,19 @@ function fn_mark_all_notifications_as_read() {
 
 // [개별 읽음 & 이동] 알림 카드 클릭 시 개별 읽음 처리 후 관련 비즈니스 페이지로 이동
 function fn_click_read_notification(id, refId, refType, alarmType) {
- // 💡 [시점 2 규격 보장]: 충전 진행 중(CHARGE_START) 알림은 알람을 창에 계속 남겨두기 위해 DB 완전 파기(DELETE)를 건너뛰고 마이페이지로 즉시 이동
  if (refType === "CHARGE" && alarmType === "CHARGE_START") {
      location.href = "${pageContext.request.contextPath}/mypage";
      return;
  }
 
- // 💡 [시점 1, 4 및 공통 규격 보장]: 충전 중 알림이 아닌 경우, 클릭 즉시 DB에서 알림 데이터를 영구 삭제(DELETE) 처리하는 백엔드 API 작동
  $.ajax({
-     url: "${pageContext.request.contextPath}/api/notification/delete/" + id, // 👈 기존 read에서 완전 삭제용 delete API 엔드포인트로 전환
+     url: "${pageContext.request.contextPath}/api/notification/delete/" + id, 
      type: "POST",
      success: function() {
-         // [수정]: 15분 전 차량 입고 안내를 포함한 모든 예약 알림은 마이페이지로 이동 처리
          if (refType === "RESERVATION") {
              location.href = "${pageContext.request.contextPath}/mypage";
              return;
          }
-         // [추가]: 충전 완료(CHARGE_COMPLETE) 클릭 시 종합 통계 및 지난 내역 확인을 위해 마이페이지로 이동 (확인 즉시 소멸 완료)
          if (refType === "CHARGE") {
              location.href = "${pageContext.request.contextPath}/mypage";
              return;
@@ -239,7 +285,6 @@ function fn_click_read_notification(id, refId, refType, alarmType) {
      },
      error: function() {
          console.error("알림 처리 중 통신 오류가 발생했습니다.");
-         // 💡 네트워크 일시적 예외 발생 시에도 유저 경험을 위해 원래 기획된 주소로의 리다이렉트는 강제 보장합니다.
          if (refType === "RESERVATION") location.href = "${pageContext.request.contextPath}/mypage";
          if (refType === "CHARGE") location.href = "${pageContext.request.contextPath}/mypage";
          if (refType === "INQUIRY" && refId && refId !== "null" && refId !== "") {
@@ -254,6 +299,7 @@ $(document).mouseup(function (e) {
  const container = $(".ev-header-bell-wrap");
  if (!container.is(e.target) && container.has(e.target).length === 0) {
      $("#evNotiCenter").hide();
+     fn_update_notification_count(); // 💡 창이 닫힐 때 실시간 개수 배지 상태 재조회
  }
 });
 </script>
