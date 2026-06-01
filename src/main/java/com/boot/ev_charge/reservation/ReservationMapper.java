@@ -55,4 +55,9 @@ public interface ReservationMapper {
     // @param userId 로그인한 회원의 고유 ID
     // @return 통계 필드명을 key로 하는 Map 객체
     Map<String, Object> getUserChargeStatistics(@Param("userId") Long userId);
+    
+ // ReservationMapper.java 인터페이스 내에 추가할 징검다리 선언부 3개
+    List<ReservationDto> findChargingStartList();        // ⚡ 충전 시작 대상자 조회용
+    List<ReservationDto> findChargingTimeoutList();      // ⚡ 충전 완료 대상자 조회용
+    List<ReservationDto> findReservationsStartingIn15Minutes(); // 🚗 15분 전 대상자 조회용
 }

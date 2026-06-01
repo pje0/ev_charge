@@ -258,5 +258,58 @@
         WHERE r.user_id = #{userId} 
           AND r.status = 'COMPLETED'
     </select>
+    <!-- 1. 5분 주기 가동: 충전 시작 시간 도래 건 일괄 조회 -->
+    <select id="findChargingStartList" resultType="com.boot.ev_charge.reservation.ReservationDto">
+        SELECT 
+            r.id,
+            r.user_id AS userId,
+            u.login_id AS loginId,
+            s.name AS stationName
+        FROM reservation r
+        JOIN user u ON r.user_id = u.id
+        LEFT JOIN charger c ON r.charger_id = c.id
+        LEFT JOIN station s ON c.station_id = s.id
+        LEFT JOIN reservation_time rt ON r.id = rt.reservation_id
+        WHERE r.status = 'RESERVED'
+          AND <![CDATA[ rt.start_time <= NOW() ]]> 
+    </select>
 
+    <!-- 2. 5분 주기 가동: 충전 만료 감지 통합 조인 질의 -->
+    <select id="findChargingTimeoutList" resultType="com.boot.ev_charge.reservation.ReservationDto">
+        SELECT 
+            r.id,
+            r.user_id AS userId,
+            u.login_id AS loginId,
+            s.name AS stationName
+        FROM reservation r
+        JOIN user u ON r.user_id = u.id
+        LEFT JOIN charger c ON r.charger_id = c.id
+        LEFT JOIN station s ON c.station_id = s.id
+        LEFT JOIN reservation_time rt ON r.id = rt.reservation_id
+        LEFT JOIN reservation_target tgt ON r.id = tgt.reservation_id
+        WHERE r.status = 'CHARGING'
+          AND (
+               (r.reservation_type = 'TIME' AND <![CDATA[ rt.end_time <= NOW() ]]> )
+               OR
+               (r.reservation_type = 'TARGET' AND <![CDATA[ DATE_ADD(r.actual_start_time, INTERVAL tgt.max_minutes MINUTE) <= NOW() ]]> )
+              )
+    </select>
+
+    <!-- ========================================================================= -->
+    <!-- 🚨 [교정 완료] 3. 5분 주기 가동: 예약 시작 15분 전 사전 입고 타겟 조회 -->
+    <!-- ========================================================================= -->
+    <select id="findReservationsStartingIn15Minutes" resultType="com.boot.ev_charge.reservation.ReservationDto">
+        SELECT 
+            r.id,
+            r.user_id AS userId,
+            u.login_id AS loginId,
+            s.name AS stationName
+        FROM reservation r
+        JOIN user u ON r.user_id = u.id
+        LEFT JOIN charger c ON r.charger_id = c.id
+        LEFT JOIN station s ON c.station_id = s.id
+        JOIN reservation_time rt ON r.id = rt.reservation_id
+        WHERE r.status = 'RESERVED'
+          AND rt.start_time = DATE_ADD(NOW(), INTERVAL 15 MINUTE)
+    </select>
 </mapper>
