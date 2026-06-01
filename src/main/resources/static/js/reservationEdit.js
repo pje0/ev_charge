@@ -17,6 +17,7 @@ let isFetchingReservedTimes = false; // 타임라인 동기화 통신 중복 방
 let currentReservationId = null;  // 현재 수정 중인 내 예약의 고유 ID (기존 예약 칸 유지용)
 let selectedCarBattery = 70.0;    // 내 차량 배터리 용량 (목표량 연산의 핵심 기준값)
 let isSubmittingForm = false;     // 예약 폼 제출 중복 방지 변수 (서버로 데이터가 2번 날아가는 현상 방지)
+let selectedChargerId = Number(document.getElementById("chargerId")?.value || 0);
 let lastSafeTargetPercent = 0;    // 목표 충전량 슬라이더 조작 시, 오류 발생 시 되돌아갈 '마지막으로 안전했던 퍼센트' 기록
 let globalAlertLock = false;      // 전역 시스템 경고창 중복 발생 방지 락
 
@@ -111,7 +112,6 @@ window.addEventListener("DOMContentLoaded", () => {
 
     let initTargetVal = Number(document.getElementById("initialTargetPercent")?.value || 0);
 
-    // 🌟 [핵심 지능 추가] DB에서 목표 퍼센트(%)가 누락되어 0으로 들어온 경우, 기존 예약 시간을 역산하여 퍼센트 복구!
     if (initTargetVal === 0 && startTime && endTime && selectedCarBattery > 0) {
         const targetDateStr = document.getElementById("reservationDate").value;
         const startMins = parseTimeStringToMinutes(startTime, targetDateStr);
@@ -119,9 +119,8 @@ window.addEventListener("DOMContentLoaded", () => {
         
         if (startMins !== null && endMins !== null) {
             let diffMins = endMins - startMins;
-            if (diffMins < 0) diffMins += 1440; // 자정 넘김 처리
+            if (diffMins < 0) diffMins += 1440;
             
-            // 15분 여유 버퍼를 제외한 순수 충전 시간 도출
             const pureChargeMins = Math.max(0, diffMins - 15);
             const chargeHours = pureChargeMins / 60.0;
             const chargedKwh = chargeHours * selectedChargerKw;
@@ -129,8 +128,6 @@ window.addEventListener("DOMContentLoaded", () => {
             initTargetVal = Math.round((chargedKwh / selectedCarBattery) * 100);
             if (initTargetVal > 100) initTargetVal = 100;
             if (initTargetVal < 0) initTargetVal = 0;
-            
-            console.log(`💡 [Auto Calc] DB 퍼센트 누락 감지! 예약 시간(${diffMins}분)을 역산하여 목표량 ${initTargetVal}% 강제 복구 완료.`);
         }
     }
 
@@ -148,18 +145,63 @@ window.addEventListener("DOMContentLoaded", () => {
     initialState.endTime = endTime;
     initialState.targetPercent = initTargetVal;
 
-    document.getElementById("reservationDate")?.addEventListener("change", (e) => {
-        console.log(`📆 [Event] 사용자 날짜 변경 감지 -> 선택값: ${e.target.value}`);
-        markAsDirty();
-        
-        clearAllReservationStyles();
-        
-        if (selectedChargerId !== null && selectedChargerId !== 0) {
-            console.log("🔄 [Event] 타임라인 동기화 및 24:00 슬롯 락인 제어기 가동");
-            loadReservedTimes();
-        }
-    });
-    
+    // 날짜 변경 이벤트 리스너
+	document.getElementById("reservationDate")?.addEventListener("change", async (e) => {
+	        console.log(`📆 [Event] 사용자 날짜 변경 감지 -> 선택값: ${e.target.value}`);
+	        markAsDirty();
+	        
+	        // 1. [핵심 선언] 가장 안전한 스코프(함수 맨 위)에서 데이터 백업
+	        const prevStartTime = startTime;
+	        const prevEndTime = endTime;
+	        const prevType = reservationType;
+	        const slider = document.getElementById("targetPercent");
+	        const prevTarget = slider ? slider.value : 0; // 안전하게 값 저장
+
+	        // 2. 뷰 초기화 (시간, 슬라이더 0 초기화)
+	        clearAllReservationStyles();
+	        
+	        // 3. 서버 데이터 갱신
+	        await loadReservedTimes(); 
+	        
+	        // 4. 모드 복구 및 UI 재설정
+	        reservationType = prevType;
+	        syncMidnightSlot();
+	        selectReservationType(reservationType); 
+
+	        // 5. [스마트 복구] 이전 시간이 여전히 예약 가능한지 확인 후 재선택
+	        if (prevStartTime) {
+	            const btn = document.querySelector(`.ev-time-btn[data-time="${prevStartTime}"]`);
+	            
+	            if (btn && !btn.classList.contains("disabled")) {
+	                console.log("🔄 [Session] 이전 상태 복구 시작...");
+	                
+	                // 타임 지정 모드 복구
+	                if (reservationType === "TIME") {
+	                    selectTime(btn, prevStartTime);
+	                    if (prevEndTime) {
+	                        const endBtn = document.querySelector(`.ev-time-btn[data-time="${prevEndTime}"]`);
+	                        if(endBtn) selectTime(endBtn, prevEndTime);
+	                    }
+	                } 
+	                // 타겟 모드 복구
+	                else if (reservationType === "TARGET") {
+	                    const sliderEl = document.getElementById("targetPercent");
+	                    if (sliderEl) {
+	                        sliderEl.value = prevTarget; // 백업해둔 값으로 복구
+	                        document.getElementById("targetPercentText").innerText = prevTarget + "%";
+	                        updateSliderBackground(prevTarget); // 시각 효과 복구
+	                        lastSafeTargetPercent = Number(prevTarget);
+	                    }
+	                    startTime = prevStartTime;
+	                    syncTimeButtonsByTarget(); // 복구 완료 후 자동 연산 실행
+	                }
+	            } else {
+	                console.warn("⚠️ [Session] 이전 시간대가 마감됨. 초기화 유지.");
+	                alert("이전에 선택한 시간대가 새로운 날짜에는 예약이 불가능하여 초기화되었습니다.");
+	            }
+	        }
+	    });
+
     const slider = document.getElementById("targetPercent");
     if (slider) {
         slider.addEventListener("input", (e) => {
@@ -509,14 +551,15 @@ function syncTimeButtonsByTarget() {
 async function loadReservedTimes() {
     if (isFetchingReservedTimes) return;
     isFetchingReservedTimes = true;
-    console.log("⏳ [loadReservedTimes] 타임라인 점유 상태 서버 동기화 루틴 기동");
+    console.log("⏳ [loadReservedTimes] 타임라인 데이터 재로드 및 상태 초기화");
     
     const chargerId = document.getElementById("chargerId").value; 
     const date = document.getElementById("reservationDate").value;
     const stationId = document.getElementById("stationId").value;
 
+    // 🟢 [완벽 초기화] 날짜가 바뀌면 이전 날짜의 모든 스타일(past, disabled 등)을 강제로 떼어냅니다.
     document.querySelectorAll(".ev-time-btn").forEach(btn => {
-        btn.classList.remove("disabled", "active", "in-range", "is-past-hour", "my-reservation");
+        btn.classList.remove("disabled", "active", "in-range", "is-past-hour", "is-reserved-locked", "my-reservation");
         if(btn.dataset.time) btn.innerText = btn.dataset.time;
     });
     
@@ -525,13 +568,15 @@ async function loadReservedTimes() {
     const selectedDateObj = new Date(date + "T00:00:00");
     const todayDateObj = new Date(todayStr + "T00:00:00");
 
+    // 🟢 [재검증] 과거 시간대 버튼 즉시 차단
     lockPastTimeSlots(date, todayStr, selectedDateObj, todayDateObj, now);
 
     try {
-        console.log(`🚀 [API] 기 예약 데이터 호출 -> chargerId: ${chargerId}`);
         const response = await fetch(`/reservation/reserved-times?chargerId=${chargerId}&date=${date}&stationId=${stationId}`);
         if (response.ok) {
             const reservedList = await response.json();
+            
+            // 예약된 시간 영역 마스킹
             reservedList.forEach((r) => {
                 const isMyCurrentRes = (Number(r.id) === currentReservationId || Number(r.reservationId) === currentReservationId);
                 const rawStart = r.startTime || r.start_time;
@@ -558,20 +603,15 @@ async function loadReservedTimes() {
                 });
             });
 
-            // 🌟 [핵심 변경] 마스킹이 끝난 뒤 기존 선택값 렌더링 복구
+            // 렌더링 후 상태 복구 (타겟 모드면 연산 재가동)
             if (startTime && endTime) {
-                // 수정 페이지 최초 로딩 시에는 무조건 DB의 원본(startTime, endTime)을 기준으로 색을 칠해 보존함!
-                colorTimeSlots(); 
-                
-                // 단, 사용자가 슬라이더나 탭을 건드린 상태(isDirty)이면서 TARGET 모드라면 자동 연산 수행
-                if (reservationType === "TARGET" && isDirty) {
-                    syncTimeButtonsByTarget();
-                }
+                if (reservationType === "TARGET") syncTimeButtonsByTarget();
+                else colorTimeSlots();
             }
             syncMidnightSlot(); 
         }
     } catch (error) { 
-        console.error("❌ [loadReservedTimes] 타임라인 통신 에러:", error); 
+        console.error("❌ [loadReservedTimes] 통신 에러:", error); 
     } finally {
         isFetchingReservedTimes = false;
     }
@@ -717,4 +757,51 @@ function submitReservationEdit() {
     
     // 혹시 모를 네트워크 지연 대비 자동 락 해제 타이머
     setTimeout(() => { isSubmittingForm = false; }, 3000);
+}
+
+/**
+ * [기능] 슬라이더의 파란색 배경을 실시간으로 채워주는 시각 엔진
+ * [중요도] ★★☆☆☆
+ */
+function updateSliderBackground(value) {
+    const slider = document.getElementById("targetPercent");
+    if (!slider) return;
+    
+    // 파란색(2563eb)과 회색(e5e7eb)으로 슬라이더 배경을 동적으로 렌더링
+    slider.style.background = `linear-gradient(to right, #2563eb 0%, #2563eb ${value}%, #e5e7eb ${value}%, #e5e7eb 100%)`;
+}
+
+/**
+ * [기능] 예약 폼의 모든 상태(시간, 슬라이더, 스타일)를 0(초기) 상태로 강제 포맷합니다.
+ * [중요도] ★★★★☆
+ */
+function clearAllReservationStyles() {
+    console.log("🧹 [스타일 리셋] 모든 폼 변수 및 슬롯 원상복구 가동");
+    
+    startTime = null;
+    endTime = null;
+    
+    // 폼 입력값 초기화
+    if (document.getElementById("startTime")) document.getElementById("startTime").value = "";
+    if (document.getElementById("endTime")) document.getElementById("endTime").value = "";
+    
+    // 슬라이더 초기화
+    const slider = document.getElementById("targetPercent");
+    if (slider) {
+        slider.value = 0; 
+        // 🌟 이제 확실하게 인식합니다!
+        updateSliderBackground(0); 
+    }
+    
+    // 텍스트 표시 초기화
+    const textDisplay = document.getElementById("targetPercentText");
+    if (textDisplay) textDisplay.innerText = "0%"; 
+
+    // 시간 선택 버튼 스타일 초기화
+    document.querySelectorAll(".ev-time-btn").forEach(btn => {
+        btn.classList.remove("active", "in-range", "disabled", "is-past-hour", "is-reserved-locked", "my-reservation");
+        if(btn.dataset.time) {
+            btn.innerText = btn.dataset.time;
+        }
+    });
 }
