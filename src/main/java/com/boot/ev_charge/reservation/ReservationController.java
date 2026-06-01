@@ -41,20 +41,23 @@ public class ReservationController {
 
     // 1. 예약 페이지 로드 (충전소 목록 포함)
     @GetMapping("")
-    public String reservationPage(Model model) {
+    public String reservationPage(
+    		@RequestParam(value = "stationId", required = false) Long stationId,
+            @RequestParam(value = "metro", required = false) String metro,
+            @RequestParam(value = "city", required = false) String city,
+            Model model) {
         log.info("@# @# [GET] /reservation -> reservationPage() 호출");
 
-        // 오늘 날짜 구하기
         String today = LocalDate.now().toString();
         model.addAttribute("today", today);
 
-        // 🟢 [에러 해결] 파라미터 불일치 오류 수정
-        // 필터 조건이 없는 초기 화면이므로, 텅 빈 HashMap을 넘겨 전체 충전소 목록을 가져옵니다.
         Map<String, Object> emptyParams = new HashMap<>();
         List<StationDto> stationList = reservationService.getStationList(emptyParams);
-        
         model.addAttribute("stationList", stationList);
-
+        model.addAttribute("selectedStationId", stationId);
+        model.addAttribute("selectedMetro", metro);
+        model.addAttribute("selectedCity", city);
+        
         log.info("@# 리턴할 뷰 경로: reservation/reservation");
         return "reservation/reservation";
     }

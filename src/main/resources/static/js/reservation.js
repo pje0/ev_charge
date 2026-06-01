@@ -1328,6 +1328,8 @@ async function fetchFilteredStations() {
         }).join('');
         
         console.log("✨ [Render Complete] 충전소 목록 585건 화면 드로잉 완료!");
+		
+		var autoSelectId = /*[[${selectedStationId}]]*/ null;
 
     } catch (err) {
         // 5. 통신 혹은 자바스크립트 연산 중 터진 모든 에러를 안전하게 포획하여 로깅 처리
