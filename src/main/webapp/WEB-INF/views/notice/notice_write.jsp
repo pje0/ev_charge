@@ -12,7 +12,7 @@
 
 <body class="ev-background">
 <jsp:include page="/WEB-INF/views/layout/header.jsp" />
-<div class="ev-container" style="max-width: 800px; margin-top: 50px;">
+<div class="ev-container" style="max-width: 800px; margin-top: 100px;">
     <div class="ev-admin-card">
         <header class="ev-notice-header" style="margin-bottom: 30px; border-bottom: 1px solid var(--ev-border); padding-bottom: 20px;">
             <h1 class="ev-notice-title">새 공지사항 작성</h1>
