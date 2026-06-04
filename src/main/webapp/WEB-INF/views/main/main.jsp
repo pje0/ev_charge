@@ -23,7 +23,7 @@
 		<div class="ev-main-hero-overlay"></div>
 		<div class="ev-container">
 			<div class="ev-main-hero-content">
-				<div class="ev-main-hero-badge">⚡ 스마트 EV 충전 플랫폼</div>
+				<div class="ev-main-hero-badge">스마트 EV 충전 플랫폼</div>
 				<h1 class="ev-main-hero-title">
 					언제 어디서나<br> <span class="ev-main-hero-title-accent">스마트하게</span><br>
 					충전하세요
@@ -44,12 +44,12 @@
 			<div class="ev-main-stats-grid">
 				<div class="ev-main-stats-item">
 					<div class="ev-main-stats-icon">📍</div>
-					<div class="ev-main-stats-value">6개소</div>
+					<div class="ev-main-stats-value">172,314</div>
 					<div class="ev-main-stats-label">전국 충전소</div>
 				</div>
 				<div class="ev-main-stats-item">
 					<div class="ev-main-stats-icon">⚡</div>
-					<div class="ev-main-stats-value">21기</div>
+					<div class="ev-main-stats-value">472,689기</div>
 					<div class="ev-main-stats-label">총 충전기</div>
 				</div>
 				<div class="ev-main-stats-item">
@@ -72,8 +72,8 @@
 			<div class="ev-main-section-header">
 				<span class="ev-main-section-badge">핵심 기능</span>
 				<h2 class="ev-main-section-title">더 스마트한 충전 경험</h2>
-				<p class="ev-main-section-desc">실시간 현황 조회부터 간편 예약까지, 전기차 충전의 모든
-					것을 한 곳에서</p>
+				<p class="ev-main-section-desc">실시간 현황 조회부터 간편 예약까지, 전기차 충전의 
+				모든 것을 한 곳에서</p>
 			</div>
 			<div class="ev-main-features-grid">
 				<a href="/map" class="ev-main-feature-card">
@@ -90,11 +90,10 @@
 						없이 충전하세요.</p> <span
 					class="ev-main-feature-link ev-main-feature-link-teal">바로가기
 						→</span>
-				</a> <a href="/status" class="ev-main-feature-card">
+				</a> <a href="/calculator" class="ev-main-feature-card">
 					<div class="ev-main-feature-icon-wrap ev-main-feature-icon-green">⚡</div>
-					<h3 class="ev-main-feature-title">실시간 충전 현황</h3>
-					<p class="ev-main-feature-desc">충전기 상태를 실시간으로 확인하고 최적 충전소를
-						선택하세요.</p> <span
+					<h3 class="ev-main-feature-title">충전 요금 미리보기</h3>
+					<p class="ev-main-feature-desc">희망하는 충전량을 입력하여 요금을 미리 계산하고 사업자별로 비교해보세요.</p> <span
 					class="ev-main-feature-link ev-main-feature-link-green">바로가기
 						→</span>
 				</a>
@@ -112,7 +111,7 @@
 					<h2 class="ev-main-cta-title">지금 바로 시작하세요</h2>
 					<p class="ev-main-cta-desc">가까운 충전소를 간편하게 예약할 수 있습니다.<br>
 						스마트한 EV 충전 라이프를 경험해보세요.</p>
-					<a href="/signup" class="ev-main-cta-btn">⚡ 지금 시작하기</a>
+					<a href="/map" class="ev-main-cta-btn">시작하기</a>
 				</div>
 			</div>
 		</div>

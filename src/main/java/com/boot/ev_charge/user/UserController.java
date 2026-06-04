@@ -27,6 +27,7 @@ public class UserController {
             @RequestParam(value = "email", required = false) String email,
             @RequestParam(value = "phone", required = false) String phone,
             @RequestParam(value = "modelId", required = false) Long modelId,
+            @RequestParam(value = "carNumber", required = false) String carNumber,
             Model model) {
 
         UserDto user = new UserDto();
@@ -53,6 +54,7 @@ public class UserController {
 
                 vehicle.setUserId(user.getId());
                 vehicle.setModelId(modelId);
+                vehicle.setCarNumber(carNumber);
 
                 System.out.println("vehicle userId: " + vehicle.getUserId());
                 System.out.println("vehicle modelId: " + vehicle.getModelId());

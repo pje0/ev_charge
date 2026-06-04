@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper
     PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
@@ -17,11 +18,17 @@
         </if>
         WHERE id = #{userId}
     </update>
+    
+    <update id="deleteReservation" parameterType="long">
+        UPDATE reservation 
+        SET status = 'CANCELED' 
+        WHERE id = #{reservationId}
+    </update>
 
     <select id="selectUpcomingReservations" parameterType="int" resultType="com.boot.ev_charge.mypage.MyPageDto">
         SELECT r.id AS reservationId, s.name AS stationName, r.reservation_type AS reservationType, 
-               r.status, rt.start_time AS startTime, rt.end_time AS endTime, rtg.target_kwh AS targetAmount, c.connector_type AS connectorType,
-               em.model_name AS carType
+               r.status, rt.start_time AS startTime, rt.end_time AS endTime, rtg.target_kwh AS targetAmount, 
+               c.connector_type AS connectorType, em.model_name AS carType
         FROM reservation r
         LEFT JOIN reservation_time rt ON r.id = rt.reservation_id
         LEFT JOIN reservation_target rtg ON r.id = rtg.reservation_id
@@ -29,14 +36,19 @@
         LEFT JOIN ev_model em ON uv.model_id = em.id
         JOIN charger c ON r.charger_id = c.id
         JOIN station s ON c.station_id = s.id
-        WHERE r.user_id = #{userId} AND r.status IN ('RESERVED', 'CHARGING')
+        WHERE r.user_id = #{userId}
+          /* 🌟 핵심: 예약 확정 상태이거나 현재 충전 중인 건만 예정 예약에 노출 */
+          AND r.status IN ('RESERVED', 'CHARGING')
+          <![CDATA[ 
+          AND rt.end_time >= NOW() 
+          ]]>
         ORDER BY rt.start_time ASC
     </select>
 
     <select id="selectPastReservations" parameterType="int" resultType="com.boot.ev_charge.mypage.MyPageDto">
         SELECT r.id AS reservationId, s.name AS stationName, r.reservation_type AS reservationType, 
-               r.status, rt.start_time AS startTime, rt.end_time AS endTime, rtg.target_kwh AS targetAmount, c.connector_type AS connectorType,
-               em.model_name AS carType
+               r.status, rt.start_time AS startTime, rt.end_time AS endTime, rtg.target_kwh AS targetAmount, 
+               c.connector_type AS connectorType, em.model_name AS carType
         FROM reservation r
         LEFT JOIN reservation_time rt ON r.id = rt.reservation_id
         LEFT JOIN reservation_target rtg ON r.id = rtg.reservation_id
@@ -44,13 +56,18 @@
         LEFT JOIN ev_model em ON uv.model_id = em.id
         JOIN charger c ON r.charger_id = c.id
         JOIN station s ON c.station_id = s.id
-        WHERE r.user_id = #{userId} AND r.status IN ('COMPLETED', 'CANCELED', 'EXPIRED')
+        WHERE r.user_id = #{userId} 
+          AND (
+              /* 🌟 핵심: 취소 건과 완료 건만 지난 예약에 표시 (만료 제외) */
+              r.status IN ('COMPLETED', 'CANCELED')
+              
+              /* 🌟 RESERVED 상태였으나 오지 않아서 시간이 지나버린 건들도 지난 예약으로 이동 */
+              <![CDATA[ 
+              OR (r.status = 'RESERVED' AND rt.end_time < NOW()) 
+              ]]>
+          )
         ORDER BY rt.start_time DESC
     </select>
-
-    <delete id="deleteReservation" parameterType="long">
-        DELETE FROM reservation WHERE id = #{reservationId}
-    </delete>
 
     <update id="updateReservationMaster" parameterType="com.boot.ev_charge.mypage.MyPageDto">
         UPDATE reservation
@@ -72,8 +89,8 @@
             max_minutes = #{maxMinutes}
     </insert>
     
-	<select id="getReservationById" parameterType="long" resultType="com.boot.ev_charge.mypage.MyPageDto">
-		SELECT 
+    <select id="getReservationById" parameterType="long" resultType="com.boot.ev_charge.mypage.MyPageDto">
+        SELECT 
             r.id AS reservationId,
             r.charger_id AS chargerId,
             c.station_id AS stationId,
@@ -87,7 +104,8 @@
             s.name AS stationName,
             em.model_name AS carType,
             em.connector_type AS carConnectorType,
-            em.battery_capacity AS batteryCapacity FROM reservation r
+            em.battery_capacity AS batteryCapacity 
+        FROM reservation r
         LEFT JOIN reservation_time rt ON r.id = rt.reservation_id
         LEFT JOIN reservation_target rtg ON r.id = rtg.reservation_id
         LEFT JOIN user_vehicle uv ON r.user_vehicle_id = uv.id
