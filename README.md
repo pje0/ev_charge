@@ -54,10 +54,15 @@
 ## 🛠 기술 스택
 
 **Backend** · Java 17, Spring Boot 3.4.3, Spring Security, OAuth2 Client, MyBatis
+
 **Frontend** · JSP, JSTL, JavaScript, jQuery
+
 **Database** · MySQL
+
 **외부 API** · 카카오맵 JS SDK, 카카오 주소검색, Kakao Mobility, 한전 공공 API
+
 **Infra** · Apache Tomcat 9.0
+
 **Tool** · STS4, DBeaver, Git, Notion
 
 ---
